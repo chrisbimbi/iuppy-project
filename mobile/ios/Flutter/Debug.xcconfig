@@ -1,0 +1,5 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug-development.xcconfig"
+#include "Generated.xcconfig"
+FLUTTER_FLAVOR=Development
+PRODUCT_BUNDLE_IDENTIFIER=com.br.iuppy.mobile.dev
+DISPLAY_NAME=Iuppy Dev
