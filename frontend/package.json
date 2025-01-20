@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "build": "tsc && vite build",
+    "build:dev": "tsc && vite build --mode development",
+    "build:prod": "tsc && vite build --mode production",
+    "serve": "vite preview"
   },
   "dependencies": {
     "@formatjs/intl-pluralrules": "5.2.14",

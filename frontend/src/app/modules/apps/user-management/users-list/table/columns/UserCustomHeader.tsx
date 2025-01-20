@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import {FC, useMemo} from 'react'
-import {initialQueryState} from '../../../../../../../_metronic/helpers'
+import {initialQueryState} from '../../../../../../..//helpers'
 import {useQueryRequest} from '../../core/QueryRequestProvider'
 import {User} from '../../core/_models'
 import {HeaderContext} from "@tanstack/react-table";

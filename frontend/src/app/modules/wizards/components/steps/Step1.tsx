@@ -1,6 +1,6 @@
 
 import {FC} from 'react'
-import {KTIcon} from '../../../../../_metronic/helpers'
+import {KTIcon} from '../../../../..//helpers'
 import {ErrorMessage, Field} from 'formik'
 
 const Step1: FC = () => {

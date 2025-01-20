@@ -1,9 +1,9 @@
 
 import {FC} from 'react'
-import {KTIcon, toAbsoluteUrl} from '../../../../../_metronic/helpers'
-import {ChatInner, Dropdown1} from '../../../../../_metronic/partials'
-import { Toolbar } from '../../../../../_metronic/layout/components/toolbar/Toolbar'
-import { Content } from '../../../../../_metronic/layout/components/Content'
+import {KTIcon, toAbsoluteUrl} from '../../../../..//helpers'
+import {ChatInner, Dropdown1} from '../../../../..//partials'
+import { Toolbar } from '../../../../..//layout/components/toolbar/Toolbar'
+import { Content } from '../../../../..//layout/components/Content'
 
 const Group: FC = () => {
   return (

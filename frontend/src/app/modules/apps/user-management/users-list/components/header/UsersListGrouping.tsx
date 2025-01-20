@@ -1,5 +1,5 @@
 import {useQueryClient, useMutation} from '@tanstack/react-query'
-import {QUERIES} from '../../../../../../../_metronic/helpers'
+import {QUERIES} from '../../../../../../..//helpers'
 import {useListView} from '../../core/ListViewProvider'
 import {useQueryResponse} from '../../core/QueryResponseProvider'
 import {deleteSelectedUsers} from '../../core/_requests'

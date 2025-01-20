@@ -1,15 +1,15 @@
 import {useEffect, useRef, useState} from 'react'
-import {KTIcon} from '../../../../_metronic/helpers'
+import {KTIcon} from '../../../..//helpers'
 import {Step1} from './steps/Step1'
 import {Step2} from './steps/Step2'
 import {Step3} from './steps/Step3'
 import {Step4} from './steps/Step4'
 import {Step5} from './steps/Step5'
-import {StepperComponent} from '../../../../_metronic/assets/ts/components'
+import {StepperComponent} from '../../../..//assets/ts/components'
 import {Form, Formik, FormikValues} from 'formik'
 import {createAccountSchemas, ICreateAccount, inits} from './CreateAccountWizardHelper'
-import { Toolbar } from '../../../../_metronic/layout/components/toolbar/Toolbar'
-import { Content } from '../../../../_metronic/layout/components/Content'
+import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
+import { Content } from '../../../..//layout/components/Content'
 
 const Vertical = () => {
   const stepperRef = useRef<HTMLDivElement | null>(null)

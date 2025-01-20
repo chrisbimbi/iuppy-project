@@ -1,8 +1,8 @@
 
 import React from 'react'
-import {KTIcon} from '../../../../_metronic/helpers'
-import {Card4} from '../../../../_metronic/partials/content/cards/Card4'
-import { Content } from '../../../../_metronic/layout/components/Content'
+import {KTIcon} from '../../../..//helpers'
+import {Card4} from '../../../..//partials/content/cards/Card4'
+import { Content } from '../../../..//layout/components/Content'
 
 export function Documents() {
   return (

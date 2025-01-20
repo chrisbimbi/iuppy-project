@@ -1,0 +1,59 @@
+{
+    "collaboratorsSummary": {
+      "active": 245,
+      "total": 280,
+      "inactive": 35,
+      "monthlyTrend": [200, 210, 220, 230, 240, 245]
+    },
+    "contentEngagement": [
+      {"title": "Novo Plano de Carreira", "type": "Comunicado", "views": 2456},
+      {"title": "Treinamento de Liderança", "type": "Evento", "views": 1890},
+      {"title": "Política de Home Office", "type": "Comunicado", "views": 2100},
+      {"title": "Programa de Bem-estar", "type": "Vídeo", "views": 1750}
+    ],
+    "openPositions": [
+      {"position": "Desenvolvedor Full Stack", "department": "TI", "responsible": "Maria Silva", "candidates": 45, "status": "Entrevistas"},
+      {"position": "Analista de Marketing", "department": "Marketing", "responsible": "João Santos", "candidates": 30, "status": "Triagem"},
+      {"position": "Gerente de Projetos", "department": "Operações", "responsible": "Ana Oliveira", "candidates": 20, "status": "Testes"}
+    ],
+    "hiringVsFiring": {
+      "hiring": [30, 40, 45, 50, 55, 60],
+      "firing": [10, 15, 12, 8, 10, 5],
+      "months": ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"]
+    },
+    "turnoverRate": {
+      "current": 12,
+      "previous": 14,
+      "reasons": [
+        {"reason": "Melhor oferta", "percentage": 40},
+        {"reason": "Insatisfação", "percentage": 30},
+        {"reason": "Mudança de carreira", "percentage": 20},
+        {"reason": "Outros", "percentage": 10}
+      ]
+    },
+    "faqTopics": [
+      {"question": "Como solicitar férias?", "topic": "RH", "occurrences": 156},
+      {"question": "Onde encontro meus holerites?", "topic": "Financeiro", "occurrences": 132},
+      {"question": "Como funciona o plano de saúde?", "topic": "Benefícios", "occurrences": 98}
+    ],
+    "pendingVacations": [
+      {"name": "Carlos Ferreira", "department": "TI", "dueDate": "2025-07-15", "recommendedStartDate": "2025-08-01"},
+      {"name": "Mariana Costa", "department": "Marketing", "dueDate": "2025-08-30", "recommendedStartDate": "2025-09-15"},
+      {"name": "Roberto Almeida", "department": "Vendas", "dueDate": "2025-09-10", "recommendedStartDate": "2025-10-01"}
+    ],
+    "multimediaContent": [
+      {"title": "Cultura Organizacional", "type": "Vídeo", "views": 1200},
+      {"title": "Liderança Efetiva", "type": "Podcast", "views": 850},
+      {"title": "Inovação no Trabalho", "type": "Vídeo", "views": 980}
+    ],
+    "latestSurveyResults": {
+      "question": "Quão satisfeito você está com o ambiente de trabalho?",
+      "responses": [
+        {"option": "Muito satisfeito", "percentage": 45},
+        {"option": "Satisfeito", "percentage": 30},
+        {"option": "Neutro", "percentage": 15},
+        {"option": "Insatisfeito", "percentage": 7},
+        {"option": "Muito insatisfeito", "percentage": 3}
+      ]
+    }
+  }

@@ -5,7 +5,7 @@ import {ConnectedAccounts} from './cards/ConnectedAccounts'
 import {EmailPreferences} from './cards/EmailPreferences'
 import {Notifications} from './cards/Notifications'
 import {DeactivateAccount} from './cards/DeactivateAccount'
-import { Content } from '../../../../../_metronic/layout/components/Content'
+import { Content } from '../../../../..//layout/components/Content'
 
 export function Settings() {
   return (

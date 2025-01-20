@@ -8,8 +8,8 @@ import {
   ChartsWidget1,
   ListsWidget5,
   ListsWidget2,
-} from '../../../../_metronic/partials/widgets'
-import { Content } from '../../../../_metronic/layout/components/Content'
+} from '../../../..//partials/widgets'
+import { Content } from '../../../..//layout/components/Content'
 
 export function Overview() {
   return (

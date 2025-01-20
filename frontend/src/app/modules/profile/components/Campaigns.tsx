@@ -1,7 +1,7 @@
 
 import React from 'react'
-import {Card5} from '../../../../_metronic/partials/content/cards/Card5'
-import { Content } from '../../../../_metronic/layout/components/Content'
+import {Card5} from '../../../..//partials/content/cards/Card5'
+import { Content } from '../../../..//layout/components/Content'
 
 export function Campaigns() {
   return (

@@ -1,7 +1,7 @@
 
 import clsx from 'clsx'
 import {FC} from 'react'
-import {toAbsoluteUrl} from '../../../../../../../_metronic/helpers'
+import {toAbsoluteUrl} from '../../../../../../..//helpers'
 import {User} from '../../core/_models'
 
 type Props = {

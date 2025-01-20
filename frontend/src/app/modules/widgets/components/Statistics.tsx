@@ -6,9 +6,9 @@ import {
   StatisticsWidget4,
   StatisticsWidget5,
   StatisticsWidget6,
-} from '../../../../_metronic/partials/widgets'
-import { Toolbar } from '../../../../_metronic/layout/components/toolbar/Toolbar'
-import { Content } from '../../../../_metronic/layout/components/Content'
+} from '../../../..//partials/widgets'
+import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
+import { Content } from '../../../..//layout/components/Content'
 
 const Statistics: FC = () => {
   return (

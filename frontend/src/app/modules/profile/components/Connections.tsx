@@ -1,7 +1,7 @@
 
 import React from 'react'
-import {Card3} from '../../../../_metronic/partials/content/cards/Card3'
-import { Content } from '../../../../_metronic/layout/components/Content'
+import {Card3} from '../../../..//partials/content/cards/Card3'
+import { Content } from '../../../..//layout/components/Content'
 
 export function Connections() {
   return (

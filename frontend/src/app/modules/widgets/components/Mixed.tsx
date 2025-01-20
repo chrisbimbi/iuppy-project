@@ -11,9 +11,9 @@ import {
   MixedWidget9,
   MixedWidget10,
   MixedWidget11,
-} from '../../../../_metronic/partials/widgets'
-import { Toolbar } from '../../../../_metronic/layout/components/toolbar/Toolbar'
-import { Content } from '../../../../_metronic/layout/components/Content'
+} from '../../../..//partials/widgets'
+import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
+import { Content } from '../../../..//layout/components/Content'
 
 const Mixed: FC = () => {
   return (

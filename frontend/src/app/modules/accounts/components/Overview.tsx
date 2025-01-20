@@ -1,14 +1,14 @@
 
 import React from 'react'
 import {Link} from 'react-router-dom'
-import {KTIcon} from '../../../../_metronic/helpers'
+import {KTIcon} from '../../../..//helpers'
 import {
   ChartsWidget1,
   ListsWidget5,
   TablesWidget1,
   TablesWidget5,
-} from '../../../../_metronic/partials/widgets'
-import { Content } from '../../../../_metronic/layout/components/Content'
+} from '../../../..//partials/widgets'
+import { Content } from '../../../..//layout/components/Content'
 
 export function Overview() {
   return (

@@ -9,7 +9,7 @@ import {
   ListViewContextProps,
   groupingOnSelectAll,
   WithChildren,
-} from '../../../../../../_metronic/helpers'
+} from '../../../../../..//helpers'
 import {useQueryResponse, useQueryResponseData} from './QueryResponseProvider'
 
 const ListViewContext = createContext<ListViewContextProps>(initialListView)
