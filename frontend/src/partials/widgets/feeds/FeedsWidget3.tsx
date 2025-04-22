@@ -49,7 +49,7 @@ const FeedsWidget3: React.FC<Props> = ({className, data}) => {
               data-kt-menu-placement='bottom-end'
               data-kt-menu-flip='top-end'
             >
-              <KTSVG path='../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
+              <KTSVG path='..../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
             </button>
           </div>
           {/* end::Menu */}
@@ -94,11 +94,11 @@ const FeedsWidget3: React.FC<Props> = ({className, data}) => {
 
           <div className='position-absolute top-0 end-0 me-n5'>
             <span className='btn btn-icon btn-sm btn-active-color-primary pe-0 me-2'>
-              <KTSVG path='../media/icons/duotune/communication/com008.svg' className='svg-icon-3 mb-3' />
+              <KTSVG path='..../media/icons/duotune/communication/com008.svg' className='svg-icon-3 mb-3' />
             </span>
 
             <span className='btn btn-icon btn-sm btn-active-color-primary ps-0'>
-              <KTSVG path='../media/icons/duotune/general/gen018.svg' className='svg-icon-2 mb-3' />
+              <KTSVG path='..../media/icons/duotune/general/gen018.svg' className='svg-icon-2 mb-3' />
             </span>
           </div>
         </form>

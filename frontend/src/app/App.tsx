@@ -5,6 +5,7 @@ import {LayoutProvider, LayoutSplashScreen} from '..//layout/core'
 import {MasterInit} from '..//layout/MasterInit'
 import {AuthInit} from './modules/auth'
 import {ThemeModeProvider} from '..//partials'
+import 'react-quill/dist/quill.snow.css';
 
 const App = () => {
   return (

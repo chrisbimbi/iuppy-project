@@ -1,16 +1,14 @@
-export * from './Role';
-export * from './ComunicadoType';
-export * from './UserEngagement';
+export * from './News';
+export * from './NewsSettings';
+export * from './NewsType';
 export * from './ContentEngagement';
-
-export type PaginationParams = {
-  page: number;
-  limit: number;
-}
-
-export type SortOrder = 'ASC' | 'DESC';
-
-export type DateRange = {
-  startDate: Date;
-  endDate: Date;
-}
+export * from './Company';
+export * from './CreateNewsDto';
+export * from './EngagementMetrics';
+export * from './ReactionsType';
+export * from './Role';
+export * from './UpdateNewsDto';
+export * from './User';
+export * from './UserEngagement';
+export * from './NewsStatus';
+export * from './Space';

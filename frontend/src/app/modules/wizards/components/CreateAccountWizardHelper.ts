@@ -1,6 +1,6 @@
 import * as Yup from 'yup'
 
-export interface ICreateAccount {
+export interface CreateAccount {
   accountType: string
   accountTeamSize: string
   accountName: string
@@ -40,7 +40,7 @@ const createAccountSchemas = [
   }),
 ]
 
-const inits: ICreateAccount = {
+const inits: CreateAccount = {
   accountType: 'personal',
   accountTeamSize: '50+',
   accountName: '',

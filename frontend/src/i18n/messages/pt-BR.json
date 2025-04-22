@@ -77,5 +77,6 @@
     "AUTH.LOGIN.BUTTON.GOOGLE": "Entrar com Google",
     "AUTH.LOGIN.BUTTON.MICROSOFT": "Entrar com Microsoft 365",
     "AUTH.LOGIN.BUTTON.APPLE": "Entrar com Apple",
-    "AUTH.LOGIN.CONTINUE_WITH_EMAIL": "Ou com e-mail"
+    "AUTH.LOGIN.CONTINUE_WITH_EMAIL": "Ou com e-mail",
+    "MENU.CREATE_COMUNICADO": "Criar new"
   }

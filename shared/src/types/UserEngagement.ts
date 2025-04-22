@@ -1,8 +1,5 @@
 export interface UserEngagement {
-    totalLogins: number;
-    lastActivityDate: Date;
-    contentViewed: number;
-    commentsPosted: number;
-    likesGiven: number;
-    eventsAttended: number;
-  }
+  views: number;
+  interactions: number;
+  // Adicione outros campos conforme necessário
+}

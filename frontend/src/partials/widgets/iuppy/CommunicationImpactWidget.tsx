@@ -19,7 +19,7 @@ const CommunicationImpactWidget: React.FC<WidgetProps> = ({ className }) => {
           <table className='table align-middle gs-0 gy-4'>
             <thead>
               <tr className='fw-bold text-muted bg-light'>
-                <th className='ps-4 min-w-125px rounded-start'>Comunicado</th>
+                <th className='ps-4 min-w-125px rounded-start'>New</th>
                 <th className='min-w-125px'>Visualizações</th>
                 <th className='min-w-125px'>Likes</th>
                 <th className='min-w-125px'>Comentários</th>

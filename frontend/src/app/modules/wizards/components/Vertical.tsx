@@ -7,7 +7,7 @@ import {Step4} from './steps/Step4'
 import {Step5} from './steps/Step5'
 import {StepperComponent} from '../../../..//assets/ts/components'
 import {Form, Formik, FormikValues} from 'formik'
-import {createAccountSchemas, ICreateAccount, inits} from './CreateAccountWizardHelper'
+import {createAccountSchemas, CreateAccount, inits} from './CreateAccountWizardHelper'
 import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../..//layout/components/Content'
 
@@ -15,7 +15,7 @@ const Vertical = () => {
   const stepperRef = useRef<HTMLDivElement | null>(null)
   const [ stepper, setStepper ] = useState<StepperComponent | null>(null)
   const [currentSchema, setCurrentSchema] = useState(createAccountSchemas[0])
-  const [initValues] = useState<ICreateAccount>(inits)
+  const [initValues] = useState<CreateAccount>(inits)
 
   const loadStepper = () => {
     setStepper(StepperComponent.createInsance(stepperRef.current as HTMLDivElement))
@@ -31,7 +31,7 @@ const Vertical = () => {
     setCurrentSchema(createAccountSchemas[stepper.currentStepIndex - 1])
   }
 
-  const submitStep = (values: ICreateAccount, actions: FormikValues) => {
+  const submitStep = (values: CreateAccount, actions: FormikValues) => {
     if (!stepper) {
       return
     }

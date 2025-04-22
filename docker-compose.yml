@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: iuppy_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: iuppy_admin
+      POSTGRES_PASSWORD: "Iuppy#2025"
+      POSTGRES_DB: iuppy_dev
+    volumes:
+      - iuppy_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iuppy_api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.development
+    depends_on:
+      - postgres
+    command: >
+      sh -c "npm run migration:run &&
+             npm run start:dev"
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./backend:/usr/src/app
+      - ./shared:/usr/src/shared
+      - /usr/src/app/node_modules
+
+volumes:
+  iuppy_postgres_data:

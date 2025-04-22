@@ -6,9 +6,9 @@
       "monthlyTrend": [200, 210, 220, 230, 240, 245]
     },
     "contentEngagement": [
-      {"title": "Novo Plano de Carreira", "type": "Comunicado", "views": 2456},
+      {"title": "Novo Plano de Carreira", "type": "New", "views": 2456},
       {"title": "Treinamento de Liderança", "type": "Evento", "views": 1890},
-      {"title": "Política de Home Office", "type": "Comunicado", "views": 2100},
+      {"title": "Política de Home Office", "type": "New", "views": 2100},
       {"title": "Programa de Bem-estar", "type": "Vídeo", "views": 1750}
     ],
     "openPositions": [

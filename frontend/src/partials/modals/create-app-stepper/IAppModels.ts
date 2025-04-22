@@ -12,14 +12,14 @@ export interface IAppDatabase {
 
 export type TAppStorage = 'Basic Server' | 'AWS' | 'Google'
 
-export interface ICreateAppData {
+export interface CreateAppData {
   appBasic: IAppBasic
   appFramework: TAppFramework
   appDatabase: IAppDatabase
   appStorage: TAppStorage
 }
 
-export const defaultCreateAppData: ICreateAppData = {
+export const defaultCreateAppData: CreateAppData = {
   appBasic: {appName: '', appType: 'Quick Online Courses'},
   appFramework: 'HTML5',
   appDatabase: {databaseName: 'db_name', databaseSolution: 'MySQL'},
@@ -27,7 +27,7 @@ export const defaultCreateAppData: ICreateAppData = {
 }
 
 export type StepProps = {
-  data: ICreateAppData
-  updateData: (fieldsToUpdate: Partial<ICreateAppData>) => void
+  data: CreateAppData
+  updateData: (fieldsToUpdate: Partial<CreateAppData>) => void
   hasError: boolean
 }

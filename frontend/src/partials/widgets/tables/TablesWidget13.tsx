@@ -25,7 +25,7 @@ const TablesWidget13: React.FC<Props> = ({className, data}) => {
         </h3>
         <div className='card-toolbar'>
           <a href='#' className='btn btn-sm btn-light-primary'>
-            <KTSVG path='../media/icons/duotune/arrows/arr075.svg' className='svg-icon-2' />
+            <KTSVG path='..../media/icons/duotune/arrows/arr075.svg' className='svg-icon-2' />
             Nova Vaga
           </a>
         </div>
@@ -81,16 +81,16 @@ const TablesWidget13: React.FC<Props> = ({className, data}) => {
                       href='#'
                       className='btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1'
                     >
-                      <KTSVG path='../media/icons/duotune/general/gen019.svg' className='svg-icon-3' />
+                      <KTSVG path='..../media/icons/duotune/general/gen019.svg' className='svg-icon-3' />
                     </a>
                     <a
                       href='#'
                       className='btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1'
                     >
-                      <KTSVG path='../media/icons/duotune/art/art005.svg' className='svg-icon-3' />
+                      <KTSVG path='..../media/icons/duotune/art/art005.svg' className='svg-icon-3' />
                     </a>
                     <a href='#' className='btn btn-icon btn-bg-light btn-active-color-primary btn-sm'>
-                      <KTSVG path='../media/icons/duotune/general/gen027.svg' className='svg-icon-3' />
+                      <KTSVG path='..../media/icons/duotune/general/gen027.svg' className='svg-icon-3' />
                     </a>
                   </td>
                 </tr>

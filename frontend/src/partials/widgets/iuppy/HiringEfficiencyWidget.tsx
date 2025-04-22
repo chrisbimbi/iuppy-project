@@ -13,7 +13,7 @@ const HiringEfficiencyWidget: React.FC = () => {
       <div className='card-body'>
         <div className='d-flex align-items-center mb-8'>
           <KTSVG
-            path='../media/icons/duotune/general/gen013.svg'
+            path='..../media/icons/duotune/general/gen013.svg'
             className='svg-icon-3x svg-icon-primary me-5'
           />
           <div>
@@ -23,7 +23,7 @@ const HiringEfficiencyWidget: React.FC = () => {
         </div>
         <div className='d-flex align-items-center mb-8'>
           <KTSVG
-            path='../media/icons/duotune/general/gen029.svg'
+            path='..../media/icons/duotune/general/gen029.svg'
             className='svg-icon-3x svg-icon-success me-5'
           />
           <div>
@@ -33,7 +33,7 @@ const HiringEfficiencyWidget: React.FC = () => {
         </div>
         <div className='d-flex align-items-center'>
           <KTSVG
-            path='../media/icons/duotune/general/gen017.svg'
+            path='..../media/icons/duotune/general/gen017.svg'
             className='svg-icon-3x svg-icon-warning me-5'
           />
           <div>

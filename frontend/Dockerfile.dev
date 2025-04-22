@@ -1,0 +1,22 @@
+# etapa dev com hot‑reload (Vite)
+FROM node:18-alpine AS dev
+
+WORKDIR /usr/src/app
+
+# 1) copiar package.json + yarn.lock do frontend
+COPY frontend/package.json frontend/yarn.lock ./
+
+# 2) copiar shared (pra @shared funcionar)
+COPY shared ./shared
+
+# 3) instalar deps (inclui shared)
+RUN yarn install --frozen-lockfile
+
+# 4) copiar todo o código do frontend
+COPY frontend ./
+
+# 5) expor porta do Vite
+EXPOSE 5173
+
+# 6) comando dev
+CMD ["yarn", "dev"]

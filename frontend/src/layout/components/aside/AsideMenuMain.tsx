@@ -1,20 +1,42 @@
 
-import {useIntl} from 'react-intl'
-import {AsideMenuItemWithSubMain} from './AsideMenuItemWithSubMain'
-import {AsideMenuItemWithSub} from './AsideMenuItemWithSub'
-import {AsideMenuItem} from './AsideMenuItem'
+import { useIntl } from 'react-intl'
+import { AsideMenuItemWithSubMain } from './AsideMenuItemWithSubMain'
+import { AsideMenuItemWithSub } from './AsideMenuItemWithSub'
+import { AsideMenuItem } from './AsideMenuItem'
 
 export function AsideMenuMain() {
   const intl = useIntl()
+
   return (
     <>
       <AsideMenuItem
         to='/dashboard'
         title='Home'
         fontIcon='bi-house fs-2'
-        bsTitle={intl.formatMessage({id: 'MENU.DASHBOARD'})}
+        bsTitle={intl.formatMessage({ id: 'MENU.DASHBOARD' })}
         className='py-2'
       />
+
+      <AsideMenuItemWithSubMain
+        to='/News/pages'
+        title='News'
+        fontIcon='bi-file-text'
+        bsTitle='Toque para ver e criar news'
+      >
+        <AsideMenuItem
+          to='/contents/news/'
+          title='Ver news'
+          hasBullet={true}
+          bsTitle='Veja todos os news criados'
+        />
+         <AsideMenuItem
+          to='/contents/news/create/*'
+          title='Criar um new'
+          hasBullet={true}
+          bsTitle='Crie um novo new'
+        />
+      </AsideMenuItemWithSubMain>
+
       <AsideMenuItemWithSubMain
         to='/crafted/pages'
         title='Crafted'
@@ -170,5 +192,6 @@ export function AsideMenuMain() {
         />
       </AsideMenuItemWithSubMain>
     </>
+
   )
 }

@@ -3,7 +3,7 @@
 import {useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
 import {Modal} from 'react-bootstrap'
-import {defaultCreateAppData, ICreateAppData} from './IAppModels'
+import {defaultCreateAppData, CreateAppData} from './IAppModels'
 import {StepperComponent} from '../../../assets/ts/components'
 import {KTIcon} from '../../../helpers'
 import {Step1} from './steps/Step1'
@@ -22,14 +22,14 @@ const modalsRoot = document.getElementById('root-modals') || document.body
 const CreateAppModal = ({show, handleClose}: Props) => {
   const stepperRef = useRef<HTMLDivElement | null>(null)
   const [ stepper, setStepper ] = useState<StepperComponent | null>(null)
-  const [data, setData] = useState<ICreateAppData>(defaultCreateAppData)
+  const [data, setData] = useState<CreateAppData>(defaultCreateAppData)
   const [hasError, setHasError] = useState(false)
 
   const loadStepper = () => {
     setStepper(StepperComponent.createInsance(stepperRef.current as HTMLDivElement))
   }
 
-  const updateData = (fieldsToUpdate: Partial<ICreateAppData>) => {
+  const updateData = (fieldsToUpdate: Partial<CreateAppData>) => {
     const updatedData = {...data, ...fieldsToUpdate}
     setData(updatedData)
   }

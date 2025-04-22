@@ -1,15 +1,15 @@
 
 
-import {FC} from 'react'
-import {Link} from 'react-router-dom'
+import { FC } from 'react'
+import { Link } from 'react-router-dom'
 import clsx from 'clsx'
-import {useLayout} from '../../core'
-import {KTIcon, toAbsoluteUrl} from '../../../helpers'
-import {AsideMenu} from './AsideMenu'
-import {Dropdown2} from '../../../partials'
+import { useLayout } from '../../core'
+import { KTIcon, toAbsoluteUrl } from '../../../helpers'
+import { AsideMenu } from './AsideMenu'
+import { Dropdown2 } from '../../../partials'
 
 const AsideDefault: FC = () => {
-  const {classes} = useLayout()
+  const { classes } = useLayout()
   return (
     <div
       id='kt_aside'
@@ -31,6 +31,7 @@ const AsideDefault: FC = () => {
       {/* end::Brand */}
 
       {/* begin::Aside menu */}
+
       <div className='aside-menu flex-column-fluid' id='kt_aside_menu'>
         {/* begin::Nav */}
         <AsideMenu asideMenuCSSClasses={classes.asideMenu} />
@@ -64,4 +65,4 @@ const AsideDefault: FC = () => {
   )
 }
 
-export {AsideDefault}
+export { AsideDefault }

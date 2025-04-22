@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Role, ComunicadoType } from '../types';
+import { Role, NewsType } from '../types';
 
 const UserEngagementSchema = z.object({
   totalLogins: z.number().nonnegative(),
@@ -32,11 +32,11 @@ export const UserSchema = z.object({
   engagementMetrics: UserEngagementSchema,
 });
 
-export const ComunicadoSchema = z.object({
+export const NewSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(5).max(200),
   content: z.string().min(10),
-  type: z.nativeEnum(ComunicadoType),
+  type: z.nativeEnum(NewsType),
   authorId: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -71,4 +71,12 @@ export const EventoSchema = z.object({
   maxCapacity: z.number().positive().optional(),
   isVirtual: z.boolean(),
   meetingLink: z.string().url().optional()
+});
+
+export const CreateNewSchema = z.object({
+  titulo: z.string().min(1, 'O título é obrigatório'),
+  conteudo: z.string().min(1, 'O conteúdo é obrigatório'),
+  tipo: z.nativeEnum(NewsType),
+  segmentacao: z.array(z.string()),
+  publicado: z.boolean(),
 });

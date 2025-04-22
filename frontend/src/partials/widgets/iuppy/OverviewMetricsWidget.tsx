@@ -17,7 +17,7 @@ const OverviewMetricsWidget: React.FC<WidgetProps> = ({ className }) => {
       <div className='card-body'>
         <div className='d-flex align-items-center mb-8'>
           <KTSVG
-            path='../media/icons/duotune/general/gen049.svg'
+            path='..../media/icons/duotune/general/gen049.svg'
             className='svg-icon-3x svg-icon-primary me-5'
           />
           <div>
@@ -27,7 +27,7 @@ const OverviewMetricsWidget: React.FC<WidgetProps> = ({ className }) => {
         </div>
         <div className='d-flex align-items-center mb-8'>
           <KTSVG
-            path='../media/icons/duotune/arrows/arr066.svg'
+            path='..../media/icons/duotune/arrows/arr066.svg'
             className='svg-icon-3x svg-icon-success me-5'
           />
           <div>
@@ -37,7 +37,7 @@ const OverviewMetricsWidget: React.FC<WidgetProps> = ({ className }) => {
         </div>
         <div className='d-flex align-items-center'>
           <KTSVG
-            path='../media/icons/duotune/general/gen032.svg'
+            path='..../media/icons/duotune/general/gen032.svg'
             className='svg-icon-3x svg-icon-info me-5'
           />
           <div>

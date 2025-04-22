@@ -50,7 +50,7 @@ const EngagementAnalyticsWidget: React.FC<WidgetProps> = ({ className }) => {
             data-kt-menu-placement='bottom-end'
             data-kt-menu-flip='top-end'
           >
-            <KTSVG path='../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
+            <KTSVG path='..../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
           </button>
           <Dropdown1 />
         </div>

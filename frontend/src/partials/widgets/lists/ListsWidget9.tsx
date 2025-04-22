@@ -30,7 +30,7 @@ const ListsWidget9: React.FC<Props> = ({className, data}) => {
             data-kt-menu-placement='bottom-end'
             data-kt-menu-flip='top-end'
           >
-            <KTSVG path='../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
+            <KTSVG path='..../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
           </button>
           {/* end::Menu */}
         </div>
@@ -45,7 +45,7 @@ const ListsWidget9: React.FC<Props> = ({className, data}) => {
             <div className='symbol symbol-50px me-5'>
               <span className='symbol-label bg-light-primary'>
                 <KTSVG
-                  path='../media/icons/duotune/abstract/abs027.svg'
+                  path='..../media/icons/duotune/abstract/abs027.svg'
                   className='svg-icon-2x svg-icon-primary'
                 />
               </span>

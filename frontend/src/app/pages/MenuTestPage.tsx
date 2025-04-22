@@ -1,7 +1,7 @@
 
-import {FC} from 'react'
+import { FC } from 'react'
 import SVG from 'react-inlinesvg'
-import {toAbsoluteUrl} from '../..//helpers'
+import { KTSVG, toAbsoluteUrl } from '../..//helpers'
 
 const MenuTestPage: FC = () => {
   return (
@@ -19,6 +19,39 @@ const MenuTestPage: FC = () => {
               data-kt-drawer-direction='start'
               data-kt-drawer-toggle='#kt_header_menu_toggle'
             >
+              {/* News */}
+              <div className='menu-item'>
+                <div className='menu-content pt-8 pb-2'>
+                  <span className='menu-section text-muted text-uppercase fs-8 ls-1'>News</span>
+                </div>
+              </div>
+              <div data-kt-menu-trigger='click' className='menu-item menu-accordion'>
+                <span className='menu-link'>
+                  <span className='menu-icon'>
+                    <KTSVG path='../media/icons/duotune/communication/com013.svg' className='svg-icon-2' />
+                  </span>
+                  <span className='menu-title'>Gerenciar News</span>
+                  <span className='menu-arrow'></span>
+                </span>
+                <div className='menu-sub menu-sub-accordion menu-active-bg'>
+                  <div className='menu-item'>
+                    <a className='menu-link' href='/news'>
+                      <span className='menu-bullet'>
+                        <span className='bullet bullet-dot'></span>
+                      </span>
+                      <span className='menu-title'>Lista de News</span>
+                    </a>
+                  </div>
+                  <div className='menu-item'>
+                    <a className='menu-link' href='/news/create'>
+                      <span className='menu-bullet'>
+                        <span className='bullet bullet-dot'></span>
+                      </span>
+                      <span className='menu-title'>Criar New</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
               <div
                 className='menu menu-lg-rounded menu-column menu-lg-row menu-state-bg menu-title-gray-700 menu-state-title-primary menu-state-icon-primary menu-state-bullet-primary menu-arrow-gray-500 fw-bold my-5 my-lg-0 align-items-stretch'
                 id='#kt_header_menu'
@@ -43,7 +76,7 @@ const MenuTestPage: FC = () => {
                   </span>
                   <div
                     className='menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-rounded-0 py-lg-4 w-100 w-lg-225px'
-                    style={{margin: '0px'}}
+                    style={{ margin: '0px' }}
                   >
                     <div
                       data-kt-menu-trigger='click'
@@ -61,7 +94,7 @@ const MenuTestPage: FC = () => {
                       </span>
                       <div
                         className='menu-sub menu-sub-accordion menu-sub-lg-dropdown menu-active-bg py-4 w-100 w-lg-225px'
-                        style={{margin: '0px'}}
+                        style={{ margin: '0px' }}
                       >
                         <div className='menu-item'>
                           <span className='menu-link py-3'>
@@ -493,7 +526,7 @@ const MenuTestPage: FC = () => {
                   </span>
                   <div
                     className='menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown menu-rounded-0 py-lg-4 w-100 w-lg-225px'
-                    style={{margin: '0px'}}
+                    style={{ margin: '0px' }}
                   >
                     <div className='menu-item'>
                       <a
@@ -547,7 +580,7 @@ const MenuTestPage: FC = () => {
                   </span>
                   <div
                     className='menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown w-100 w-lg-600px p-5 p-lg-5'
-                    style={{margin: '0px'}}
+                    style={{ margin: '0px' }}
                   >
                     <div className='row' data-kt-menu-dismiss='true'>
                       <div className='col-lg-4 border-left-lg-1'>
@@ -670,7 +703,7 @@ const MenuTestPage: FC = () => {
               className='menu menu-sub menu-sub-dropdown w-250px w-lg-300px px-7 py-5'
               data-kt-menu='true'
               id='kt_header_search_menu'
-              style={{margin: '0px'}}
+              style={{ margin: '0px' }}
             >
               <div
                 id='kt_header_search'
@@ -698,7 +731,7 @@ const MenuTestPage: FC = () => {
                     value=''
                     placeholder='Search...'
                     id='kt_header_search_input'
-                    onChange={() => {}}
+                    onChange={() => { }}
                   />
                   <span
                     className='position-absolute top-50 end-0 translate-middle-y lh-0 d-none me-1'
@@ -1049,4 +1082,4 @@ const MenuTestPage: FC = () => {
   )
 }
 
-export {MenuTestPage}
+export { MenuTestPage }

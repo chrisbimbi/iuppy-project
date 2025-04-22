@@ -30,7 +30,7 @@ const ListsWidget5: React.FC<Props> = ({className, data}) => {
             data-kt-menu-placement='bottom-end'
             data-kt-menu-flip='top-end'
           >
-            <KTSVG path='../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
+            <KTSVG path='..../media/icons/duotune/general/gen024.svg' className='svg-icon-2' />
           </button>
           {/* end::Menu */}
         </div>
