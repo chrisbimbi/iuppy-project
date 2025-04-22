@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   postgres:
     image: postgres:13
@@ -16,9 +15,7 @@ services:
     build:
       context: ..
       dockerfile: backend/Dockerfile
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://iuppy_user:Iuppy2025@postgres:5432/iuppy_dev
+    
     ports:
       - "3000:3000"
     depends_on:

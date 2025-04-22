@@ -1,18 +1,22 @@
+# backend/Dockerfile
+
+# 1. Imagem base
 FROM node:18
 
+# 2. Define diretório de trabalho
 WORKDIR /usr/src/app
 
-# Copiar package.json e package-lock.json do diretório backend
-COPY backend/package*.json ./
+# 3. Copia apenas os package.json pra instalar dependências
+COPY package*.json ./
 
-RUN npm install
+# 4. Instala dependências
+RUN npm ci
 
-# Copiar o resto dos arquivos do backend
-COPY backend .
+# 5. Copia todo o código do backend para dentro da imagem
+COPY . .
 
-# Copiar a pasta shared
-COPY shared ../shared
+# 6. Expõe porta (a API roda na 3000 dentro do container)
+EXPOSE 3000
 
-RUN npm run build
-
+# 7. Comando default (usado pelo docker-compose)
 CMD ["npm", "run", "start:dev"]
