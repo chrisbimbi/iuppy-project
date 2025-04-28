@@ -13,7 +13,7 @@ interface CustomDropzoneProps {
 
 const CustomDropzone: React.FC<CustomDropzoneProps> = ({ onFilesAdded, accept, maxFiles, maxSize, type, multiple = true }) => {
     const onDrop = useCallback((acceptedFiles: File[]) => {
-        console.log('Dropzone accepted files:', acceptedFiles);
+      //  console.log('Dropzone accepted files:', acceptedFiles);
         onFilesAdded(acceptedFiles);
     }, [onFilesAdded]);
 
@@ -25,7 +25,7 @@ const CustomDropzone: React.FC<CustomDropzoneProps> = ({ onFilesAdded, accept, m
         multiple,
     });
 
-    console.log('Dropzone current accepted files:', acceptedFiles);
+    //console.log('Dropzone current accepted files:', acceptedFiles);
 
     return (
         <div>

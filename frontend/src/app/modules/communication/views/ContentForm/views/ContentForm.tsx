@@ -5,16 +5,15 @@ import { Formik, Form, FormikHelpers } from 'formik';
 import { useIntl } from 'react-intl';
 import { Step1 } from './steps/Step1';
 import { Step2 } from './steps/Step2';
+import { KTSVG } from 'src/helpers';
+import { PageTitle } from 'src/layout/core';
+import { Content } from 'src/layout/components/Content';
 import {
   CreateNewsDto as CreateContentDto,
-  UpdateNewsDto as UpdateContentDto
+  UpdateNewsDto as UpdateContentDto,
 } from '@shared/types';
 import { useAuth } from 'src/app/modules/auth';
 import { useContentActions } from '../../../providers/useContentActions';
-import { PageTitle } from 'src/layout/core';
-import { Content } from 'src/layout/components/Content';
-import { createNewSchema } from '../helpers/validationSchemas';
-import { KTSVG } from 'src/helpers';
 
 interface ContentFormProps {
   initialValues: CreateContentDto;
@@ -22,21 +21,20 @@ interface ContentFormProps {
   onSaved: () => void;
 }
 
-const CreateContentPage: React.FC<ContentFormProps> = ({
+const ContentForm: React.FC<ContentFormProps> = ({
   initialValues,
   editingId,
   onSaved,
 }) => {
-  const [step, setStep] = useState(1);
+  const intl = useIntl();
   const { currentUser } = useAuth();
   const [values, setValues] = useState<CreateContentDto>(initialValues);
-  const [ok, setOk] = useState(false);
-  const [err, setErr] = useState(false);
-  const intl = useIntl();
+  const [step, setStep] = useState(1);
 
-  // useContentActions no longer provides a loading flag
+  // nosso hook agora dispara onSaved() após criar/editar.
   const { createItem, editItem } = useContentActions(onSaved);
 
+  // popula authorId e companyId
   useEffect(() => {
     if (currentUser) {
       setValues(v => ({
@@ -47,15 +45,15 @@ const CreateContentPage: React.FC<ContentFormProps> = ({
     }
   }, [currentUser]);
 
+  // reseta valores quando abrimos o modal
   useEffect(() => {
     setValues(initialValues);
     setStep(1);
-    setOk(false);
-    setErr(false);
   }, [initialValues]);
 
   const next = () => setStep(s => Math.min(s + 1, 2));
   const prev = () => setStep(s => Math.max(s - 1, 1));
+
   const handleChange = (field: string, val: any) => {
     setValues(v => {
       if (field.startsWith('settings.')) {
@@ -71,8 +69,8 @@ const CreateContentPage: React.FC<ContentFormProps> = ({
     dto: CreateContentDto,
     helpers: FormikHelpers<CreateContentDto>
   ) => {
+    console.log('🚀 onSubmit payload:', dto);
     if (!dto.channelId) {
-      setErr(true);
       helpers.setSubmitting(false);
       return;
     }
@@ -83,31 +81,22 @@ const CreateContentPage: React.FC<ContentFormProps> = ({
       type: dto.type,
       channelId: dto.channelId,
       isPublished: dto.isPublished,
-      attachments: dto.attachments,
-      highlightImages: dto.highlightImages.map(i => ({
-        url: i.url,
-        altText: i.name,
-      })),
+      attachments: [],         // uploads não implementados
+      highlightImages: [],     // uploads não implementados
       settings: { ...dto.settings },
     };
-
     try {
       if (editingId) {
+        console.log('✏️ Editing:', editingId);
         await editItem(editingId, updateDto);
       } else {
+        console.log('🆕 Creating new content');
         await createItem(dto);
       }
-      setErr(false);
-      setOk(true);
-      setTimeout(() => {
-        setOk(false);
-        setStep(1);
-        setValues({ ...initialValues, authorId: dto.authorId, companyId: dto.companyId });
-        onSaved();
-      }, 1000);
-    } catch {
-      setErr(true);
+    } catch (e) {
+      console.error('Error in onSubmit:', e);
     } finally {
+      console.log('⏱ onSubmit complete');
       helpers.setSubmitting(false);
     }
   };
@@ -120,87 +109,88 @@ const CreateContentPage: React.FC<ContentFormProps> = ({
         })}
       </PageTitle>
       <Content>
-        {ok && (
-          <div className="alert alert-success">
-            {intl.formatMessage({ id: 'ALERT.SAVE_SUCCESS' }, { item: 'comunicado' })}
-          </div>
-        )}
-        {err && (
-          <div className="alert alert-danger">
-            {intl.formatMessage({ id: 'ALERT.SAVE_ERROR' })}
-          </div>
-        )}
-
         <Formik
           initialValues={values}
-          validationSchema={createNewSchema}
           onSubmit={onSubmit}
           enableReinitialize
         >
-          {formik => (
-            <Form id="kt_create_content_form" noValidate>
-              {step === 1 ? (
-                <Step1
-                  data={values}
-                  setFieldValue={(f, v) => {
-                    formik.setFieldValue(f, v);
-                    handleChange(f, v);
-                  }}
-                  errors={formik.errors}
-                  touched={formik.touched}
-                />
-              ) : (
-                <Step2
-                  data={values}
-                  setFieldValue={(f, v) => {
-                    formik.setFieldValue(f, v);
-                    handleChange(f, v);
-                  }}
-                  errors={formik.errors}
-                  touched={formik.touched}
-                />
-              )}
-
-              <div className="d-flex flex-stack pt-10">
-                {step > 1 && (
-                  <button type="button" className="btn btn-light" onClick={prev}>
-                    <KTSVG
-                      path="../media/icons/duotune/arrows/arr063.svg"
-                      className="svg-icon-2 me-0"
-                    />
-                    {intl.formatMessage({ id: 'BUTTON.BACK' })}
-                  </button>
-                )}
-                {step < 2 ? (
-                  <button type="button" className="btn btn-primary" onClick={next}>
-                    {intl.formatMessage({ id: 'BUTTON.NEXT' })}
-                    <KTSVG
-                      path="../media/icons/duotune/arrows/arr064.svg"
-                      className="svg-icon-2 ms-0"
-                    />
-                  </button>
+          {formik => {
+            const { submitForm, isSubmitting } = formik;
+            return (
+              <Form id="kt_create_content_form" noValidate>
+                {step === 1 ? (
+                  <Step1
+                    data={values}
+                    setFieldValue={(f, v) => {
+                      formik.setFieldValue(f, v);
+                      handleChange(f, v);
+                    }}
+                    errors={formik.errors}
+                    touched={formik.touched}
+                  />
                 ) : (
-                  <button
-                    type="submit"
-                    className={clsx('btn btn-primary', {
-                      'indicator-progress': formik.isSubmitting,
-                    })}
-                    disabled={formik.isSubmitting}
-                  >
-                    {formik.isSubmitting
-                      ? intl.formatMessage({ id: 'BUTTON.SAVING' })
-                      : intl.formatMessage({ id: 'BUTTON.SAVE' })}
-                  </button>
+                  <Step2
+                    data={values}
+                    setFieldValue={(f, v) => {
+                      formik.setFieldValue(f, v);
+                      handleChange(f, v);
+                    }}
+                    errors={formik.errors}
+                    touched={formik.touched}
+                  />
                 )}
-              </div>
-            </Form>
-          )}
+
+                <div className="d-flex flex-stack pt-10">
+                  {step > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-light"
+                      onClick={prev}
+                    >
+                      <KTSVG
+                        path="/media/icons/duotune/arrows/arr063.svg"
+                        className="svg-icon-2 me-0"
+                      />
+                      {intl.formatMessage({ id: 'BUTTON.BACK' })}
+                    </button>
+                  )}
+                  {step < 2 ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={next}
+                    >
+                      {intl.formatMessage({ id: 'BUTTON.NEXT' })}
+                      <KTSVG
+                        path="/media/icons/duotune/arrows/arr064.svg"
+                        className="svg-icon-2 ms-0"
+                      />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={clsx('btn btn-primary', {
+                        'indicator-progress': isSubmitting,
+                      })}
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        console.log('💾 BOTÃO SALVAR clicado');
+                        submitForm();
+                      }}
+                    >
+                      {isSubmitting
+                        ? intl.formatMessage({ id: 'BUTTON.SAVING' })
+                        : intl.formatMessage({ id: 'BUTTON.SAVE' })}
+                    </button>
+                  )}
+                </div>
+              </Form>
+            );
+          }}
         </Formik>
       </Content>
     </>
   );
 };
 
-export const ContentForm: React.FC<ContentFormProps> = props => (
-  <CreateContentPage {...props} />
-);
+export default ContentForm;

@@ -10,51 +10,61 @@ import { useContentActions } from '../providers/useContentActions';
 import { spacesService } from 'src/app/modules/spaces/services/spaces.service';
 import { channelsService } from 'src/app/modules/channels/services/channels.service';
 import { ContentService } from '../services/content.service';
-import ChannelModal from 'src/app/modules/channels/components/ChannelModal';
+import { CreateNewsDto as CreateContentDto } from '@shared/types';
 import { Modal } from 'bootstrap';
 import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
-import { ContentForm } from 'src/app/modules/communication/views/ContentForm/views/ContentForm';
-import { initialNewValues } from 'src/app/modules/communication/views/ContentForm/helpers/initialValues';
-import { CreateNewsDto } from '@shared/types';
+import { initialNewValues } from '../views/ContentForm/helpers/initialValues';
+import ContentForm from '../views/ContentForm/views/ContentForm';
 
 const ContentPage: React.FC = () => {
     const { currentUser } = useAuth();
 
-    // Estados de espaço e canais
     const [spaces, setSpaces] = useState<any[]>([]);
     const [spaceId, setSpaceId] = useState<string | null>(null);
     const [channels, setChannels] = useState<any[]>([]);
     const [channelId, setChannelId] = useState<string | null>(null);
 
-    // Seleção múltipla na lista de conteúdos
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-    // Controle de modais
+    // success alert state
+    const [success, setSuccess] = useState(false);
+
+    // channel modal
     const [channelModalShow, setChannelModalShow] = useState(false);
-    const [channelModalId, setChannelModalId] = useState<string | undefined>(undefined);
-    const createPostRef = useRef<HTMLDivElement>(null);
-    const [createPostModal, setCreatePostModal] = useState<Modal | null>(null);
-    const [editingId, setEditingId] = useState<string | undefined>(undefined);
-    const [wizardInitialValues, setWizardInitialValues] = useState<CreateNewsDto>({
+    const [channelModalId, setChannelModalId] = useState<string>();
+
+    // content form modal
+    const formRef = useRef<HTMLDivElement>(null);
+    const [formModal, setFormModal] = useState<Modal | null>(null);
+    const [editingId, setEditingId] = useState<string>();
+    const [wizardInitialValues, setWizardInitialValues] = useState<CreateContentDto>({
         ...initialNewValues,
         channelId: channelId!,
     });
 
-    // Hooks de dados e ações
+    // data hooks
     const { items, loading, error, refetch } = useContent({ channelId });
     const { createItem, editItem, duplicateItem, deleteItem } = useContentActions(refetch);
 
-    // Inicia modais e Metronic
+    // callback after successful save: hide modal, refresh list & show alert
+    const handleSaved = () => {
+        formModal?.hide();
+        refetch();
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+    };
+
+    // init metronic and modal
     useEffect(() => {
-        if (createPostRef.current) {
-            setCreatePostModal(new Modal(createPostRef.current));
+        if (formRef.current) {
+            setFormModal(new Modal(formRef.current));
         }
         MenuComponent.reinitialization();
         DrawerComponent.bootstrap();
         setTimeout(() => DrawerComponent.createInstances('#kt_stats_drawer'), 50);
     }, []);
 
-    // Carrega spaces
+    // load spaces
     useEffect(() => {
         if (!currentUser) return;
         spacesService.list(currentUser.companyId).then(data => {
@@ -63,7 +73,7 @@ const ContentPage: React.FC = () => {
         });
     }, [currentUser]);
 
-    // Carrega channels quando space muda
+    // load channels
     useEffect(() => {
         if (!spaceId || !currentUser) return;
         channelsService.list(currentUser.companyId, spaceId).then(data => {
@@ -72,21 +82,27 @@ const ContentPage: React.FC = () => {
         });
     }, [spaceId, currentUser]);
 
-    // Handlers de canal
+    // handlers
+    const handleCreateChannel = () => setChannelModalShow(true);
     const handleEditChannel = (id: string) => {
         setChannelModalId(id);
         setChannelModalShow(true);
     };
-    const handleCreateChannel = () => {
-        handleEditChannel(undefined!);
+
+    const handleCreatePost = (chId: string) => {
+      
+        setEditingId(undefined);
+        setWizardInitialValues({
+            ...initialNewValues,
+            channelId: chId,
+            authorId: String(currentUser!.id),
+            companyId: currentUser!.companyId,
+        });
+        console.log('companyId', currentUser!.companyId);
+        console.log('authorId', currentUser!.id);
+        formModal?.show();
     };
 
-    // Handlers de conteúdo
-    const handleCreatePost = (chId: string) => {
-        setEditingId(undefined);
-        setWizardInitialValues({ ...initialNewValues, channelId: chId });
-        createPostModal?.show();
-    };
     const handleEditContent = async (id: string) => {
         const original = await ContentService.get(id);
         setEditingId(id);
@@ -95,23 +111,19 @@ const ContentPage: React.FC = () => {
             subtitle: original.subtitle,
             content: original.content,
             type: original.type,
-            authorId: original.authorId,
-            companyId: original.companyId!,
             channelId: original.channelId,
+            authorId: original.authorId,
+            companyId: original.companyId!,   // já vinha correto
             isPublished: original.isPublished,
             attachments: original.attachments.map(url => ({ url, name: url.split('/').pop()! })),
             highlightImages: original.highlightImages.map(url => ({ url, name: url.split('/').pop()! })),
             settings: { ...original.settings },
         });
-        createPostModal?.show();
+        formModal?.show();
     };
-    const handleSaved = () => {
-        createPostModal?.hide();
-        refetch();
-    };
-    const handleSelect = (id: string, checked: boolean) => {
+
+    const handleSelect = (id: string, checked: boolean) =>
         setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)));
-    };
 
     return (
         <div className="app-container container-xxl">
@@ -120,25 +132,28 @@ const ContentPage: React.FC = () => {
                     <AsideDefault />
                     <div className="app-main flex-column flex-row-fluid" id="kt_app_main">
                         <Content>
+                            {success && (
+                                <div className="alert alert-success">
+                                    Comunicado salvo com sucesso!
+                                </div>
+                            )}
                             <div className="row">
-                                {/* Sidebar de canais */}
                                 <div className="col-lg-4">
                                     <ChannelsList
                                         channels={channels}
                                         selectedChannelId={channelId}
                                         onChannelSelect={setChannelId}
-                                        onChannelReorder={() => { }}
                                         onCreateChannel={handleCreateChannel}
-                                        onEditChannel={id => handleEditChannel(id)}
+                                        onEditChannel={handleEditChannel}
+                                        onChannelReorder={() => { }}
                                         onCreatePost={handleCreatePost}
                                     />
                                 </div>
-                                {/* Lista de conteúdos */}
                                 <div className="col-lg-8">
                                     <ContentList
                                         channelName={channels.find(c => c.id === channelId)?.name ?? null}
-                                        onEditChannel={() => handleEditChannel(channelId!)}
-                                        onCreatePost={() => handleCreatePost(channelId!)}
+                                        onEditChannel={() => channelId && handleEditChannel(channelId)}
+                                        onCreatePost={() => channelId && handleCreatePost(channelId)}
                                         items={items}
                                         loading={loading}
                                         error={error}
@@ -151,8 +166,8 @@ const ContentPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Modal de criação/edição */}
-                            <div className="modal fade modal-xl" tabIndex={-1} ref={createPostRef}>
+                            {/* ContentForm modal */}
+                            <div className="modal fade modal-xl" tabIndex={-1} ref={formRef}>
                                 <div className="modal-dialog modal-fullscreen-lg-down">
                                     <div className="modal-content">
                                         <ContentForm
@@ -164,18 +179,7 @@ const ContentPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Modal de canal */}
-                            <ChannelModal
-                                show={channelModalShow}
-                                onHide={() => setChannelModalShow(false)}
-                                channelId={channelModalId}
-                                companyId={currentUser!.companyId}
-                                onSave={() =>
-                                    channelsService
-                                        .list(currentUser!.companyId, spaceId!)
-                                        .then(data => setChannels(data))
-                                }
-                            />
+                            {/* ChannelModal aqui */}
                         </Content>
                     </div>
                 </div>
