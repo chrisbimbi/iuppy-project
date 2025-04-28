@@ -1,3 +1,4 @@
+// src/app/modules/news/hooks/useNews.ts
 import { useState, useEffect } from 'react';
 import { News } from '@shared/types';
 import { NewsService } from '../services/news.service';
@@ -10,47 +11,24 @@ export const useNews = ({ channelId }: UseNewsProps) => {
   const [news, setNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
   useEffect(() => {
     const fetchNews = async () => {
-      if (!channelId) {
-        setNews([]);
-        return;
-      }
-
       setLoading(true);
-      setError(null);
-
       try {
-        const data: News[] = await NewsService.getNews();
-
-        // Filtrar news pelo canal selecionado
-        const filtered = data.filter((news) => news.channelId === channelId);
-
-        // Garantir que settings e targetAudience sejam válidos
-        const mappedNews = filtered.map((news) => ({
-          ...news,
-          settings: {
-            ...news.settings,
-            targetAudience: Array.isArray(news.settings?.targetAudience)
-              ? news.settings.targetAudience
-              : [], // Garante que seja um array
-            moderateComments: news.settings?.moderateComments ?? false,
-            allowReactions: news.settings?.allowReactions ?? false,
-            pushNotification: news.settings?.pushNotification ?? false,
-          },
-        }));
-
-        setNews(mappedNews);
+        const data = await NewsService.list(channelId);
+        setNews(data);
       } catch (err: any) {
-        setError(err?.message || 'Erro ao buscar news.'); // Fallback seguro para erros
+        setError(err.message || 'Erro ao buscar conteúdos.');
       } finally {
         setLoading(false);
       }
     };
+    if (channelId !== null) fetchNews();
+  }, [channelId, refreshIndex]);
 
-    fetchNews();
-  }, [channelId]); // Executa o efeito apenas quando channelId mudar
+  const refetch = () => setRefreshIndex(i => i + 1);
 
-  return { news, loading, error };
+  return { news, loading, error, refetch };
 };

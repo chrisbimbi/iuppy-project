@@ -40,7 +40,7 @@ export const NewSchema = z.object({
   authorId: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  targetAudience: z.array(z.string()),
+  //targetAudience: z.array(z.string()),
   isPublished: z.boolean(),
   attachments: z.array(z.string()).optional(),
   engagementMetrics: ContentEngagementSchema,

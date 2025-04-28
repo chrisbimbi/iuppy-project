@@ -1,94 +1,145 @@
-// frontend/src/app/modules/contents/pages/ContentsPage.tsx
-
-import React, { useEffect, useState } from 'react';
-import { Content } from '../../../../layout/components/Content';
-import { AsideDefault } from '../../../../layout/components/aside/AsideDefault';
-import { ContentsMenu } from '../components/ContentsMenu';
-import { Channel } from '@shared/types/Channel';
+// src/app/modules/contents/pages/ContentsPage.tsx
+import React, { useEffect, useRef, useState } from 'react';
+import { AsideDefault } from 'src/layout/components/aside/AsideDefault';
+import { Content } from 'src/layout/components/Content';
 import { ChannelsList } from '../../channels/components/ChannelsList';
+import { ContentsList } from '../components/ContentsList';
+import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
 import { useAuth } from '../../auth';
-import { CreateNewsDto, NewsType } from '@shared/types';
-import { useNavigate } from 'react-router-dom';
-import { ChannelsService } from '../../channels/servicces/channels.service';
 import { useNews } from '../../news/hooks/useNews';
-import { NewsList } from '../../news/components/NewsList';
-const ContentsPage: React.FC = () => {
-    const { currentUser } = useAuth();
-    const navigate = useNavigate();
+import { spacesService } from '../../spaces/services/spaces.service';
+import { channelsService } from '../../channels/services/channels.service';
+import { Modal } from 'bootstrap';
+import { initialNewValues } from '../../news/components/helpers/initialValues';
+import ChannelModal from '../../channels/components/ChannelModal';
+import { CreateNewWrapper } from '../../news/components/CreateNewsWizard';
+import { CreateNewsDto } from '@shared/types';
+import { NewsService } from '../../news/services/news.service';
 
-    const [channels, setChannels] = useState<Channel[]>([]);
-    const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
-    const { news, loading, error } = useNews({ channelId: selectedChannelId });
+export const ContentsPage: React.FC = () => {
+    const { currentUser } = useAuth();
+    const [spaces, setSpaces] = useState<any[]>([]);
+    const [channels, setChannels] = useState<any[]>([]);
+    const [selSpace, setSelSpace] = useState<string | null>(null);
+    const [selChan, setSelChan] = useState<string | null>(null);
+    const { news, loading, error, refetch } = useNews({ channelId: selChan });
+    const [selectedNewsIds, setSelectedNewsIds] = useState<string[]>([]);
+    const [channelModalShow, setChannelModalShow] = useState(false);
+    const [channelModalId, setChannelModalId] = useState<string | undefined>(undefined);
+    const createPostRef = useRef<HTMLDivElement>(null);
+    const [createPostModal, setCreatePostModal] = useState<Modal | null>(null);
+    const [editingId, setEditingId] = useState<string | undefined>(undefined);
+    const [wizardInitialValues, setWizardInitialValues] = useState<CreateNewsDto>({
+        ...initialNewValues,
+        channelId: selChan!,
+    });
 
     useEffect(() => {
-        if (currentUser) {
-            fetchChannels();
+        if (createPostRef.current) {
+            setCreatePostModal(new Modal(createPostRef.current));
         }
+        DrawerComponent.bootstrap();
+        setTimeout(() => DrawerComponent.createInstances('#kt_stats_drawer'), 50);
+    }, []);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        spacesService.list(currentUser.companyId).then(data => {
+            setSpaces(data);
+            if (!selSpace) setSelSpace(data[0]?.id ?? null);
+        });
     }, [currentUser]);
 
-    const fetchChannels = async () => {
+    useEffect(() => {
+        if (!selSpace) return;
+        if (!currentUser) return;
+        channelsService.list(currentUser.companyId, selSpace).then(data => {
+            setChannels(data);
+            if (!selChan) setSelChan(data[0]?.id ?? null);
+        });
+    }, [selSpace]);
+
+    const handleCreatePost = () => {
+        setEditingId(undefined);
+        setWizardInitialValues({ ...initialNewValues, channelId: selChan! });
+        createPostModal!.show();
+    };
+
+    const handleEditChannel = (id: string) => {
+        setChannelModalId(id);
+        setChannelModalShow(true);
+    };
+
+    const reloadChannels = () => {
+        if (!selSpace) return;
+        if (currentUser) {
+            channelsService.list(currentUser.companyId, selSpace).then(data => setChannels(data));
+        }
+        setChannelModalShow(false);
+    };
+
+    const handleEditNews = async (id: string) => {
         try {
-            console.log('CURRENT USER companyId >>>>  ' + currentUser!.companyId)
-            console.log('CURRENT USER userId >>>>  ' + currentUser!.id)
-            const response = await ChannelsService.getChannels();
-            console.log('Canais retornados do backend:', response);
-            const filteredChannels = response.filter((channel: Channel) => channel.companyId === currentUser?.companyId);
-            console.log('Canais filtrados:', filteredChannels);
-            setChannels(filteredChannels);
-        } catch (error) {
-            console.error('Erro ao buscar canais:', error);
+            const item = await NewsService.getNew(id);
+            const dto = {
+                title: item.title,
+                subtitle: item.subtitle,
+                content: item.content,
+                type: item.type,
+                authorId: String(currentUser!.id),
+                companyId: currentUser!.companyId,
+                channelId: item.channelId,
+                isPublished: item.isPublished,
+                attachments: item.attachments.map(url => ({ url, name: url.split('/').pop()! })),
+                highlightImages: item.highlightImages.map(url => ({ url, name: url.split('/').pop()! })),
+                settings: { ...item.settings },
+            };
+            setEditingId(id);
+            setWizardInitialValues(dto);
+            createPostModal!.show();
+        } catch {
+            alert('Erro ao carregar conteúdo para edição.');
         }
     };
 
-    const handleChannelSelect = (channelId: string) => {
-        setSelectedChannelId(channelId);
+    const handleDeleteNews = async (id: string) => {
+        if (!confirm('Confirma a exclusão deste conteúdo?')) return;
+        try {
+            await NewsService.deleteNew(id);
+            refetch();
+        } catch {
+            alert('Erro ao deletar.');
+        }
     };
 
-    const handleCreateChannel = () => {
-        console.log('Criar novo canal');
-        // Aqui você pode, por exemplo, abrir um modal ou redirecionar para a rota de criação de canal
+    const handleDuplicateNews = async (id: string) => {
+        try {
+            const original = news.find(n => n.id === id);
+            if (!original) throw new Error();
+            const dto = {
+                ...initialNewValues,
+                title: original.title + ' (Cópia)',
+                subtitle: original.subtitle,
+                content: original.content,
+                type: original.type,
+                authorId: String(currentUser!.id),
+                companyId: currentUser!.companyId,
+                channelId: original.channelId,
+                isPublished: false,
+                attachments: original.attachments.map(url => ({ url, name: url.split('/').pop()! })),
+                highlightImages: original.highlightImages.map(url => ({ url, name: url.split('/').pop()! })),
+                settings: { ...original.settings },
+            };
+            await NewsService.createNew(dto);
+            refetch();
+            alert('Duplicado com sucesso!');
+        } catch {
+            alert('Erro ao duplicar.');
+        }
     };
 
-    const handleEditChannel = (channelId: string) => {
-        console.log('Editar canal:', channelId);
-        // Aqui você pode redirecionar para uma página de edição ou abrir um modal de edição
-    };
-
-    const initialValues: CreateNewsDto = {
-        title: '',
-        subtitle: '',
-        content: '',
-        type: NewsType.ANNOUNCEMENT,
-        authorId: '',
-        channelId: '',
-        attachments: [],
-        highlightImages: [],
-        settings: {
-            visibility: 'public',
-            allowComments: true,
-            moderateComments: false,
-            allowReactions: true,
-            notifyUsers: false,
-            pushNotification: false,
-            emailNotification: false,
-            allowSharing: true,
-            showAuthor: true,
-            showPublishDate: true,
-            pinToTop: false,
-            schedulePublication: false,
-            expirePublication: false,
-            pushTitle: '',
-            pushContent: '',
-            expirationDate: undefined,
-            schedulePublishDate: undefined,
-            targetAudience: []
-        },
-        isPublished: false
-    };
-
-    const handleCreateContent = () => {
-        navigate('/contents/news/create');
-    };
+    const handleSelect = (id: string, checked: boolean) =>
+        setSelectedNewsIds(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)));
 
     return (
         <div className="app-container container-xxl">
@@ -98,46 +149,84 @@ const ContentsPage: React.FC = () => {
                     <div className="app-main flex-column flex-row-fluid" id="kt_app_main">
                         <Content>
                             <div className="row">
-                                {/* Menu lateral (3 colunas) */}
-                                <div className="col-md-3">
-                                    <ContentsMenu />
+                                <div className="col-lg-4">
+                                    <ChannelsList
+                                        channels={channels}
+                                        selectedChannelId={selChan}
+                                        onChannelSelect={setSelChan}
+                                        onCreateChannel={() => setChannelModalShow(true)}
+                                        onEditChannel={handleEditChannel}
+                                        onChannelReorder={() => { }}
+                                        onCreatePost={handleCreatePost}
+                                    />
                                 </div>
-                                {/* Área principal (9 colunas) */}
-                                <div className="col-md-9">
-                                    <div className="card card-xl-stretch mb-5">
-                                        <div className="card-header border-0 pt-5 d-flex flex-wrap justify-content-between">
-                                            <div>
-                                                <h3 className="card-title fw-bold fs-3 mb-1">Filtros de Segmentação</h3>
-                                                <div className="d-flex gap-2 mt-3">
-                                                    <select className="form-select">
-                                                        <option value="All">Todos Locais</option>
-                                                        <option value="Matriz">Matriz</option>
-                                                        <option value="Filial1">Filial 1</option>
-                                                    </select>
-                                                    <select className="form-select">
-                                                        <option value="All">Todos Grupos</option>
-                                                        <option value="Diretoria">Diretoria</option>
-                                                        <option value="RH">RH</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <button className="btn btn-sm btn-primary mt-4" onClick={handleCreateContent}>
-                                                    Criar Conteúdo
-                                                </button>
-                                            </div>
+                                <div className="col-lg-8">
+                                    <ContentsList
+                                        channelName={channels.find(c => c.id === selChan)?.name ?? null}
+                                        onEditChannel={handleCreatePost}
+                                        onCreatePost={handleCreatePost}
+                                        items={news}
+                                        loading={loading}
+                                        error={error}
+                                        selectedIds={selectedNewsIds}
+                                        onSelect={handleSelect}
+                                        onEdit={handleEditNews}
+                                        onDelete={handleDeleteNews}
+                                        onDuplicate={handleDuplicateNews}
+                                    />
+                                </div>
+                            </div>
+                            <ChannelModal
+                                show={channelModalShow}
+                                onHide={() => setChannelModalShow(false)}
+                                channelId={channelModalId}
+                                companyId={currentUser!.companyId}
+                                onSave={reloadChannels}
+                            />
+                            <div className="modal fade modal-xl" tabIndex={-1} ref={createPostRef} id="kt_modal_create_content">
+                                <div className="modal-dialog modal-fullscreen-lg-down">
+                                    <div className="modal-content">
+                                        <div className="modal-header">
+                                            <h5 className="modal-title">
+                                                {editingId
+                                                    ? `Editar conteúdo para o canal “${channels.find(c => c.id === selChan)?.name}”`
+                                                    : `Criar novo conteúdo para o canal “${channels.find(c => c.id === selChan)?.name}”`}
+                                            </h5>
+                                            <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
-                                        <div className="card-body pt-5">
-                                            <ChannelsList
-                                                channels={channels}
-                                                selectedChannelId={selectedChannelId}
-                                                onChannelSelect={handleChannelSelect}
-                                                onCreateChannel={handleCreateChannel}
-                                                onEditChannel={handleEditChannel}
+                                        <div className="modal-body">
+                                            <CreateNewWrapper
+                                                initialValues={wizardInitialValues}
+                                                editingId={editingId}
+                                                onSaved={() => { createPostModal!.hide(); refetch(); }}
                                             />
-                                            <NewsList news={news} loading={loading} error={error} />
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            {/* Drawer for content statistics */}
+                            <div
+                                id="kt_stats_drawer"
+                                className="bg-body drawer drawer-end"
+                                data-drawer="true"
+                                data-drawer-activate="true"
+                                data-drawer-overlay="true"
+                                data-drawer-width="{default:'300px', 'md':'500px'}"
+                                data-drawer-direction="end"
+                            >
+                                <div className="drawer-header pe-5">
+                                    <h3 className="drawer-title"></h3>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-icon btn-active-light-primary ms-2"
+                                        data-drawer-dismiss="true"
+                                    >
+                                        <i className="bi bi-x fs-2"></i>
+                                    </button>
+                                </div>
+                                <div className="drawer-body px-5 pb-10">
+                                    {/* Estatísticas serão carregadas aqui */}
+                                    <div id="kt_stats_chart"></div>
                                 </div>
                             </div>
                         </Content>

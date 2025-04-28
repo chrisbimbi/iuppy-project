@@ -25,7 +25,7 @@ const FeedsWidget3: React.FC<Props> = ({className, data}) => {
           <div className='d-flex align-items-center flex-grow-1'>
             {/* begin::Avatar */}
             <div className='symbol symbol-45px me-5'>
-              <img src='/media/avatars/300-21.jpg' alt='' />
+              <img src='../media/avatars/300-21.jpg' alt='' />
             </div>
             {/* end::Avatar */}
 

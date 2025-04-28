@@ -19,17 +19,17 @@ const languages = [
   {
     lang: 'en',
     name: 'English',
-    flag: '/media/flags/united-states.svg',
+    flag: '../media/flags/united-states.svg',
   },
   {
     lang: 'pt-BR',
     name: 'Português',
-    flag: '/media/flags/brazil.svg',
+    flag: '../media/flags/brazil.svg',
   },
   {
     lang: 'it',
     name: 'Italiano',
-    flag: '/media/flags/italy.svg',
+    flag: '../media/flags/italy.svg',
   },]
 
 export function getLanguage(lang: string) {

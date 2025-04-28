@@ -1,0 +1,421 @@
+.
+├── .husky
+│   └── _
+│       ├── .gitignore
+│       ├── applypatch-msg
+│       ├── commit-msg
+│       ├── h
+│       ├── husky.sh
+│       ├── post-applypatch
+│       ├── post-checkout
+│       ├── post-commit
+│       ├── post-merge
+│       ├── post-rewrite
+│       ├── pre-applypatch
+│       ├── pre-auto-gc
+│       ├── pre-commit
+│       ├── pre-merge-commit
+│       ├── pre-push
+│       ├── pre-rebase
+│       └── prepare-commit-msg
+├── .vscode
+│   └── settings.json
+├── backend
+│   ├── src
+│   │   ├── channels
+│   │   │   ├── dto
+│   │   │   ├── .DS_Store
+│   │   │   ├── channel.entity.ts
+│   │   │   ├── channels.controller.ts
+│   │   │   ├── channels.module.ts
+│   │   │   └── channels.service.ts
+│   │   ├── config
+│   │   │   └── data-source.ts
+│   │   ├── migrations
+│   │   │   └── 1700000000001-add-channel-contributors-admins.ts
+│   │   ├── news
+│   │   │   ├── dto
+│   │   │   ├── .DS_Store
+│   │   │   ├── news.controller.ts
+│   │   │   ├── news.entity.ts
+│   │   │   ├── news.module.ts
+│   │   │   └── news.service.ts
+│   │   ├── spaces
+│   │   │   ├── dto
+│   │   │   ├── space.entity.ts
+│   │   │   ├── spaces.controller.ts
+│   │   │   ├── spaces.module.ts
+│   │   │   └── spaces.service.ts
+│   │   ├── users
+│   │   │   ├── dto
+│   │   │   ├── user.entity.ts
+│   │   │   ├── users.controller.ts
+│   │   │   ├── users.module.ts
+│   │   │   └── users.service.ts
+│   │   ├── .DS_Store
+│   │   ├── app.controller.spec.ts
+│   │   ├── app.controller.ts
+│   │   ├── app.module.ts
+│   │   ├── app.service.ts
+│   │   └── main.ts
+│   ├── test
+│   │   ├── app.e2e-spec.ts
+│   │   └── jest-e2e.json
+│   ├── .!66720!.DS_Store
+│   ├── .DS_Store
+│   ├── .env.development
+│   ├── .env.production
+│   ├── .eslintrc.js
+│   ├── .prettierrc
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── docker-compose.yml
+│   ├── nest-cli.json
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── seed.ts
+│   ├── tsconfig.build.json
+│   ├── tsconfig.json
+│   └── webpack.config.js
+├── frontend
+│   ├── public
+│   │   ├── media
+│   │   │   ├── auth
+│   │   │   ├── avatars
+│   │   │   ├── banners
+│   │   │   ├── books
+│   │   │   ├── demo
+│   │   │   ├── email
+│   │   │   ├── features-logos
+│   │   │   ├── flags
+│   │   │   ├── framework-logos
+│   │   │   ├── icons
+│   │   │   ├── illustrations
+│   │   │   ├── logos
+│   │   │   ├── misc
+│   │   │   ├── patterns
+│   │   │   ├── plugins
+│   │   │   ├── preview
+│   │   │   ├── product
+│   │   │   ├── products
+│   │   │   ├── smiles
+│   │   │   ├── stock
+│   │   │   └── svg
+│   │   ├── favicon.ico
+│   │   └── splash-screen.css
+│   ├── src
+│   │   ├── app
+│   │   │   ├── modules
+│   │   │   ├── pages
+│   │   │   ├── routing
+│   │   │   ├── .DS_Store
+│   │   │   └── App.tsx
+│   │   ├── assets
+│   │   │   ├── fonticon
+│   │   │   ├── keenicons
+│   │   │   ├── sass
+│   │   │   ├── ts
+│   │   │   └── .DS_Store
+│   │   ├── components
+│   │   │   ├── CustomDropzone.tsx
+│   │   │   ├── QuillWrapper.tsx
+│   │   │   └── SafeHtml.tsx
+│   │   ├── data
+│   │   │   └── mockData.json
+│   │   ├── helpers
+│   │   │   ├── components
+│   │   │   ├── crud-helper
+│   │   │   ├── icons-config
+│   │   │   ├── .DS_Store
+│   │   │   ├── AssetHelpers.ts
+│   │   │   ├── RouterHelpers.ts
+│   │   │   ├── dataExamples.ts
+│   │   │   ├── index.ts
+│   │   │   └── react18MigrationHelpers.ts
+│   │   ├── hooks
+│   │   │   └── useApiData.ts
+│   │   ├── i18n
+│   │   │   ├── messages
+│   │   │   ├── Metronici18n.tsx
+│   │   │   └── i18nProvider.tsx
+│   │   ├── layout
+│   │   │   ├── components
+│   │   │   ├── core
+│   │   │   ├── .DS_Store
+│   │   │   ├── MasterInit.tsx
+│   │   │   └── MasterLayout.tsx
+│   │   ├── partials
+│   │   │   ├── chat
+│   │   │   ├── content
+│   │   │   ├── layout
+│   │   │   ├── modals
+│   │   │   ├── widgets
+│   │   │   ├── .DS_Store
+│   │   │   └── index.ts
+│   │   ├── types
+│   │   │   └── types.ts
+│   │   ├── utils
+│   │   │   ├── fileUtils.ts
+│   │   │   └── sanitizeHtml.tsx
+│   │   ├── .DS_Store
+│   │   ├── main.tsx
+│   │   └── vite-env.d.ts
+│   ├── .DS_Store
+│   ├── .env
+│   ├── .env.development
+│   ├── .env.production
+│   ├── .eslintignore
+│   ├── .eslintrc.cjs
+│   ├── .gitignore
+│   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   ├── README.md
+│   ├── index.html
+│   ├── nginx.conf
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   ├── vite.config.ts
+│   ├── yarn-error.log
+│   └── yarn.lock
+├── mobile
+│   ├── .dart_tool
+│   │   ├── dartpad
+│   │   │   └── web_plugin_registrant.dart
+│   │   ├── extension_discovery
+│   │   │   ├── README.md
+│   │   │   └── vs_code.json
+│   │   ├── flutter_build
+│   │   │   ├── 556c35ab511f5ae38c77e64f08a4d179
+│   │   │   └── d823f12e4239db784e919281cee3e4ea
+│   │   ├── package_config.json
+│   │   ├── package_config_subset
+│   │   └── version
+│   ├── .idea
+│   │   ├── libraries
+│   │   │   ├── Dart_SDK.xml
+│   │   │   └── KotlinJavaRuntime.xml
+│   │   ├── runConfigurations
+│   │   │   └── main_dart.xml
+│   │   ├── modules.xml
+│   │   └── workspace.xml
+│   ├── android
+│   │   ├── .gradle
+│   │   │   ├── 8.3
+│   │   │   ├── buildOutputCleanup
+│   │   │   ├── kotlin
+│   │   │   └── vcs-1
+│   │   ├── app
+│   │   │   ├── src
+│   │   │   └── build.gradle
+│   │   ├── gradle
+│   │   │   └── wrapper
+│   │   ├── .gitignore
+│   │   ├── build.gradle
+│   │   ├── gradle.properties
+│   │   ├── gradlew
+│   │   ├── gradlew.bat
+│   │   ├── local.properties
+│   │   ├── mobile_android.iml
+│   │   └── settings.gradle
+│   ├── ios
+│   │   ├── .symlinks
+│   │   │   └── plugins
+│   │   ├── Flutter
+│   │   │   ├── AppFrameworkInfo.plist
+│   │   │   ├── Debug.xcconfig
+│   │   │   ├── Flutter.podspec
+│   │   │   ├── Generated.xcconfig
+│   │   │   ├── Release.xcconfig
+│   │   │   └── flutter_export_environment.sh
+│   │   ├── Pods
+│   │   │   ├── Headers
+│   │   │   ├── Local Podspecs
+│   │   │   ├── Pods.xcodeproj
+│   │   │   ├── Target Support Files
+│   │   │   └── Manifest.lock
+│   │   ├── Runner
+│   │   │   ├── Assets.xcassets
+│   │   │   ├── Base.lproj
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── GeneratedPluginRegistrant.h
+│   │   │   ├── GeneratedPluginRegistrant.m
+│   │   │   ├── Info.plist
+│   │   │   └── Runner-Bridging-Header.h
+│   │   ├── Runner.xcodeproj
+│   │   │   ├── project.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   ├── xcuserdata
+│   │   │   └── project.pbxproj
+│   │   ├── Runner.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   ├── xcuserdata
+│   │   │   └── contents.xcworkspacedata
+│   │   ├── RunnerTests
+│   │   │   └── RunnerTests.swift
+│   │   ├── .gitignore
+│   │   ├── Podfile
+│   │   └── Podfile.lock
+│   ├── ios_backup
+│   │   ├── Flutter
+│   │   │   ├── AppFrameworkInfo.plist
+│   │   │   ├── Debug.xcconfig
+│   │   │   ├── Generated.xcconfig
+│   │   │   ├── Release.xcconfig
+│   │   │   └── flutter_export_environment.sh
+│   │   ├── Runner
+│   │   │   ├── Assets.xcassets
+│   │   │   ├── Base.lproj
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── GeneratedPluginRegistrant.h
+│   │   │   ├── GeneratedPluginRegistrant.m
+│   │   │   ├── Info.plist
+│   │   │   └── Runner-Bridging-Header.h
+│   │   ├── Runner.xcodeproj
+│   │   │   ├── project.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   ├── xcuserdata
+│   │   │   └── project.pbxproj
+│   │   ├── Runner.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   ├── xcuserdata
+│   │   │   └── contents.xcworkspacedata
+│   │   ├── RunnerTests
+│   │   │   └── RunnerTests.swift
+│   │   ├── .DS_Store
+│   │   └── .gitignore
+│   ├── lib
+│   │   ├── config
+│   │   │   └── flavor_config.dart
+│   │   ├── models
+│   │   ├── services
+│   │   ├── viewmodels
+│   │   │   └── base_view_model.dart
+│   │   ├── views
+│   │   │   ├── home_view.dart
+│   │   │   └── login_view.dart
+│   │   ├── main.dart
+│   │   ├── main_development.dart
+│   │   └── main_production.dart
+│   ├── linux
+│   │   ├── flutter
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── generated_plugin_registrant.cc
+│   │   │   ├── generated_plugin_registrant.h
+│   │   │   └── generated_plugins.cmake
+│   │   ├── runner
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── main.cc
+│   │   │   ├── my_application.cc
+│   │   │   └── my_application.h
+│   │   ├── .gitignore
+│   │   └── CMakeLists.txt
+│   ├── macos
+│   │   ├── Flutter
+│   │   │   ├── ephemeral
+│   │   │   ├── Flutter-Debug.xcconfig
+│   │   │   ├── Flutter-Release.xcconfig
+│   │   │   └── GeneratedPluginRegistrant.swift
+│   │   ├── Runner
+│   │   │   ├── Assets.xcassets
+│   │   │   ├── Base.lproj
+│   │   │   ├── Configs
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── DebugProfile.entitlements
+│   │   │   ├── Info.plist
+│   │   │   ├── MainFlutterWindow.swift
+│   │   │   └── Release.entitlements
+│   │   ├── Runner.xcodeproj
+│   │   │   ├── project.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   └── project.pbxproj
+│   │   ├── Runner.xcworkspace
+│   │   │   ├── xcshareddata
+│   │   │   └── contents.xcworkspacedata
+│   │   ├── RunnerTests
+│   │   │   └── RunnerTests.swift
+│   │   └── .gitignore
+│   ├── test
+│   │   └── widget_test.dart
+│   ├── web
+│   │   ├── icons
+│   │   │   ├── Icon-192.png
+│   │   │   ├── Icon-512.png
+│   │   │   ├── Icon-maskable-192.png
+│   │   │   └── Icon-maskable-512.png
+│   │   ├── favicon.png
+│   │   ├── index.html
+│   │   └── manifest.json
+│   ├── windows
+│   │   ├── flutter
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── generated_plugin_registrant.cc
+│   │   │   ├── generated_plugin_registrant.h
+│   │   │   └── generated_plugins.cmake
+│   │   ├── runner
+│   │   │   ├── resources
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── Runner.rc
+│   │   │   ├── flutter_window.cpp
+│   │   │   ├── flutter_window.h
+│   │   │   ├── main.cpp
+│   │   │   ├── resource.h
+│   │   │   ├── runner.exe.manifest
+│   │   │   ├── utils.cpp
+│   │   │   ├── utils.h
+│   │   │   ├── win32_window.cpp
+│   │   │   └── win32_window.h
+│   │   ├── .gitignore
+│   │   └── CMakeLists.txt
+│   ├── .DS_Store
+│   ├── .gitignore
+│   ├── .metadata
+│   ├── README.md
+│   ├── analysis_options.yaml
+│   ├── mobile.iml
+│   ├── pubspec.lock
+│   └── pubspec.yaml
+├── shared
+│   ├── src
+│   │   ├── constants
+│   │   │   └── newsDefaults.ts
+│   │   ├── types
+│   │   │   ├── Channel.ts
+│   │   │   ├── Company.ts
+│   │   │   ├── ContentEngagement.ts
+│   │   │   ├── CreateNewsDto.ts
+│   │   │   ├── CreateSpaceDto.ts
+│   │   │   ├── EngagementMetrics.ts
+│   │   │   ├── News.ts
+│   │   │   ├── NewsSettings.ts
+│   │   │   ├── NewsStatus.ts
+│   │   │   ├── NewsType.ts
+│   │   │   ├── ReactionsType.ts
+│   │   │   ├── Role.ts
+│   │   │   ├── Space.ts
+│   │   │   ├── UpdateNewsDto.ts
+│   │   │   ├── UpdateSpaceDto.ts
+│   │   │   ├── User.ts
+│   │   │   ├── UserEngagement.ts
+│   │   │   └── index.ts
+│   │   ├── validations
+│   │   │   └── index.ts
+│   │   └── .DS_Store
+│   ├── .DS_Store
+│   ├── package-lock.json
+│   ├── package.json
+│   └── tsconfig.json
+├── .!64770!.DS_Store
+├── .DS_Store
+├── .gitignore
+├── CONTRIBUTING.md
+├── README.md
+├── commitlint.config.js
+├── docker-compose.yml
+├── estrutura.txt
+├── package-lock.json
+├── package.json
+└── yarn.lock
+
+158 directories, 261 files

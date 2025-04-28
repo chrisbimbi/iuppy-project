@@ -1,10 +1,9 @@
-// backend/src/channels/channels.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Channel } from './channel.entity';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
-import { Channel } from './channel.entity';
 
 @Injectable()
 export class ChannelsService {
@@ -13,25 +12,37 @@ export class ChannelsService {
     private readonly channelRepository: Repository<Channel>,
   ) {}
 
-  async create(createChannelDto: CreateChannelDto): Promise<Channel> {
-    const channel = this.channelRepository.create(createChannelDto);
+  /* ------------------------------------------------- */
+  /* CRUD                                              */
+  /* ------------------------------------------------- */
+  create(dto: CreateChannelDto) {
+    const channel = this.channelRepository.create(dto);
     return this.channelRepository.save(channel);
   }
 
-  async findAll(): Promise<Channel[]> {
-    return this.channelRepository.find();
+  findByCompanyAndSpace(companyId: string, spaceId?: string) {
+    const qb = this.channelRepository
+      .createQueryBuilder('c')
+      .where('c."companyId" = :companyId', { companyId });
+
+    if (spaceId) {
+      // usa snake_case real da coluna
+      qb.andWhere(':spaceId = ANY(c."space_ids")', { spaceId });
+    }
+
+    return qb.orderBy('c."name"', 'ASC').getMany();
   }
 
-  async findOne(id: string): Promise<Channel> {
+  findOne(id: string) {
     return this.channelRepository.findOneBy({ id });
   }
 
-  async update(id: string, updateChannelDto: UpdateChannelDto): Promise<Channel> {
-    await this.channelRepository.update(id, updateChannelDto);
+  async update(id: string, dto: UpdateChannelDto) {
+    await this.channelRepository.update(id, dto);
     return this.findOne(id);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.channelRepository.delete(id);
+  remove(id: string) {
+    return this.channelRepository.delete(id);
   }
 }

@@ -3,8 +3,9 @@ import { Space } from '@shared/types/Space';
 
 @Entity({ name: 'spaces' })  // O nome da tabela será "spaces"
 export class SpaceEntity implements Space {
+  @Column('uuid')
   companyId: string;
-  createdAt: Date;
+   createdAt: Date;
   updatedAt: Date;
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -26,4 +27,5 @@ export class SpaceEntity implements Space {
 
   @Column({ default: true })
   active?: boolean;
+
 }

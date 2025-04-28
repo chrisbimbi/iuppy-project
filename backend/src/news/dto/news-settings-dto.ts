@@ -57,5 +57,5 @@ export class NewSettingsDto {
 
   @IsArray()
   @IsString({ each: true })
-  targetAudience: string[];
+  targetAudience?: string[];
 }

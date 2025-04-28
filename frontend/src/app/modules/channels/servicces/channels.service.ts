@@ -5,6 +5,14 @@ import { Channel } from '@shared/types/Channel';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/';
 
 export const ChannelsService = {
+
+  async list(companyId: string, spaceId?: string): Promise<Channel[]> {
+    console.log('[channelsService] GET /channels', { companyId, spaceId });
+    const { data } = await axios.get<Channel[]>(`${API_URL}/channels`, {
+      params: { companyId, spaceId },
+    });
+    return data;
+  },
   async getChannels(): Promise<Channel[]> {
     console.log('Fetching channels from API...' + API_URL);
     const response = await axios.get(`${API_URL}/channels`);

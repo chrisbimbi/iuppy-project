@@ -31,5 +31,6 @@ export const initialNewsValues: CreateNewsDto = {
     targetAudience: []
   },
   createdAt: undefined,
-  updatedAt: undefined
+  updatedAt: undefined,
+  companyId: ''
 };

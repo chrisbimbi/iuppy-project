@@ -12,14 +12,14 @@ export const REQUEST_PASSWORD_URL = `${API_URL}/forgot_password`;
 // Usuário fake para teste
 const fakeUser: UserModel = {
   id: '43c3b012-2634-41c6-bcc7-eb895bbf60f1',
-  username: 'SeededUser',
-  firstname: 'Teste',
-  lastname: 'Iuppy',
-  email: 'test@iuppy.com',        // não importa muito, pois é fake
-  companyId: '5f09494b-34dc-4c21-a869-6fb4df117abb',
+  username: 'chrispalmezan',
+  firstname: 'Christiano',
+  lastname: 'Palmezan',
+  email: 'christiano@iuppy.com.br',        // não importa muito, pois é fake
+  companyId: '7f64e31e-88cb-4edc-b661-10ebca66880f',
   spaceIds: [
     // pegue dois IDs de espaço (spaces) que você gerou, por ex:
-    '9c99ed8e-3b1b-4fef-91f1-4a65ef965930',
+    '17a22029-e28c-4cdb-8f75-399b54a5e248',
     '41ee84ef-3fad-4cdf-b373-2f5247f68889',
   ],
   groupIds: [
@@ -36,7 +36,7 @@ const fakeUser: UserModel = {
   auth: {
     api_token: 'fake_token_123',
   },
-  password: '$2b$10$NcupNw8HVffhD.XAcpNPHOdRMAp5ji6M5ymXxDWlRzFgho7L4HtIy',
+  password: '@@Cano086969',
 };
 
 // Server should return AuthModel
@@ -44,6 +44,7 @@ export function login(email: string, password: string) {
   return new Promise<{ data: AuthModel }>((resolve, reject) => {
     if (email === fakeUser.email && password === fakeUser.password) {
       resolve({ data: { api_token: fakeUser.auth.api_token } });
+      console.log(fakeUser.companyId)
     } else {
       reject({ message: 'Credenciais inválidas' });
     }

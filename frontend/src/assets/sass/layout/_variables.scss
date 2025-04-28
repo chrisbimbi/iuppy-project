@@ -66,6 +66,40 @@ $toolbar-config: (
 	border-dark: 1px solid $dark-light-dark) !default;
 
 // Aside
+
+.aside-menu {
+	.menu {
+		>.menu-item {
+			>.menu-link {
+				display: flex !important;
+				flex-direction: row !important;
+				align-items: center;
+				justify-content: flex-start;
+				width: 100% !important;
+				height: auto !important;
+				padding: 0.75rem 1rem;
+
+				.menu-icon {
+					margin-right: 0.75rem;
+					margin-bottom: 0;
+					width: auto !important;
+					display: inline-flex;
+					align-items: center;
+				}
+
+				.menu-title {
+					flex: none;
+					margin-left: 10px;;
+				}
+
+				.menu-arrow {
+					margin-left: auto;
+				}
+			}
+		}
+	}
+}
+
 $aside-config: (
 	z-index: 101,
 	// Aside's z-index property
@@ -73,7 +107,7 @@ $aside-config: (
 	menu-indention: 0.75rem,
 	bg-color: #090A0D,
 	logo-bg-color: #090A0D,
-	width: (desktop: 140px,
+	width: (desktop: 240px,
 		tablet-and-mobile: 80px),
 	// Aside width for desktop mode
 	logo-height: 120px,

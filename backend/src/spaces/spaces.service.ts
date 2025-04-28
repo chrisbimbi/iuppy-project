@@ -10,15 +10,18 @@ export class SpacesService {
   constructor(
     @InjectRepository(SpaceEntity)
     private spaceRepository: Repository<SpaceEntity>,
-  ) {}
+  ) { }
 
   async create(createSpaceDto: CreateSpaceDto): Promise<SpaceEntity> {
     const space = this.spaceRepository.create(createSpaceDto);
     return this.spaceRepository.save(space);
   }
 
-  async findAll(): Promise<SpaceEntity[]> {
-    return this.spaceRepository.find();
+  async findAll(companyId?: string): Promise<SpaceEntity[]> {
+    if (companyId) {
+      return this.spaceRepository.find({ where: { companyId } });
+    }
+    return this.spaceRepository.find();    // fallback: todos
   }
 
   async findOne(id: string): Promise<SpaceEntity> {
@@ -27,6 +30,11 @@ export class SpacesService {
       throw new NotFoundException(`Space with id ${id} not found`);
     }
     return space;
+  }
+
+  async findByCompany(companyId?: string): Promise<SpaceEntity[]> {
+    if (!companyId) return this.spaceRepository.find();
+    return this.spaceRepository.find({ where: { companyId }, order: { priority: 'ASC' } });
   }
 
   async update(id: string, updateSpaceDto: UpdateSpaceDto): Promise<SpaceEntity> {

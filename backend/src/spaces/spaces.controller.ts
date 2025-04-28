@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+// backend/src/spaces/spaces.controller.ts
+import { Controller, Get, Query, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { SpacesService } from './spaces.service';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
@@ -6,30 +7,33 @@ import { SpaceEntity } from './space.entity';
 
 @Controller('spaces')
 export class SpacesController {
-  constructor(private readonly spacesService: SpacesService) {}
+  constructor(private readonly spacesService: SpacesService) { }
 
-  @Post()
-  async create(@Body() createSpaceDto: CreateSpaceDto): Promise<SpaceEntity> {
-    return this.spacesService.create(createSpaceDto);
+  // GET /spaces?companyId=xxx
+  @Get()
+  findAll(@Query('companyId') companyId?: string) {
+    return this.spacesService.findAll(companyId);
   }
 
   @Get()
-  async findAll(): Promise<SpaceEntity[]> {
-    return this.spacesService.findAll();
+  find(
+    @Query('companyId') companyId?: string,
+  ): Promise<SpaceEntity[]> {
+    return this.spacesService.findByCompany(companyId);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string): Promise<SpaceEntity> {
-    return this.spacesService.findOne(id);
+  @Post()
+  create(@Body() dto: CreateSpaceDto) {
+    return this.spacesService.create(dto);
   }
 
-  @Put(':id')
-  async update(@Param('id') id: string, @Body() updateSpaceDto: UpdateSpaceDto): Promise<SpaceEntity> {
-    return this.spacesService.update(id, updateSpaceDto);
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateSpaceDto) {
+    return this.spacesService.update(id, dto);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: string) {
     return this.spacesService.remove(id);
   }
 }

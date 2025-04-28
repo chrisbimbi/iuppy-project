@@ -1,197 +1,86 @@
-
-import { useIntl } from 'react-intl'
-import { AsideMenuItemWithSubMain } from './AsideMenuItemWithSubMain'
-import { AsideMenuItemWithSub } from './AsideMenuItemWithSub'
-import { AsideMenuItem } from './AsideMenuItem'
+// frontend/src/layout/components/AsideMenuMain.tsx
+import React, { useEffect } from 'react';
+import { useIntl } from 'react-intl';
+import { useLocation } from 'react-router';
+import { useAuth } from 'src/app/modules/auth';
+import { useSpaces } from 'src/app/modules/spaces/hooks/useSpaces';
+import { DrawerComponent, ToggleComponent } from 'src/assets/ts/components';
+import { AsideMenuItemWithSub } from './AsideMenuItemWithSub';
+import { AsideMenuItem } from './AsideMenuItem';
 
 export function AsideMenuMain() {
-  const intl = useIntl()
+  const intl = useIntl();
+  const { pathname } = useLocation();
+  const isContents = pathname.startsWith('/contents');
+
+  const { currentUser } = useAuth();
+  const companyId = currentUser?.companyId ?? '';
+  const { data: spaces = [], loading } = useSpaces(companyId);
+
+  const t = (id: string, defaultMsg: string) => {
+    try {
+      return intl.formatMessage({ id, defaultMessage: defaultMsg });
+    } catch {
+      return defaultMsg;
+    }
+  };
+
+  const modules = [
+    { id: 'NEWS',    to: '/contents/news',    icon: 'bi-file-earmark-text', label: t('MENU.NEWS','News') },
+    { id: 'PAGES',   to: '/contents/pages',   icon: 'bi-journal-text',      label: t('MENU.PAGES','Pages') },
+    { id: 'SURVEYS', to: '/contents/surveys', icon: 'bi-bar-chart',         label: t('MENU.SURVEYS','Surveys') },
+  ];
+
+  // sempre re-inicializa o drawer/accordion do Metronic
+  useEffect(() => {
+    // @ts-ignore
+    window.setTimeout(() => {
+      // esses métodos estão no bundle TS do Metronic
+      // reinitialization garante que o accordion funcione após mudança de rota
+      DrawerComponent.reinitialization();
+      ToggleComponent.reinitialization();
+    }, 50);
+  }, [pathname]);
+
+  if (!isContents) return null;
 
   return (
     <>
-      <AsideMenuItem
-        to='/dashboard'
-        title='Home'
-        fontIcon='bi-house fs-2'
-        bsTitle={intl.formatMessage({ id: 'MENU.DASHBOARD' })}
-        className='py-2'
-      />
-
-      <AsideMenuItemWithSubMain
-        to='/News/pages'
-        title='News'
-        fontIcon='bi-file-text'
-        bsTitle='Toque para ver e criar news'
+      {/* --- Segmentação --- */}
+      <AsideMenuItemWithSub
+        to="/contents/news"
+        title={t('MENU.SEGMENTATION','Segmentação')}
+        fontIcon="bi-diagram-3"
       >
-        <AsideMenuItem
-          to='/contents/news/'
-          title='Ver news'
-          hasBullet={true}
-          bsTitle='Veja todos os news criados'
-        />
-         <AsideMenuItem
-          to='/contents/news/create/*'
-          title='Criar um new'
-          hasBullet={true}
-          bsTitle='Crie um novo new'
-        />
-      </AsideMenuItemWithSubMain>
+        {loading ? (
+          <AsideMenuItem title={t('MENU.LOADING', 'Carregando...')} to={''} />
+        ) : (
+          spaces.map(space => (
+            <AsideMenuItem
+              key={space.id}
+              to={`/contents/news?spaceId=${space.id}`}
+              title={space.name}
+              hasBullet
+            />
+          ))
+        )}
+      </AsideMenuItemWithSub>
 
-      <AsideMenuItemWithSubMain
-        to='/crafted/pages'
-        title='Crafted'
-        fontIcon='bi-file-text'
-        bsTitle='Crafted'
+      {/* --- Módulos --- */}
+      <AsideMenuItemWithSub
+        to="/contents/modules"
+        title={t('MENU.MODULES','Módulos')}
+        fontIcon="bi-stack"
       >
-        <AsideMenuItemWithSub to='/crafted/pages/profile' title='Profile' hasBullet={true}>
+        {modules.map(mod => (
           <AsideMenuItem
-            to='/crafted/pages/profile/overview'
-            title='Overview'
-            bsTitle='Overview'
-            hasBullet={true}
+            key={mod.id}
+            to={mod.to}
+            title={mod.label}
+            fontIcon={mod.icon}
           />
-          <AsideMenuItem
-            to='/crafted/pages/profile/projects'
-            title='Projects'
-            bsTitle='Projects'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/pages/profile/campaigns'
-            title='Campaigns'
-            bsTitle='Campaigns'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/pages/profile/documents'
-            title='Documents'
-            bsTitle='Documents'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/pages/profile/connections'
-            title='Connections'
-            hasBullet={true}
-            bsTitle='Connections'
-          />
-        </AsideMenuItemWithSub>
-
-        <AsideMenuItemWithSub to='/crafted/pages/wizards' title='Wizards' hasBullet={true}>
-          <AsideMenuItem
-            to='/crafted/pages/wizards/horizontal'
-            title='Horizontal'
-            hasBullet={true}
-            bsTitle='Horizontal'
-          />
-          <AsideMenuItem
-            to='/crafted/pages/wizards/vertical'
-            title='Vertical'
-            bsTitle='Vertical'
-            hasBullet={true}
-          />
-        </AsideMenuItemWithSub>
-
-        <AsideMenuItemWithSub to='/crafted/accounts' title='Accounts' hasBullet={true}>
-          <AsideMenuItem
-            to='/crafted/account/overview'
-            title='Overview'
-            hasBullet={true}
-            bsTitle='Overview'
-          />
-          <AsideMenuItem
-            to='/crafted/account/settings'
-            title='Settings'
-            hasBullet={true}
-            bsTitle='Settings'
-          />
-        </AsideMenuItemWithSub>
-
-        <AsideMenuItemWithSub to='/crafted/widgets' title='Widgets' hasBullet={true}>
-          <AsideMenuItem
-            to='/crafted/widgets/lists'
-            title='Lists'
-            bsTitle='Lists'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/widgets/statistics'
-            title='Statistics'
-            bsTitle='Statistics'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/widgets/charts'
-            title='Charts'
-            bsTitle='Charts'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/widgets/mixed'
-            title='Mixed'
-            bsTitle='Mixed'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/widgets/tables'
-            title='Tables'
-            bsTitle='Tables'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/crafted/widgets/feeds'
-            title='Feeds'
-            bsTitle='Feeds'
-            hasBullet={true}
-          />
-        </AsideMenuItemWithSub>
-
-        <AsideMenuItemWithSub to='/apps/chat' title='Chat' hasBullet={true}>
-          <AsideMenuItem
-            to='/apps/chat/private-chat'
-            title='Private Chat'
-            bsTitle='Private Chat'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/apps/chat/group-chat'
-            title='Group Chart'
-            bsTitle='Group Chart'
-            hasBullet={true}
-          />
-          <AsideMenuItem
-            to='/apps/chat/drawer-chat'
-            title='Drawer Chart'
-            bsTitle='Drawer Chart'
-            hasBullet={true}
-          />
-        </AsideMenuItemWithSub>
-        <AsideMenuItemWithSub to='/error' title='Errors' hasBullet={true}>
-          <AsideMenuItem to='/error/404' title='Error 404' hasBullet={true} />
-          <AsideMenuItem to='/error/500' title='Error 500' hasBullet={true} />
-        </AsideMenuItemWithSub>
-        <AsideMenuItem
-          to='/apps/user-management/users'
-          title='User management'
-          hasBullet={true}
-          bsTitle='User management'
-        />
-      </AsideMenuItemWithSubMain>
-
-      <AsideMenuItemWithSubMain
-        to='/builder'
-        title='Resources'
-        bsTitle='Resources'
-        fontIcon='bi-gear'
-      >
-        <AsideMenuItem to='/builder' title='Layout builder' fontIcon='bi-layers fs-3' />
-        <AsideMenuItem
-          to={import.meta.env.VITE_APP_PREVIEW_DOCS_URL + '/changelog'}
-          outside={true}
-          title={`Changelog ${import.meta.env.VITE_APP_VERSION}`}
-          fontIcon='bi-card-text fs-3'
-        />
-      </AsideMenuItemWithSubMain>
+        ))}
+      </AsideMenuItemWithSub>
     </>
-
-  )
+  );
 }

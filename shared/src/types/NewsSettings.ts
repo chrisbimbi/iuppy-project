@@ -16,7 +16,7 @@ export interface NewsSettings {
   pushContent?: string; // Tornado opcional, caso o backend permita ausência de conteúdo no push
   expirationDate?: Date; // Data de expiração opcional
   schedulePublishDate?: Date; // Data de publicação agendada opcional
-  targetAudience: string[]; // Público-alvo obrigatório
+  targetAudience?: string[]; // Público-alvo obrigatório
   maxAudienceSize?: number; // Adicionado caso o backend limite o tamanho do público
   restrictAccess?: boolean; // Adicionado para refletir restrições de acesso, se aplicável
 }

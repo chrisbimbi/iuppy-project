@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ErrorMessage, FormikErrors, FormikTouched } from 'formik';
-import { CreateNewsDto } from '@shared/types';
 import { useIntl } from 'react-intl';
 import { KTSVG } from '../../../../../helpers';
 import { Modal } from 'bootstrap';
+import { CreateNewsDto } from '@shared/types';
 
 type StepProps = {
   data: CreateNewsDto;
@@ -50,12 +50,24 @@ export const Step2: React.FC<StepProps> = ({ data, setFieldValue, errors, touche
         <div className='col-md-6'>
           <label className='form-label required'>Público Alvo</label>
           <input
-            name='targetAudience'
-            className={`form-control form-control-lg form-control-solid ${touched.settings?.targetAudience && errors.settings?.targetAudience ? 'is-invalid' : ''}`}
-            value={data.settings?.targetAudience.join(', ')}
-            onChange={(e) => setFieldValue('targetAudience', e.target.value.split(',').map(item => item.trim()))}
+            name='settings.targetAudience'
+            className={`form-control form-control-lg form-control-solid ${touched.settings?.targetAudience && errors.settings?.targetAudience
+                ? 'is-invalid'
+                : ''
+              }`}
+            value={data.settings?.targetAudience?.join(', ')}
+            onChange={e =>
+              setFieldValue(
+                'settings.targetAudience',
+                e.target.value.split(',').map(item => item.trim())
+              )
+            }
           />
-          <ErrorMessage name='targetAudience' component='div' className='invalid-feedback' />
+          <ErrorMessage
+            name='settings.targetAudience'
+            component='div'
+            className='invalid-feedback'
+          />
         </div>
         <div className='col-md-6'>
           <label className='form-label'>Visibilidade</label>
@@ -311,7 +323,7 @@ export const Step2: React.FC<StepProps> = ({ data, setFieldValue, errors, touche
                 aria-label='Close'
               >
                 <KTSVG
-                  path='/media/icons/duotune/arrows/arr061.svg'
+                  path='../media/icons/duotune/arrows/arr061.svg'
                   className='svg-icon svg-icon-2x'
                 />
               </div>

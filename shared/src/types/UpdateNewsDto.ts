@@ -9,8 +9,8 @@ export interface UpdateNewsDto {
   authorId?: string;
   type?: NewsType;
   isPublished?: boolean;
-  attachments?: { url: string; name: string }[]; // Estrutura consistente com CreateNewDto
-  highlightImages?: { url: string; altText?: string }[]; // Estrutura consistente com CreateNewDto
+  attachments: { url: string; name: string }[]; // Exemplo de estrutura para arquivos
+  highlightImages: { url: string; altText?: string }[];
   settings?: NewsSettings;
   updatedAt?: Date; // Adicionado para refletir a data de atualização
 }

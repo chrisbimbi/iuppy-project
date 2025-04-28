@@ -151,7 +151,7 @@ export const Step1: React.FC<StepProps> = ({ data, setFieldValue, errors, touche
                 <ErrorMessage name='title' component='div' className='invalid-feedback' />
             </div>
 
-            {/* <div className='fv-row mb-10'>
+            <div className='fv-row mb-10'>
                 <label className='form-label'>Subtítulo</label>
                 <input
                     type='text'
@@ -162,7 +162,7 @@ export const Step1: React.FC<StepProps> = ({ data, setFieldValue, errors, touche
                     onChange={(e) => setFieldValue('subtitle', e.target.value)}
                 />
                 <ErrorMessage name='subtitle' component='div' className='invalid-feedback' />
-            </div> */}
+            </div>
 
             <div className='fv-row mb-10'>
                 <label className='form-label required'>Tipo</label>

@@ -21,4 +21,10 @@ export class Channel implements ChannelInterface {
 
   @Column('text', { array: true, nullable: true })
   groupIds?: string[];
+
+  @Column('text', { array: true, nullable: true, name: 'contributor_ids' })
+  contributorIds?: string[];
+
+  @Column('text', { array: true, nullable: true, name: 'admin_ids' })
+  adminIds?: string[];
 }

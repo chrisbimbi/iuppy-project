@@ -1,20 +1,13 @@
-import { CreateNewsDto, NewsType } from '@shared/types';
+// src/app/modules/news/components/initialNewValues.ts
+import { CreateNewsDto, NewsType } from '@shared/types'
 
-/**
- * Este objeto contém os valores iniciais para a criação de um new.
- * 
- * Certifique-se de que as propriedades declaradas aqui correspondem exatamente 
- * ao tipo CreateNewDto definido na pasta shared.
- */
 export const initialNewValues: CreateNewsDto = {
   title: '',
   subtitle: '',
   content: '',
   type: NewsType.ANNOUNCEMENT,
   authorId: '',
-  channelId: '',
-  // Removemos "id", "createdAt" e "updatedAt", pois esses campos não fazem parte do DTO
-  attachments: [],
+  channelId: '', // já existe, mas vai ser sobrescrito  attachments: [],
   highlightImages: [],
   settings: {
     visibility: 'public',
@@ -36,5 +29,6 @@ export const initialNewValues: CreateNewsDto = {
     schedulePublishDate: undefined,
     targetAudience: []
   },
-  isPublished: false
-};
+  isPublished: false,
+  attachments: []
+}

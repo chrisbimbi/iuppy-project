@@ -54,7 +54,7 @@ const Statistics: FC = () => {
           <div className='col-xl-4'>
             <StatisticsWidget2
               className='card-xl-stretch mb-xl-8'
-              avatar='/media/svg/avatars/029-boy-11.svg'
+              avatar='../media/svg/avatars/029-boy-11.svg'
               title='Arthur Goldstain'
               description='System & Software Architect'
             />
@@ -63,7 +63,7 @@ const Statistics: FC = () => {
           <div className='col-xl-4'>
             <StatisticsWidget2
               className='card-xl-stretch mb-xl-8'
-              avatar='/media/svg/avatars/014-girl-7.svg'
+              avatar='../media/svg/avatars/014-girl-7.svg'
               title='Lisa Bold'
               description='Marketing & Fanance Manager'
             />
@@ -72,7 +72,7 @@ const Statistics: FC = () => {
           <div className='col-xl-4'>
             <StatisticsWidget2
               className='card-xl-stretch mb-5 mb-xl-8'
-              avatar='/media/svg/avatars/004-boy-1.svg'
+              avatar='../media/svg/avatars/004-boy-1.svg'
               title='Nick Stone'
               description='Customer Support Team'
             />

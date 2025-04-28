@@ -24,4 +24,12 @@ export class UpdateChannelDto {
   @IsArray()
   @IsUUID('all', { each: true })
   groupIds?: string[];
+
+  @IsOptional()
+  @IsArray() @IsUUID('4', { each: true })
+  contributorIds?: string[];
+
+  @IsOptional()
+  @IsArray() @IsUUID('4', { each: true })
+  adminIds?: string[];
 }

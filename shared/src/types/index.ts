@@ -12,3 +12,5 @@ export * from './User';
 export * from './UserEngagement';
 export * from './NewsStatus';
 export * from './Space';
+export * from './Channel';
+
