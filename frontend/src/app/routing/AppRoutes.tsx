@@ -1,22 +1,24 @@
-import { FC } from 'react'
-import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
-import { PrivateRoutes } from './PrivateRoutes'
-import { ErrorsPage } from '../modules/errors/ErrorsPage'
-import { Logout, AuthPage, useAuth } from '../modules/auth'
-import { App } from '../App'
-import { MasterLayout } from '../../layout/MasterLayout'
+// frontend/src/app/routes/AppRoutes.tsx
+import { FC } from 'react';
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
+import { PrivateRoutes } from './PrivateRoutes';
+import { ErrorsPage } from '../modules/errors/ErrorsPage';
+import { Logout, AuthPage, useAuth } from '../modules/auth';
+import { App } from '../App';
+import { MasterLayout } from '../../layout/MasterLayout';
 
-const { BASE_URL } = import.meta.env
+const { BASE_URL } = import.meta.env;
 
 const AppRoutes: FC = () => {
-  const { currentUser } = useAuth()
+  const { currentUser } = useAuth();
+
   return (
     <BrowserRouter basename={BASE_URL}>
       <Routes>
         <Route element={<App />}>
           <Route path='error/*' element={<ErrorsPage />} />
           <Route path='logout' element={<Logout />} />
-          
+
           {currentUser ? (
             <Route element={<MasterLayout />}>
               <Route path='/*' element={<PrivateRoutes />} />
@@ -31,7 +33,7 @@ const AppRoutes: FC = () => {
         </Route>
       </Routes>
     </BrowserRouter>
-  )
-}
+  );
+};
 
-export { AppRoutes }
+export { AppRoutes };

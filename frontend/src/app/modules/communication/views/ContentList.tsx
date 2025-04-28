@@ -1,23 +1,21 @@
-// src/app/modules/contents/components/ContentsList.tsx
-import React, { useEffect, useRef } from 'react';
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
-import { News } from '@shared/types';
+import React from 'react';
+import { News as Content } from '@shared/types';
 
 interface Props {
     channelName: string | null;
-    onEditChannel: () => void;
-    onCreatePost: () => void;
-    items: News[];
+    onEditChannel(): void;
+    onCreatePost(): void;
+    items: Content[];
     loading: boolean;
     error: any;
     selectedIds: string[];
-    onSelect: (id: string, checked: boolean) => void;
-    onEdit: (id: string) => void;
-    onDelete: (id: string) => void;
-    onDuplicate: (id: string) => void;
+    onSelect(id: string, checked: boolean): void;
+    onEdit(id: string): void;
+    onDuplicate(id: string): void;
+    onDelete(id: string): void;
 }
 
-export const ContentsList: React.FC<Props> = ({
+const ContentList: React.FC<Props> = ({
     channelName,
     onEditChannel,
     onCreatePost,
@@ -27,27 +25,9 @@ export const ContentsList: React.FC<Props> = ({
     selectedIds,
     onSelect,
     onEdit,
-    onDelete,
     onDuplicate,
+    onDelete,
 }) => {
-    const headerRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        MenuComponent.reinitialization();
-    }, [items]);
-
-    const openStats = (item: News) => {
-        const drawerEl = document.getElementById('kt_stats_drawer');
-        if (!drawerEl) return;
-        const dr = DrawerComponent.getInstance('#kt_stats_drawer');
-        if (!dr) return;
-
-        
-        const titleEl = dr.element.querySelector<HTMLElement>('.drawer-title');
-        if (titleEl) titleEl.innerText = `Estatísticas do conteúdo “${item.title}”`;
-        dr.show();
-    };
-
     if (loading) return <div>Carregando conteúdos...</div>;
     if (error) return <div>Erro ao carregar conteúdos.</div>;
 
@@ -56,16 +36,12 @@ export const ContentsList: React.FC<Props> = ({
             <div className="card-header py-5 d-flex justify-content-between align-items-center">
                 <h3>{channelName ?? 'Conteúdos'}</h3>
                 <div>
-                    {channelName && (
-                        <>
-                            <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
-                                <i className="bi bi-gear"></i>
-                            </button>
-                            <button className="btn btn-primary btn-sm" onClick={onCreatePost}>
-                                Criar
-                            </button>
-                        </>
-                    )}
+                    <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
+                        <i className="bi bi-gear"></i>
+                    </button>
+                    <button className="btn btn-primary btn-sm" onClick={onCreatePost}>
+                        Criar post
+                    </button>
                 </div>
             </div>
             <div className="card-body py-3">
@@ -77,15 +53,9 @@ export const ContentsList: React.FC<Props> = ({
                             <tr>
                                 <th>
                                     <input
-                                        ref={headerRef}
                                         type="checkbox"
-                                        checked={
-                                            items.length > 0 &&
-                                            items.every(i => selectedIds.includes(i.id))
-                                        }
-                                        onChange={e =>
-                                            items.forEach(i => onSelect(i.id, e.target.checked))
-                                        }
+                                        checked={items.length > 0 && items.every(i => selectedIds.includes(i.id))}
+                                        onChange={e => items.forEach(i => onSelect(i.id, e.target.checked))}
                                     />
                                 </th>
                                 <th>Título</th>
@@ -112,7 +82,7 @@ export const ContentsList: React.FC<Props> = ({
                                         <td>
                                             <button
                                                 className="btn btn-icon btn-sm"
-                                                onClick={() => openStats(item)}
+                                                onClick={() => {/* stats drawer logic */ }}
                                             >
                                                 <i className="bi bi-bar-chart-line"></i>
                                             </button>
@@ -123,29 +93,19 @@ export const ContentsList: React.FC<Props> = ({
                                                 <button
                                                     className="btn btn-icon"
                                                     type="button"
-                                                    id={`dropdown-${item.id}`}
                                                     data-bs-toggle="dropdown"
                                                     aria-expanded="false"
                                                 >
                                                     <i className="bi bi-three-dots-vertical"></i>
                                                 </button>
-                                                <ul
-                                                    className="dropdown-menu dropdown-menu-end"
-                                                    aria-labelledby={`dropdown-${item.id}`}
-                                                >
+                                                <ul className="dropdown-menu dropdown-menu-end">
                                                     <li>
-                                                        <button
-                                                            className="dropdown-item"
-                                                            onClick={() => onEdit(item.id)}
-                                                        >
+                                                        <button className="dropdown-item" onClick={() => onEdit(item.id)}>
                                                             <i className="bi bi-pencil me-2" /> Editar
                                                         </button>
                                                     </li>
                                                     <li>
-                                                        <button
-                                                            className="dropdown-item"
-                                                            onClick={() => onDuplicate(item.id)}
-                                                        >
+                                                        <button className="dropdown-item" onClick={() => onDuplicate(item.id)}>
                                                             <i className="bi bi-files me-2" /> Duplicar
                                                         </button>
                                                     </li>
@@ -170,3 +130,5 @@ export const ContentsList: React.FC<Props> = ({
         </div>
     );
 };
+
+export default ContentList;

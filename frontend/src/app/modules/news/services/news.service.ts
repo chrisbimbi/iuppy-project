@@ -2,7 +2,7 @@ import axios from 'axios';
 import { News, CreateNewsDto, UpdateNewsDto } from '@shared/types';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export const NewsService = {
+export const ContentService = {
   // Lista conteúdos por canal
   async list(channelId: string | null): Promise<News[]> {
     const response = await axios.get<News[]>(`${API_URL}/news`, {

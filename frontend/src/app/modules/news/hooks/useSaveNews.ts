@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { FormikHelpers } from 'formik';
 import { CreateNewsDto, UpdateNewsDto } from '@shared/types';
-import { NewsService } from '../services/news.service';
+import { ContentService } from '../services/news.service';
 
 export const useSaveNews = (editingId?: string) => {
     const [loading, setLoading] = useState(false);
@@ -15,9 +15,9 @@ export const useSaveNews = (editingId?: string) => {
         setLoading(true);
         try {
             if (editingId) {
-                await NewsService.updateNew(editingId, updateDto);
+                await ContentService.updateNew(editingId, updateDto);
             } else {
-                await NewsService.createNew(createDto);
+                await ContentService.createNew(createDto);
             }
             helpers.resetForm();
         } catch (error) {

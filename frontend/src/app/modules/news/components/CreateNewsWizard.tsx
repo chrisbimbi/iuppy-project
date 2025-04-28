@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Formik, Form, FormikHelpers } from 'formik';
 import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router-dom';
 import { KTSVG } from '../../../../helpers';
 import { createNewSchema } from './helpers/validationSchemas';
 import { Step1 } from './steps/Step1';
@@ -13,6 +12,7 @@ import { useAuth } from '../../auth';
 import { Content } from '../../../../layout/components/Content';
 import { PageTitle } from '../../../../layout/core';
 import { useSaveNews } from '../hooks/useSaveNews';
+import { initialNewValues } from './helpers/initialValues';
 
 interface WizardProps {
   initialValues: CreateNewsDto;
@@ -32,8 +32,8 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
   const [ok, setOk] = useState(false);
   const [err, setErr] = useState(false);
   const intl = useIntl();
-  const navigate = useNavigate();
 
+  // Preenche authorId e companyId vindos do usuário
   useEffect(() => {
     if (currentUser) {
       setValues(v => ({
@@ -44,7 +44,13 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
     }
   }, [currentUser]);
 
-  useEffect(() => setValues(initialValues), [initialValues]);
+  // Re-inicializa valores quando initialValues mudar
+  useEffect(() => {
+    setValues(initialValues);
+    setStep(1);
+    setOk(false);
+    setErr(false);
+  }, [initialValues]);
 
   const handleNext = () => setStep(s => Math.min(s + 1, 2));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
@@ -64,7 +70,7 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
     helpers: FormikHelpers<CreateNewsDto>
   ) => {
     if (!dto.channelId) {
-      alert('Selecione um canal antes de salvar.');
+      setErr(true);
       return;
     }
     const updateDto: UpdateNewsDto = {
@@ -75,18 +81,25 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
       channelId: dto.channelId,
       isPublished: dto.isPublished,
       attachments: dto.attachments,
-      highlightImages: dto.highlightImages.map(i => ({ url: i.url, altText: i.name })),
+      highlightImages: dto.highlightImages.map(i => ({
+        url: i.url,
+        altText: i.name,
+      })),
       settings: { ...dto.settings },
     };
 
     try {
       await save(dto, updateDto, helpers);
-      setOk(true);
       setErr(false);
+      setOk(true);
+
+      // Exibe alerta e, após breve pausa, limpa e fecha modal
       setTimeout(() => {
         setOk(false);
+        // reseta wizard para um novo post
+        setStep(1);
+        setValues({ ...initialValues, authorId: dto.authorId, companyId: dto.companyId });
         onSaved();
-        navigate('/contents');
       }, 1000);
     } catch {
       setErr(true);
@@ -95,7 +108,19 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
 
   return (
     <>
+      <PageTitle>{intl.formatMessage({ id: editingId ? 'MENU.EDIT_COMUNICADO' : 'MENU.CREATE_COMUNICADO' })}</PageTitle>
       <Content>
+        {ok && (
+          <div className="alert alert-success">
+            {intl.formatMessage({ id: 'ALERT.SAVE_SUCCESS' }, { item: 'comunicado' })}
+          </div>
+        )}
+        {err && (
+          <div className="alert alert-danger">
+            {intl.formatMessage({ id: 'ALERT.SAVE_ERROR' })}
+          </div>
+        )}
+
         <Formik
           initialValues={values}
           validationSchema={createNewSchema}
@@ -129,12 +154,18 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
               <div className="d-flex flex-stack pt-10">
                 {step > 1 && (
                   <button type="button" className="btn btn-light" onClick={handlePrev}>
-                    Voltar
+                    <KTSVG path="/media/icons/duotune/arrows/arr063.svg" className="svg-icon-2 me-0" />
+                    {intl.formatMessage({ id: 'BUTTON.BACK' })}
                   </button>
                 )}
                 {step < 2 ? (
-                  <button type="button" className="btn btn-primary" onClick={handleNext}>
-                    Próximo
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleNext}
+                  >
+                    {intl.formatMessage({ id: 'BUTTON.NEXT' })}
+                    <KTSVG path="/media/icons/duotune/arrows/arr064.svg" className="svg-icon-2 ms-0" />
                   </button>
                 ) : (
                   <button
@@ -142,7 +173,9 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
                     className={clsx('btn btn-primary', { 'indicator-progress': loading })}
                     disabled={loading}
                   >
-                    {loading ? 'Salvando...' : 'Salvar'}
+                    {loading
+                      ? intl.formatMessage({ id: 'BUTTON.SAVING' })
+                      : intl.formatMessage({ id: 'BUTTON.SAVE' })}
                   </button>
                 )}
               </div>
@@ -155,11 +188,5 @@ export const CreateNewsPage: React.FC<WizardProps> = ({
 };
 
 export const CreateNewWrapper: React.FC<WizardProps> = props => {
-  const intl = useIntl();
-  return (
-    <>
-      <PageTitle>{intl.formatMessage({ id: 'MENU.CREATE_COMUNICADO' })}</PageTitle>
-      <CreateNewsPage {...props} />
-    </>
-  );
+  return <CreateNewsPage {...props} />;
 };

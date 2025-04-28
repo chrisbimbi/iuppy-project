@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { sanitizeHtml } from '../../../../utils/sanitizeHtml';
 import { simulateFileUpload } from '../../../../utils/fileUtils';
 import { CreateNewsDto } from '@shared/types';
-import { NewsService } from '../services/news.service';
+import { ContentService } from '../services/news.service';
 
 export const useCreateNews = () => {
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export const useCreateNews = () => {
       // (mantém seus logs de progresso padrão)
 
       console.log('[useCreateNews] enviando para backend:', JSON.stringify(sanitizedValues, null, 2));
-      const response = await NewsService.createNew(sanitizedValues);
+      const response = await ContentService.createNew(sanitizedValues);
       console.log('[useCreateNews] resposta do backend:', response);
 
       return response;
