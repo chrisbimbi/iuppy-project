@@ -51,5 +51,6 @@ Próximas Etapas
 - [x] Migrar controller, views e providers de `news/` para `communication/`
 - [x] Passar wizard, steps e validation para `communication/views/ContentForm`
 - [x] Refatorar imports e renomear DTOs de “News” para “Content”
-- [ ] **Bug:** modal de criação não está salvando (post “Salvar” não persiste)
+- [x] Bug: modal de criação agora salva corretamente
+- [ ] Bug: edição e duplicação de conteúdo
 Dica: Sempre valide este arquivo no início de cada sprint para garantir que estamos no caminho certo!

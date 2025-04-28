@@ -13,8 +13,8 @@ import { ContentService } from '../services/content.service';
 import ChannelModal from 'src/app/modules/channels/components/ChannelModal';
 import { Modal } from 'bootstrap';
 import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
-import { CreateNewWrapper } from 'src/app/modules/news/components/CreateNewsWizard';
-import { initialNewValues } from 'src/app/modules/news/components/helpers/initialValues';
+import { ContentForm } from 'src/app/modules/communication/views/ContentForm/views/ContentForm';
+import { initialNewValues } from 'src/app/modules/communication/views/ContentForm/helpers/initialValues';
 import { CreateNewsDto } from '@shared/types';
 
 const ContentPage: React.FC = () => {
@@ -155,7 +155,7 @@ const ContentPage: React.FC = () => {
                             <div className="modal fade modal-xl" tabIndex={-1} ref={createPostRef}>
                                 <div className="modal-dialog modal-fullscreen-lg-down">
                                     <div className="modal-content">
-                                        <CreateNewWrapper
+                                        <ContentForm
                                             initialValues={wizardInitialValues}
                                             editingId={editingId}
                                             onSaved={handleSaved}

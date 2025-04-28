@@ -30,5 +30,6 @@ export const initialNewValues: CreateNewsDto = {
     targetAudience: []
   },
   isPublished: false,
-  attachments: []
+  attachments: [],
+  companyId: ''
 }

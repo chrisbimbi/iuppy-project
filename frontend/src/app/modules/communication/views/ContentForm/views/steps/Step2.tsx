@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ErrorMessage, FormikErrors, FormikTouched } from 'formik';
 import { useIntl } from 'react-intl';
-import { KTSVG } from '../../../../../helpers';
+import { KTSVG } from '../../../../../../../helpers';
 import { Modal } from 'bootstrap';
 import { CreateNewsDto } from '@shared/types';
 

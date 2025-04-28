@@ -4,9 +4,9 @@ import React from 'react';
 import { NewsType, CreateNewsDto } from '@shared/types';
 import { ErrorMessage, FormikErrors, FormikTouched } from 'formik';
 import { useIntl } from 'react-intl';
-import { KTSVG } from '../../../../../helpers';
-import QuillWrapper from '../../../../../components/QuillWrapper';
-import CustomDropzone from '../../../../../components/CustomDropzone';
+import { KTSVG } from '../../../../../../../helpers';
+import QuillWrapper from '../../../../../../../components/QuillWrapper';
+import CustomDropzone from '../../../../../../../components/CustomDropzone';
 import { Accept } from 'react-dropzone';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
