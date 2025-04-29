@@ -1,57 +1,32 @@
 # ROADMAP
 
-Este documento serve como ponto de partida para guiar o desenvolvimento do projeto Iuppy, garantindo que sigamos as etapas definidas e mantenhamos o foco.
+**Contexto geral:**  
+Opção 2 escolhida – vamos terminar o módulo de Comunicação (Etapa 2) e em seguida assumir um fluxo completo end-to-end com empresas, usuários, push, estatísticas e segmentação.
 
-Estrutura de Trabalho
+---
 
-1. Canvas como Fonte Única de Verdade
- • Os documentos de cada etapa (Análise, Backlog de Features, Skeleton de Código) devem ficar disponíveis no Canvas do ChatGPT.
- • Sempre referenciar o título da etapa ao iniciar uma tarefa ou PR.
+## Etapa 2: Refactor Módulo de Comunicação  
+- [x] Migrar controller, views e providers de `news/` → `communication/`  
+- [x] Wizard, steps e validações em `ContentForm`  
+- [x] Ajustes de criação, edição e duplicação (incluindo thumbnails e ordenação)  
+- [x] Bulk actions (seleção múltipla: duplicar, publicar/despublicar, excluir)  
+- [x] Confirmação de exclusão em modal Metronic  
+## Próximas Etapas
 
-2. Recapitulação de Contexto
- • Como usar: Antes de qualquer solicitação de código, cole o prompt inical:
-_Recap: estamos na Etapa X, [descrição breve]_
- • Isso garante que o contexto esteja sempre alinhado.
+**Etapa 3: CRUD de UserGroups & Segmentação Fina**  
+- Modelar entidade UserGroup (+ relação com usuário)  
+- Endpoints e DTOs no back-end  
+- CRUD no CMS para criar/editar/excluir grupos  
+- Step 2 do wizard: substituir “Público Alvo” por multi-select de grupos reais  
 
-3. Checklist de Revisão
- • Após implementar cada bloco de código, complete o checklist:
- • Funcionalidade testada e funcionando no front-end
- • Imports e paths corretos conforme communication/...
- • Testes manuais básicos realizados
+**Etapa 4: CRUD de Companies & Users**  
+- Modelagem de Company & User  
+- Autenticação real (JWT)  
+- Views no CMS para gerenciar empresas e contas  
 
-4. Versionamento de Branches
- • Nomeie branches seguindo o padrão: feature/etapaX-descrição-curta.
- • Exemplo: feature/etapa2-communication-structure
+**Etapa 5: Integração App Mobile**  
+- Esqueleto React Native / Expo  
+- Login e consumo das APIs de conteúdo  
+- Feed + segmentação funcionando no app  
 
-5. Atualização do ROADMAP.md
- • Ao concluir cada etapa, atualize este arquivo:
- • Marque a etapa como concluída
- • Adicione data de finalização e referência ao PR
-
-6. Responsabilidades
- • Você (desenvolvedor):
- • Mantém o roadmap atualizado e inclui o título da etapa nas solicitações
- • Executa o checklist e reporta status
- • IA (ChatGPT):
- • Garante que as respostas e códigos respeitem o roadmap e etapas definidas
- • Fornece recapitulações e lembretes sempre que solicitado
-
-Próximas Etapas
-
- 1. Etapa 2: Migrar o módulo de Comunicação para a estrutura controller/service/provider/view.
- 2. Etapa 3: Implementar Formulários Customizáveis.
- 3. Etapa 4: Incluir Enquetes Nativas.
- 4. Etapa 5: Dashboard Básico de Estatísticas.
-…e assim por diante.
-
-⸻
-
-## Etapa 2: Refactor do módulo de Comunicação
-
-- [x] Migrar controller, views e providers de `news/` para `communication/`
-- [x] Passar wizard, steps e validation para `communication/views/ContentForm`
-- [x] Refatorar imports e renomear DTOs de “News” para “Content”
-- [x] Bug: modal de criação agora salva corretamente
-- [x] Bug: edição e duplicação de conteúdo
-- [ ] NOVA FEATURE: Editar, excluir e despublicar multiplas postagens
-Dica: Sempre valide este arquivo no início de cada sprint para garantir que estamos no caminho certo!
+**(Depois: Etapa 6: Push Notifications, Etapa 7: Dashboard de Estatísticas, Etapa 8+: módulos MVP…)**
