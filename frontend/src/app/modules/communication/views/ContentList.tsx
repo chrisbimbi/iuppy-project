@@ -1,24 +1,25 @@
-// frontend/src/app/modules/communication/views/ContentList.tsx
-import React, { useEffect, useRef } from 'react';
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
-import { News as Content } from '@shared/types';
+import React, { useEffect, useRef } from 'react'
+import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
+import { News as Content } from '@shared/types'
 
 interface Props {
-    channelName: string | null;
-    onEditChannel(): void;
-    onCreatePost(): void;
-    items: Content[];
-    loading: boolean;
-    error: any;
-    selectedIds: string[];
-    onSelect(id: string, checked: boolean): void;
-    onEdit(id: string): void;
-    onDuplicate(id: string): void;
-    onDelete(id: string): void;
+    channelName: string | null
+    onEditChannel(): void
+    onCreatePost(): void
+    items: Content[]
+    loading: boolean
+    error: any
+    selectedIds: string[]
+    onSelect(id: string, checked: boolean): void
+    onEdit(id: string): void
+    onDuplicate(id: string): void
+    onDelete(id: string): void
+    onDeleteMultiple(): void
+    onDuplicateMultiple(): void
+    onTogglePublishMultiple(): void
 }
 
-// Imagem padrão quando não houver thumbnail
-const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg';
+const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg'
 
 const ContentList: React.FC<Props> = ({
     channelName,
@@ -32,35 +33,59 @@ const ContentList: React.FC<Props> = ({
     onEdit,
     onDuplicate,
     onDelete,
+    onDeleteMultiple,
+    onDuplicateMultiple,
+    onTogglePublishMultiple,
 }) => {
-    const headerRef = useRef<HTMLInputElement>(null);
+    const headerRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        MenuComponent.reinitialization();
-    }, [items]);
+        MenuComponent.reinitialization()
+    }, [items])
 
-    // Ordena do mais recente ao mais antigo
-    const sortedItems = items
-        .slice()
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    // ordena do mais recente ao mais antigo
+    const sorted = [...items].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
 
-        const openStats = (item: Content) => {
-            const drawerEl = document.getElementById('kt_stats_drawer');
-            if (!drawerEl) return;
-            // 'getOrCreateInstance' não existe no tipo, então usamos cast para any
-            const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl);
-            const titleEl = (dr.element as HTMLElement).querySelector<HTMLElement>('.drawer-title');
-            if (titleEl) titleEl.innerText = `Estatísticas do conteúdo “${item.title}”`;
-            dr.show();
-        };
-    if (loading) return <div>Carregando conteúdos...</div>;
-    if (error) return <div>Erro ao carregar conteúdos.</div>;
+    // bulk status
+    const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
+    const allPublished = selectedItems.every(i => i.isPublished)
+    const allDraft = selectedItems.every(i => !i.isPublished)
+
+    // stats drawer
+    const openStats = (item: Content) => {
+        const drawerEl = document.getElementById('kt_stats_drawer')
+        if (!drawerEl) return
+        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl)
+        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement
+        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`
+        dr.show()
+    }
+
+    if (loading) return <div>Carregando conteúdos...</div>
+    if (error) return <div>Erro ao carregar conteúdos.</div>
 
     return (
         <div className="card card-flush h-lg-100">
             <div className="card-header py-5 d-flex justify-content-between align-items-center">
                 <h3>{channelName ?? 'Conteúdos'}</h3>
-                <div>
+                <div className="d-flex align-items-center">
+                    {selectedIds.length > 0 && (
+                        <div className="me-3">
+                            <button className="btn btn-sm btn-light me-2" onClick={onDuplicateMultiple}>
+                                <i className="bi bi-files"></i>
+                            </button>
+                            {(allPublished || allDraft) && (
+                                <button className="btn btn-sm btn-light me-2" onClick={onTogglePublishMultiple}>
+                                    <i className={`bi ${allPublished ? 'bi-toggle-off' : 'bi-toggle-on'}`}></i>
+                                </button>
+                            )}
+                            <button className="btn btn-sm btn-danger me-2" onClick={onDeleteMultiple}>
+                                <i className="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    )}
                     {channelName && (
                         <>
                             <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
@@ -73,8 +98,9 @@ const ContentList: React.FC<Props> = ({
                     )}
                 </div>
             </div>
+
             <div className="card-body py-3">
-                {sortedItems.length === 0 ? (
+                {sorted.length === 0 ? (
                     <div className="text-center text-muted">Nenhum conteúdo encontrado.</div>
                 ) : (
                     <table className="table table-row-dashed gy-5 align-middle fw-semibold">
@@ -84,10 +110,8 @@ const ContentList: React.FC<Props> = ({
                                     <input
                                         ref={headerRef}
                                         type="checkbox"
-                                        checked={
-                                            sortedItems.length > 0 && sortedItems.every(i => selectedIds.includes(i.id))
-                                        }
-                                        onChange={e => sortedItems.forEach(i => onSelect(i.id, e.target.checked))}
+                                        checked={sorted.length > 0 && sorted.every(i => selectedIds.includes(i.id))}
+                                        onChange={e => sorted.forEach(i => onSelect(i.id, e.target.checked))}
                                     />
                                 </th>
                                 <th>Thumb</th>
@@ -99,9 +123,9 @@ const ContentList: React.FC<Props> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedItems.map(item => {
-                                const isChecked = selectedIds.includes(item.id);
-                                const thumbUrl = item.highlightImages?.[0] || DEFAULT_THUMB;
+                            {sorted.map(item => {
+                                const isChecked = selectedIds.includes(item.id)
+                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB
                                 return (
                                     <tr key={item.id}>
                                         <td>
@@ -113,7 +137,7 @@ const ContentList: React.FC<Props> = ({
                                         </td>
                                         <td>
                                             <img
-                                                src={thumbUrl}
+                                                src={thumb}
                                                 alt="thumb"
                                                 className="rounded"
                                                 style={{ width: 120, height: 80, objectFit: 'cover' }}
@@ -122,10 +146,7 @@ const ContentList: React.FC<Props> = ({
                                         <td>{item.title}</td>
                                         <td>{item.isPublished ? 'Publicado' : 'Rascunho'}</td>
                                         <td>
-                                            <button
-                                                className="btn btn-icon btn-sm"
-                                                onClick={() => openStats(item)}
-                                            >
+                                            <button className="btn btn-icon btn-sm" onClick={() => openStats(item)}>
                                                 <i className="bi bi-bar-chart-line"></i>
                                             </button>
                                         </td>
@@ -161,14 +182,14 @@ const ContentList: React.FC<Props> = ({
                                             </div>
                                         </td>
                                     </tr>
-                                );
+                                )
                             })}
                         </tbody>
                     </table>
                 )}
             </div>
         </div>
-    );
-};
+    )
+}
 
-export default ContentList;
+export default ContentList

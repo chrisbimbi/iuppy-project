@@ -1,61 +1,62 @@
-import { IsBoolean, IsOptional, IsString, IsDateString, IsArray, IsIn } from 'class-validator';
+import {
+  IsEnum,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsDateString,
+  ArrayNotEmpty,
+  ValidateIf,
+  IsInt,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export enum Visibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+  SPECIFIC = 'specific_groups',
+}
 
 export class NewSettingsDto {
-  @IsOptional()
-  @IsIn(['public', 'private', 'specific_groups'])
-  visibility?: string;
+  @IsEnum(Visibility)
+  visibility!: Visibility;
 
-  @IsBoolean()
-  allowComments: boolean;
-
-  @IsBoolean()
-  moderateComments: boolean;
-
-  @IsBoolean()
-  allowReactions: boolean;
-
-  @IsBoolean()
-  notifyUsers: boolean;
-
-  @IsBoolean()
-  pushNotification: boolean;
-
-  @IsBoolean()
-  emailNotification: boolean;
-
-  @IsBoolean()
-  allowSharing: boolean;
-
-  @IsBoolean()
-  showAuthor: boolean;
-
-  @IsBoolean()
-  showPublishDate: boolean;
-
-  @IsBoolean()
-  pinToTop: boolean;
-
-  @IsBoolean()
-  schedulePublication: boolean;
-
-  @IsBoolean()
-  expirePublication: boolean;
-
-  @IsString()
-  pushTitle: string;
-
-  @IsString()
-  pushContent: string;
-
-  @IsOptional()
-  @IsDateString()
-  expirationDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  schedulePublishDate?: string;
-
+  @ValidateIf(o => o.visibility === Visibility.SPECIFIC)
   @IsArray()
-  @IsString({ each: true })
+  @ArrayNotEmpty()
   targetAudience?: string[];
+
+  @IsBoolean() allowComments!: boolean;
+  @IsBoolean() moderateComments!: boolean;
+  @IsBoolean() allowReactions!: boolean;
+  @IsBoolean() notifyUsers!: boolean;
+
+  @IsBoolean() pushNotification!: boolean;
+  @ValidateIf(o => o.pushNotification)
+  @IsOptional() @IsString() pushTitle?: string;
+  @ValidateIf(o => o.pushNotification)
+  @IsOptional() @IsString() pushContent?: string;
+
+  @IsBoolean() emailNotification!: boolean;
+
+  @IsBoolean() inAppNotification!: boolean;
+
+  @IsBoolean() allowSharing!: boolean;
+  @IsBoolean() showAuthor!: boolean;
+  @IsBoolean() showPublishDate!: boolean;
+  @IsBoolean() pinToTop!: boolean;
+
+  @IsBoolean() schedulePublication!: boolean;
+  @ValidateIf(o => o.schedulePublication)
+  @IsDateString() schedulePublishDate?: string;
+
+  @IsBoolean() expirePublication!: boolean;
+  @ValidateIf(o => o.expirePublication)
+  @IsDateString() expirationDate?: string;
+
+  @IsBoolean() acknowledgementRequired!: boolean;
+
+  @IsOptional() @IsInt() @Min(1) maxAudienceSize?: number;
+  @IsBoolean() restrictAccess!: boolean;
 }

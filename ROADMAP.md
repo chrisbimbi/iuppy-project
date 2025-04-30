@@ -52,5 +52,10 @@ Próximas Etapas
 - [x] Passar wizard, steps e validation para `communication/views/ContentForm`
 - [x] Refatorar imports e renomear DTOs de “News” para “Content”
 - [x] Bug: modal de criação agora salva corretamente
-- [ ] Bug: edição e duplicação de conteúdo
+- [x] Bug: edição e duplicação de conteúdo
+##Etapa 2.1
+- [x] ENTIDADES, TYPOS, DTOS E CRUD BACKEND FUNCIONAL
+- [ ] frontend com UI, rotas, modals e crud completo
+  
+
 Dica: Sempre valide este arquivo no início de cada sprint para garantir que estamos no caminho certo!

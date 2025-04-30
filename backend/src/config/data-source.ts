@@ -4,6 +4,7 @@ import { UserEntity } from '../users/user.entity';
 import { Channel } from '../channels/channel.entity';
 import { SpaceEntity } from '../spaces/space.entity';
 import { NewEntity } from '../news/news.entity';
+import { GroupEntity } from 'src/groups/group.entity';
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [UserEntity, Channel, SpaceEntity, NewEntity],
+  entities: [UserEntity, Channel, SpaceEntity, NewEntity, GroupEntity],
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
   synchronize: false,

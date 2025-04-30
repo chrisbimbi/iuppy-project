@@ -1,26 +1,49 @@
-import { 
-  IsOptional, IsString, IsEnum, IsBoolean, IsArray, ValidateNested, IsUUID 
+import {
+  IsOptional,
+  IsUUID,
+  IsString,
+  IsEnum,
+  IsBoolean,
+  IsArray,
+  ValidateNested
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NewsType } from '@shared/types/NewsType';
 import { NewSettingsDto } from './news-settings-dto';
 
 export class UpdateNewDto {
-  @IsOptional() @IsString() title?: string;
-  @IsOptional() @IsString() subtitle?: string;
-  @IsOptional() @IsString() content?: string;
+  @IsOptional() @IsUUID()
+  companyId?: string;
 
-  @IsOptional() @IsUUID() channelId?: string;
-  @IsOptional() @IsUUID() authorId?: string;
-  @IsOptional() @IsUUID() companyId?: string;
+  @IsOptional() @IsUUID()
+  authorId?: string;
 
-  @IsOptional() @IsEnum(NewsType) type?: NewsType;
-  @IsOptional() @IsBoolean() isPublished?: boolean;
+  @IsOptional() @IsUUID()
+  channelId?: string;
 
-  @IsOptional() @IsArray() attachments?: any[];
-  @IsOptional() @IsArray() highlightImages?: any[];
+  @IsOptional() @IsString()
+  title?: string;
+
+  @IsOptional() @IsString()
+  subtitle?: string;
+
+  @IsOptional() @IsString()
+  content?: string;
+
+  @IsOptional() @IsEnum(NewsType)
+  type?: NewsType;
+
+  @IsOptional() @IsBoolean()
+  isPublished?: boolean;
+
+  @IsOptional() @IsArray()
+  attachments?: { url: string; name: string }[];
+
+  @IsOptional() @IsArray()
+  highlightImages?: { url: string; altText?: string }[];
 
   @IsOptional()
-  @ValidateNested() @Type(() => NewSettingsDto)
+  @ValidateNested()
+  @Type(() => NewSettingsDto)
   settings?: NewSettingsDto;
 }

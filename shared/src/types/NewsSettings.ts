@@ -1,22 +1,23 @@
+// shared/src/types/NewsSettings.ts
 export interface NewsSettings {
-  visibility: 'public' | 'private' | 'specific_groups'; // Tornado obrigatório para refletir o backend
+  visibility: 'public' | 'private' | 'specific_groups';
+  targetAudience: string[];               // públicos específicos
   allowComments: boolean;
   moderateComments: boolean;
   allowReactions: boolean;
-  notifyUsers: boolean;
+  notifyUsers: boolean;                   // email interno
   pushNotification: boolean;
   emailNotification: boolean;
+  inAppNotification: boolean;             // notificação in-app
   allowSharing: boolean;
   showAuthor: boolean;
   showPublishDate: boolean;
   pinToTop: boolean;
   schedulePublication: boolean;
+  schedulePublishDate?: Date;
   expirePublication: boolean;
-  pushTitle?: string; // Tornado opcional, caso o backend permita ausência de título no push
-  pushContent?: string; // Tornado opcional, caso o backend permita ausência de conteúdo no push
-  expirationDate?: Date; // Data de expiração opcional
-  schedulePublishDate?: Date; // Data de publicação agendada opcional
-  targetAudience?: string[]; // Público-alvo obrigatório
-  maxAudienceSize?: number; // Adicionado caso o backend limite o tamanho do público
-  restrictAccess?: boolean; // Adicionado para refletir restrições de acesso, se aplicável
+  expirationDate?: Date;
+  acknowledgementRequired: boolean;       // “Li e aceito”
+  maxAudienceSize?: number;
+  restrictAccess?: boolean;
 }

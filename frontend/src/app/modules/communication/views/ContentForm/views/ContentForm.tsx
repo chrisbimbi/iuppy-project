@@ -30,6 +30,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
   const { currentUser } = useAuth();
   const [values, setValues] = useState<CreateContentDto>(initialValues);
   const [step, setStep] = useState(1);
+  const [err, setErr] = useState(false);
 
   // nosso hook agora dispara onSaved() após criar/editar.
   const { createItem, editItem } = useContentActions(onSaved);
@@ -45,12 +46,19 @@ const ContentForm: React.FC<ContentFormProps> = ({
     }
   }, [currentUser]);
 
-  // reseta valores quando abrimos o modal
   useEffect(() => {
-    setValues(initialValues);
-    setStep(1);
-  }, [initialValues]);
+    // Começa clonando tudo que veio de initialValues
+    const base = { ...initialValues };
 
+    // Se já tivermos currentUser, atualiza authorId e companyId
+    if (currentUser) {
+      base.authorId = String(currentUser.id);
+      base.companyId = currentUser.companyId;
+    }
+
+    setValues(base);
+    setStep(1);
+  }, [initialValues, currentUser]);
   const next = () => setStep(s => Math.min(s + 1, 2));
   const prev = () => setStep(s => Math.max(s - 1, 1));
 
@@ -80,21 +88,31 @@ const ContentForm: React.FC<ContentFormProps> = ({
       content: dto.content,
       type: dto.type,
       channelId: dto.channelId,
+
+      // <<< Esses dois são obrigatórios para o PUT >>>
+      authorId: dto.authorId!,
+      companyId: dto.companyId!,
+
       isPublished: dto.isPublished,
-      attachments: [],         // uploads não implementados
-      highlightImages: [],     // uploads não implementados
+      attachments: dto.attachments,
+      highlightImages: dto.highlightImages.map(i => ({
+        name: i.name,
+        url: i.url,
+        altText: i.name,
+      })),
       settings: { ...dto.settings },
     };
     try {
       if (editingId) {
-        console.log('✏️ Editing:', editingId);
         await editItem(editingId, updateDto);
       } else {
-        console.log('🆕 Creating new content');
         await createItem(dto);
       }
-    } catch (e) {
-      console.error('Error in onSubmit:', e);
+      // sucesso — fechamos o modal via onSaved()
+    } catch (err: any) {
+      console.error('Erro ao salvar conteúdo:', err);
+      // exibe um alerta temporário dentro do modal
+      setErr(true);
     } finally {
       console.log('⏱ onSubmit complete');
       helpers.setSubmitting(false);
@@ -109,6 +127,11 @@ const ContentForm: React.FC<ContentFormProps> = ({
         })}
       </PageTitle>
       <Content>
+        {err && (
+          <div className="alert alert-danger">
+            Ocorreu um erro ao salvar o comunicado. Por favor, tente novamente.
+          </div>
+        )}
         <Formik
           initialValues={values}
           onSubmit={onSubmit}
@@ -194,3 +217,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
 };
 
 export default ContentForm;
+
+function setErr(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}

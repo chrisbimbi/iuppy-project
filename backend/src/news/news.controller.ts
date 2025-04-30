@@ -1,6 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpException, HttpStatus } from '@nestjs/common';
+// backend/src/news/news.controller.ts
+import { 
+  Controller, Get, Post, Put, Delete,
+  Body, Param, HttpException, HttpStatus 
+} from '@nestjs/common';
 import { CreateNewDto } from './dto/create-news.dto';
-import { UpdateNewDto } from './dto/update-news.dto';
+import { UpdateNewDto } from './dto/update-news.dto';   // <--- aqui
 import { NewsService } from './news.service';
 
 @Controller('news')
@@ -8,9 +12,9 @@ export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
   @Post()
-  async create(@Body() createNewDto: CreateNewDto) {
+  async create(@Body() dto: CreateNewDto) {
     try {
-      return await this.newsService.create(createNewDto);
+      return await this.newsService.create(dto);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
@@ -18,25 +22,31 @@ export class NewsController {
 
   @Get()
   async findAll() {
-    return await this.newsService.findAll();
+    return this.newsService.findAll();
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const news = await this.newsService.findOne(id);
-    if (!news) {
-      throw new HttpException('New not found', HttpStatus.NOT_FOUND);
-    }
-    return news;
+    const n = await this.newsService.findOne(id);
+    if (!n) throw new HttpException('New not found', HttpStatus.NOT_FOUND);
+    return n;
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() updateNewDto: UpdateNewDto) {
-    return await this.newsService.update(id, updateNewDto);
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateNewDto           // <--- usar o DTO correto
+  ) {
+    try {
+      return await this.newsService.update(id, dto);
+    } catch (err) {
+      console.error('Erro em NewsController.update:', err);
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return await this.newsService.remove(id);
+    return this.newsService.remove(id);
   }
 }

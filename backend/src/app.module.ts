@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { NewsModule } from './news/news.module';
 import { ChannelsModule } from './channels/channels.module';
 import { SpacesModule } from './spaces/spaces.module';
+import { GroupsModule } from './groups/groups.module';
 
 @Module({
   imports: [
@@ -43,8 +44,9 @@ import { SpacesModule } from './spaces/spaces.module';
     NewsModule,
     ChannelsModule,
     SpacesModule,
+    GroupsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
