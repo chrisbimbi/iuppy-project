@@ -1,20 +1,21 @@
-import { IsNotEmpty, IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsArray,
+} from 'class-validator';
 
 export class CreateChannelDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsNotEmpty() @IsString()
   name: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   description?: string;
 
-  @IsNotEmpty()
-  @IsUUID()
+  @IsNotEmpty() @IsUUID()
   companyId: string;
 
-  // ---
-  // Troca locationIds por spaceIds
   @IsOptional()
   @IsArray()
   @IsUUID('all', { each: true })
@@ -26,11 +27,12 @@ export class CreateChannelDto {
   groupIds?: string[];
 
   @IsOptional()
-  @IsArray() @IsUUID('4', { each: true })
+  @IsArray()
+  @IsUUID('all', { each: true })
   contributorIds?: string[];
 
   @IsOptional()
-  @IsArray() @IsUUID('4', { each: true })
+  @IsArray()
+  @IsUUID('all', { each: true })
   adminIds?: string[];
-  
 }

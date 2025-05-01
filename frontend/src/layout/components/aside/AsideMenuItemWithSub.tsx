@@ -1,8 +1,9 @@
-import {FC} from 'react'
+// frontend/src/layout/components/AsideMenuItemWithSub.tsx
+import React from 'react'
 import clsx from 'clsx'
-import {useLocation} from 'react-router'
-import {checkIsActive, KTIcon, WithChildren} from '../../../helpers'
-import {useLayout} from '../../core'
+import { Link, useLocation } from 'react-router-dom'
+import { KTIcon, WithChildren } from '../../../helpers'
+import { useLayout } from '../../core'
 
 type Props = {
   to: string
@@ -12,45 +13,29 @@ type Props = {
   hasBullet?: boolean
 }
 
-const AsideMenuItemWithSub: FC<Props & WithChildren> = ({
-  children,
-  to,
-  title,
-  icon,
-  fontIcon,
-  hasBullet,
+export const AsideMenuItemWithSub: React.FC<Props & WithChildren> = ({
+  children, to, title, icon, fontIcon, hasBullet
 }) => {
-  const {pathname} = useLocation()
-  const isActive = checkIsActive(pathname, to)
-  const {config} = useLayout()
-  const {aside} = config
+  const { pathname } = useLocation()
+  const isActive = pathname.startsWith(to)
+  const { config } = useLayout()
+  const { aside } = config
 
   return (
     <div
-      className={clsx('menu-item', {'here show': isActive}, 'menu-accordion')}
-      data-kt-menu-sub='accordion'
+      className={clsx('menu-item', 'menu-accordion', isActive && 'here show')}
       data-kt-menu-trigger='click'
+      data-kt-menu-placement='right-start'
     >
       <span className='menu-link'>
-        {hasBullet && (
-          <span className='menu-bullet'>
-            <span className='bullet bullet-dot'></span>
-          </span>
-        )}
-        {icon && aside.menuIcon === 'svg' && (
-          <span className='menu-icon'>
-            <KTIcon iconName={icon} className='fs-2' />
-          </span>
-        )}
-        {fontIcon && aside.menuIcon === 'font' && <i className={clsx('bi fs-3', fontIcon)}></i>}
+        {icon && aside.menuIcon==='svg' && <KTIcon iconName={icon} className='fs-2' />}
+        {fontIcon && aside.menuIcon==='font' && <i className={`bi ${fontIcon} fs-2`}></i>}
         <span className='menu-title'>{title}</span>
         <span className='menu-arrow'></span>
       </span>
-      <div className={clsx('menu-sub menu-sub-accordion', {'menu-active-bg': isActive})}>
+      <div className={clsx('menu-sub menu-sub-accordion', isActive && 'menu-active-bg')}>
         {children}
       </div>
     </div>
   )
 }
-
-export {AsideMenuItemWithSub}

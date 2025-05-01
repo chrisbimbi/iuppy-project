@@ -7,42 +7,29 @@ import { UpdateSpaceDto } from './dto/update-space.dto';
 
 @Injectable()
 export class SpacesService {
-  constructor(
-    @InjectRepository(SpaceEntity)
-    private spaceRepository: Repository<SpaceEntity>,
-  ) { }
+  constructor(@InjectRepository(SpaceEntity) private repo: Repository<SpaceEntity>) {}
 
-  async create(createSpaceDto: CreateSpaceDto): Promise<SpaceEntity> {
-    const space = this.spaceRepository.create(createSpaceDto);
-    return this.spaceRepository.save(space);
-  }
-
-  async findAll(companyId?: string): Promise<SpaceEntity[]> {
-    if (companyId) {
-      return this.spaceRepository.find({ where: { companyId } });
-    }
-    return this.spaceRepository.find();    // fallback: todos
+  findByCompany(companyId: string): Promise<SpaceEntity[]> {
+    return this.repo.find({ where: { companyId }, order: { priority: 'ASC' } });
   }
 
   async findOne(id: string): Promise<SpaceEntity> {
-    const space = await this.spaceRepository.findOne({ where: { id } });
-    if (!space) {
-      throw new NotFoundException(`Space with id ${id} not found`);
-    }
-    return space;
+    const s = await this.repo.findOneBy({ id });
+    if (!s) throw new NotFoundException(`Space ${id} not found`);
+    return s;
   }
 
-  async findByCompany(companyId?: string): Promise<SpaceEntity[]> {
-    if (!companyId) return this.spaceRepository.find();
-    return this.spaceRepository.find({ where: { companyId }, order: { priority: 'ASC' } });
+  create(dto: CreateSpaceDto): Promise<SpaceEntity> {
+    const e = this.repo.create(dto);
+    return this.repo.save(e);
   }
 
-  async update(id: string, updateSpaceDto: UpdateSpaceDto): Promise<SpaceEntity> {
-    await this.spaceRepository.update(id, updateSpaceDto);
+  async update(id: string, dto: UpdateSpaceDto): Promise<SpaceEntity> {
+    await this.repo.update(id, dto);
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    await this.spaceRepository.delete(id);
+    await this.repo.delete(id);
   }
 }

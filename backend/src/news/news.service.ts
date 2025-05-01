@@ -1,4 +1,3 @@
-// backend/src/news/news.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -23,7 +22,14 @@ export class NewsService {
     return this.repo.save(entity);
   }
 
-  async findAll(): Promise<News[]> {
+  /**
+   * Se channelId for passado, filtra por canal;
+   * caso contrário, retorna todos os registros.
+   */
+  async findAll(channelId?: string): Promise<News[]> {
+    if (channelId) {
+      return this.repo.find({ where: { channelId } });
+    }
     return this.repo.find();
   }
 

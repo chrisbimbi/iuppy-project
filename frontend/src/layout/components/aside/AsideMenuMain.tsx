@@ -11,11 +11,13 @@ import { AsideMenuItem } from './AsideMenuItem';
 export function AsideMenuMain() {
   const intl = useIntl();
   const { pathname } = useLocation();
-  const isContents = pathname.startsWith('/contents');
-
   const { currentUser } = useAuth();
   const companyId = currentUser?.companyId ?? '';
+
+  // espaços só para segmento
   const { data: spaces = [], loading } = useSpaces(companyId);
+
+  const isContents = pathname.startsWith('/contents');
 
   const t = (id: string, defaultMsg: string) => {
     try {
@@ -25,61 +27,92 @@ export function AsideMenuMain() {
     }
   };
 
-  const modules = [
-    { id: 'NEWS',    to: '/contents/news',    icon: 'bi-file-earmark-text', label: t('MENU.NEWS','News') },
-    { id: 'PAGES',   to: '/contents/pages',   icon: 'bi-journal-text',      label: t('MENU.PAGES','Pages') },
-    { id: 'SURVEYS', to: '/contents/surveys', icon: 'bi-bar-chart',         label: t('MENU.SURVEYS','Surveys') },
-  ];
-
-  // sempre re-inicializa o drawer/accordion do Metronic
   useEffect(() => {
-    // @ts-ignore
-    window.setTimeout(() => {
-      // esses métodos estão no bundle TS do Metronic
-      // reinitialization garante que o accordion funcione após mudança de rota
+    setTimeout(() => {
       DrawerComponent.reinitialization();
       ToggleComponent.reinitialization();
     }, 50);
   }, [pathname]);
 
-  if (!isContents) return null;
-
   return (
     <>
-      {/* --- Segmentação --- */}
-      <AsideMenuItemWithSub
-        to="/contents/news"
-        title={t('MENU.SEGMENTATION','Segmentação')}
-        fontIcon="bi-diagram-3"
-      >
-        {loading ? (
-          <AsideMenuItem title={t('MENU.LOADING', 'Carregando...')} to={''} />
-        ) : (
-          spaces.map(space => (
-            <AsideMenuItem
-              key={space.id}
-              to={`/contents/news?spaceId=${space.id}`}
-              title={space.name}
-              hasBullet
-            />
-          ))
-        )}
-      </AsideMenuItemWithSub>
+      {/* --- Dashboard --- */}
+      <AsideMenuItem
+        to="/dashboard"
+        title={t('MENU.DASHBOARD', 'Dashboard')}
+        fontIcon="bi-speedometer2"
+      />
 
-      {/* --- Módulos --- */}
+      {/* --- Conteúdos (link direto) --- */}
+      <AsideMenuItem
+        to="/contents"
+        title={t('MENU.CONTENTS', 'Conteúdos')}
+        fontIcon="bi-newspaper"
+      />
+
+      {/* --- Sub-menus de Conteúdos (só em /contents) --- */}
+      {isContents && (
+        <>
+          <AsideMenuItemWithSub
+            to="/contents"
+            title={t('MENU.SEGMENTATION', 'Segmentação')}
+            fontIcon="bi-diagram-3"
+          >
+            {loading ? (
+              <AsideMenuItem
+                to=""
+                hasBullet
+                title={t('MENU.LOADING', 'Carregando...')}
+              />
+            ) : (
+              spaces.map(space => (
+                <AsideMenuItem
+                  key={space.id}
+                  to={`/contents?spaceId=${space.id}`}
+                  hasBullet
+                  title={space.name}
+                />
+              ))
+            )}
+          </AsideMenuItemWithSub>
+
+          <AsideMenuItemWithSub
+            to="/contents/modules"
+            title={t('MENU.MODULES', 'Módulos')}
+            fontIcon="bi-stack"
+          >
+            {[
+              { to: '/contents/pages', icon: 'bi-journal-text', label: t('MENU.PAGES','Pages') },
+              { to: '/contents/surveys', icon: 'bi-bar-chart',   label: t('MENU.SURVEYS','Surveys') },
+            ].map(mod => (
+              <AsideMenuItem
+                key={mod.to}
+                to={mod.to}
+                hasBullet
+                fontIcon={mod.icon}
+                title={mod.label}
+              />
+            ))}
+          </AsideMenuItemWithSub>
+        </>
+      )}
+
+      {/* --- Usuários & Grupos (sempre visível) --- */}
       <AsideMenuItemWithSub
-        to="/contents/modules"
-        title={t('MENU.MODULES','Módulos')}
-        fontIcon="bi-stack"
+        to="#"
+        title={t('MENU.USERS_GROUPS', 'Meus usuários e grupos')}
+        fontIcon="bi-people"
       >
-        {modules.map(mod => (
-          <AsideMenuItem
-            key={mod.id}
-            to={mod.to}
-            title={mod.label}
-            fontIcon={mod.icon}
-          />
-        ))}
+        <AsideMenuItem
+          to="/groups"
+          hasBullet
+          title={t('MENU.GROUPS', 'Grupos')}
+        />
+        <AsideMenuItem
+          to="/users"
+          hasBullet
+          title={t('MENU.USERS', 'Usuários')}
+        />
       </AsideMenuItemWithSub>
     </>
   );

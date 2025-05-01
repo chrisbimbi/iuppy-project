@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { Channel as ChannelInterface } from '@shared/types/Channel';
 
-@Entity()
+@Entity('channel')
 export class Channel implements ChannelInterface {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -15,11 +15,10 @@ export class Channel implements ChannelInterface {
   @Column()
   companyId: string;
 
-  // renomeie a coluna no banco para space_ids (já feito na migração)
   @Column('text', { array: true, nullable: true, name: 'space_ids' })
   spaceIds?: string[];
 
-  @Column('text', { array: true, nullable: true })
+  @Column('text', { array: true, nullable: true, name: 'group_ids' })
   groupIds?: string[];
 
   @Column('text', { array: true, nullable: true, name: 'contributor_ids' })

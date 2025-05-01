@@ -3,14 +3,18 @@ export interface Channel {
   name: string;
   description?: string;
 
-  /* multi-tenant */
+  /** multi-tenant */
   companyId: string;
 
-  /* visibilidade */
+  /** visibilidade: spaces em que este canal vive */
   spaceIds?: string[];
+
+  /** segmentação adicional por grupos */
   groupIds?: string[];
 
-  /* permissões de gestão do canal */
+  /** quem pode contribuir neste canal */
   contributorIds?: string[];
+
+  /** quem é admin deste canal */
   adminIds?: string[];
 }

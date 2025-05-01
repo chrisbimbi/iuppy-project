@@ -1,15 +1,4 @@
-import { 
-  IsOptional, IsString, IsNumber, IsBoolean, IsUUID 
-} from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateSpaceDto } from './create-space.dto';
 
-export class UpdateSpaceDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() slug?: string;
-  @IsOptional() @IsString() description?: string;
-  @IsOptional() @IsString() imageUrl?: string;
-  @IsOptional() @IsNumber() priority?: number;
-  @IsOptional() @IsBoolean() active?: boolean;
-
-  @IsOptional() @IsUUID()
-  companyId?: string;
-}
+export class UpdateSpaceDto extends PartialType(CreateSpaceDto) {}

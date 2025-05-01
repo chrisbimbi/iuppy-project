@@ -1,25 +1,35 @@
-import React, { useEffect, useRef } from 'react'
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
-import { News as Content } from '@shared/types'
+import React, { useEffect, useRef } from 'react';
+import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
+import { News as Content } from '@shared/types';
+import clsx from 'clsx';
+import { toAbsoluteUrl } from 'src/helpers';
 
 interface Props {
-    channelName: string | null
-    onEditChannel(): void
-    onCreatePost(): void
-    items: Content[]
-    loading: boolean
-    error: any
-    selectedIds: string[]
-    onSelect(id: string, checked: boolean): void
-    onEdit(id: string): void
-    onDuplicate(id: string): void
-    onDelete(id: string): void
-    onDeleteMultiple(): void
-    onDuplicateMultiple(): void
-    onTogglePublishMultiple(): void
+    channelName: string | null;
+    onEditChannel(): void;
+    onCreatePost(): void;
+    items: Content[];
+    loading: boolean;
+    error: any;
+    selectedIds: string[];
+    onSelect(id: string, checked: boolean): void;
+    onEdit(id: string): void;
+    onDuplicate(id: string): void;
+    onDelete(id: string): void;
+    onDeleteMultiple(): void;
+    onDuplicateMultiple(): void;
+    onTogglePublishMultiple(): void;
 }
 
-const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg'
+const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg';
+
+const Spinner = () => (
+    <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
+        <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Carregando...</span>
+        </div>
+    </div>
+);
 
 const ContentList: React.FC<Props> = ({
     channelName,
@@ -37,34 +47,31 @@ const ContentList: React.FC<Props> = ({
     onDuplicateMultiple,
     onTogglePublishMultiple,
 }) => {
-    const headerRef = useRef<HTMLInputElement>(null)
+    const headerRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        MenuComponent.reinitialization()
-    }, [items])
+        MenuComponent.reinitialization();
+    }, [items]);
 
-    // ordena do mais recente ao mais antigo
     const sorted = [...items].sort(
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
+    );
 
-    // bulk status
-    const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
-    const allPublished = selectedItems.every(i => i.isPublished)
-    const allDraft = selectedItems.every(i => !i.isPublished)
+    const selectedItems = sorted.filter(i => selectedIds.includes(i.id));
+    const allPublished = selectedItems.every(i => i.isPublished);
+    const allDraft = selectedItems.every(i => !i.isPublished);
 
-    // stats drawer
     const openStats = (item: Content) => {
-        const drawerEl = document.getElementById('kt_stats_drawer')
-        if (!drawerEl) return
-        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl)
-        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement
-        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`
-        dr.show()
-    }
+        const drawerEl = document.getElementById('kt_stats_drawer');
+        if (!drawerEl) return;
+        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl);
+        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement;
+        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`;
+        dr.show();
+    };
 
-    if (loading) return <div>Carregando conteúdos...</div>
-    if (error) return <div>Erro ao carregar conteúdos.</div>
+    if (loading) return <Spinner />;
+    if (error) return <div className="text-danger p-5">Erro ao carregar conteúdos.</div>;
 
     return (
         <div className="card card-flush h-lg-100">
@@ -101,7 +108,15 @@ const ContentList: React.FC<Props> = ({
 
             <div className="card-body py-3">
                 {sorted.length === 0 ? (
-                    <div className="text-center text-muted">Nenhum conteúdo encontrado.</div>
+                    <div className="text-center">
+                        <img
+                            src={toAbsoluteUrl('../media/illustrations/sigma-1/20-dark.png')}
+                            alt="Sem conteúdos"
+                            className="mw-100 mb-4"
+                            style={{ maxHeight: 200 }}
+                        />
+                        <div className="text-muted">Nenhum conteúdo encontrado neste canal.</div>
+                    </div>
                 ) : (
                     <table className="table table-row-dashed gy-5 align-middle fw-semibold">
                         <thead>
@@ -124,8 +139,8 @@ const ContentList: React.FC<Props> = ({
                         </thead>
                         <tbody>
                             {sorted.map(item => {
-                                const isChecked = selectedIds.includes(item.id)
-                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB
+                                const isChecked = selectedIds.includes(item.id);
+                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB;
                                 return (
                                     <tr key={item.id}>
                                         <td>
@@ -162,7 +177,10 @@ const ContentList: React.FC<Props> = ({
                                                 >
                                                     <i className="bi bi-three-dots-vertical"></i>
                                                 </button>
-                                                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdown-${item.id}`}>
+                                                <ul
+                                                    className="dropdown-menu dropdown-menu-end"
+                                                    aria-labelledby={`dropdown-${item.id}`}
+                                                >
                                                     <li>
                                                         <button className="dropdown-item" onClick={() => onEdit(item.id)}>
                                                             <i className="bi bi-pencil me-2" /> Editar
@@ -182,14 +200,14 @@ const ContentList: React.FC<Props> = ({
                                             </div>
                                         </td>
                                     </tr>
-                                )
+                                );
                             })}
                         </tbody>
                     </table>
                 )}
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default ContentList
+export default ContentList;

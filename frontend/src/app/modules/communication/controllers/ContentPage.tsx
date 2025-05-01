@@ -1,105 +1,117 @@
-// frontend/src/app/modules/communication/controllers/ContentPage.tsx
-import React, { useEffect, useRef, useState } from 'react'
-import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
-import { Content } from 'src/layout/components/Content'
-import { ChannelsList } from 'src/app/modules/channels/components/ChannelsList'
-import ContentList from 'src/app/modules/communication/views/ContentList'
-import { useAuth } from 'src/app/modules/auth'
-import { useContent } from '../providers/useContent'
-import { useContentActions } from '../providers/useContentActions'
-import { spacesService } from 'src/app/modules/spaces/services/spaces.service'
-import { channelsService } from 'src/app/modules/channels/services/channels.service'
-import { ContentService } from '../services/content.service'
-import { CreateNewsDto as CreateContentDto } from '@shared/types'
-import { Modal } from 'bootstrap'
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
-import { initialNewValues } from '../views/ContentForm/helpers/initialValues'
-import ContentForm from '../views/ContentForm/views/ContentForm'
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AsideDefault } from 'src/layout/components/aside/AsideDefault';
+import { Content } from 'src/layout/components/Content';
+import { ChannelsList } from 'src/app/modules/channels/components/ChannelsList';
+import ContentList from 'src/app/modules/communication/views/ContentList';
+import { useAuth } from 'src/app/modules/auth';
+import { useContent } from '../providers/useContent';
+import { useContentActions } from '../providers/useContentActions';
+import { spacesService } from 'src/app/modules/spaces/services/spaces.service';
+import { channelsService } from 'src/app/modules/channels/services/channels.service';
+import { ContentService } from '../services/content.service';
+import { CreateNewsDto as CreateContentDto } from '@shared/types';
+import { Modal } from 'bootstrap';
+import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
+import { initialNewValues } from '../views/ContentForm/helpers/initialValues';
+import ContentForm from '../views/ContentForm/views/ContentForm';
 
 const ContentPage: React.FC = () => {
-  const { currentUser } = useAuth()
+  const { currentUser } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // estados básicos
-  const [spaces, setSpaces] = useState<any[]>([])
-  const [spaceId, setSpaceId] = useState<string | null>(null)
-  const [channels, setChannels] = useState<any[]>([])
-  const [channelId, setChannelId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [success, setSuccess] = useState(false)
+  const [spaces, setSpaces] = useState<any[]>([]);
+  const [spaceId, setSpaceId] = useState<string | null>(null);
+  const [channels, setChannels] = useState<any[]>([]);
+  const [channelId, setChannelId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [success, setSuccess] = useState(false);
 
-  // modal de form
-  const formRef = useRef<HTMLDivElement>(null)
-  const [formModal, setFormModal] = useState<Modal | null>(null)
-  const [editingId, setEditingId] = useState<string>()
-  const [wizardInitialValues, setWizardInitialValues] = useState<CreateContentDto>({
-    ...initialNewValues,
-    channelId: channelId!,
-  })
+  const formRef = useRef<HTMLDivElement>(null);
+  const deleteRef = useRef<HTMLDivElement>(null);
+  const [formModal, setFormModal] = useState<Modal | null>(null);
+  const [deleteModal, setDeleteModal] = useState<Modal | null>(null);
 
-  // modal de delete
-  const deleteRef = useRef<HTMLDivElement>(null)
-  const [deleteModal, setDeleteModal] = useState<Modal | null>(null)
-  const [toDeleteIds, setToDeleteIds] = useState<string[]>([])
+  const [editingId, setEditingId] = useState<string>();
+  const [wizardInitialValues, setWizardInitialValues] =
+    useState<CreateContentDto>({ ...initialNewValues, channelId: '' });
 
-  // dados & ações
-  const { items, loading, error, refetch } = useContent({ channelId })
+  const [toDeleteIds, setToDeleteIds] = useState<string[]>([]);
+
+  const { items, loading, error, refetch } = useContent({ channelId });
   const {
     createItem,
     editItem,
     duplicateItem,
     deleteItem,
     togglePublishItems,
-  } = useContentActions(refetch)
+  } = useContentActions(refetch);
 
-  // após salvar
-  const handleSaved = () => {
-    formModal?.hide()
-    refetch()
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 3000)
-  }
-
-  // init Metronic + modals
   useEffect(() => {
-    if (formRef.current) setFormModal(new Modal(formRef.current))
-    if (deleteRef.current) setDeleteModal(new Modal(deleteRef.current))
-    MenuComponent.reinitialization()
-    DrawerComponent.bootstrap()
-    setTimeout(() => DrawerComponent.createInstances('#kt_stats_drawer'), 50)
-  }, [])
+    if (formRef.current) setFormModal(new Modal(formRef.current));
+    if (deleteRef.current) setDeleteModal(new Modal(deleteRef.current));
+    MenuComponent.reinitialization();
+    DrawerComponent.bootstrap();
+    setTimeout(() => DrawerComponent.createInstances('#kt_stats_drawer'), 50);
+  }, []);
 
-  // carregar spaces e channels
   useEffect(() => {
-    if (!currentUser) return
+    const p = new URLSearchParams(location.search);
+    const sp = p.get('spaceId');
+    const ch = p.get('channelId');
+    if (sp && sp !== spaceId) setSpaceId(sp);
+    if (ch && ch !== channelId) setChannelId(ch);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!currentUser) return;
     spacesService.list(currentUser.companyId).then(data => {
-      setSpaces(data)
-      if (!spaceId) setSpaceId(data[0]?.id ?? null)
-    })
-  }, [currentUser])
-  useEffect(() => {
-    if (!spaceId || !currentUser) return
-    channelsService.list(currentUser.companyId, spaceId).then(data => {
-      setChannels(data)
-      if (!channelId) setChannelId(data[0]?.id ?? null)
-    })
-  }, [spaceId, currentUser])
+      setSpaces(data);
+      if (!spaceId && data.length) {
+        setSpaceId(data[0].id);
+      }
+    });
+  }, [currentUser]);
 
-  // abrir modal de criação
+  useEffect(() => {
+    if (!spaceId || !currentUser) return;
+    channelsService.list(currentUser.companyId, spaceId).then(data => {
+      setChannels(data);
+      if (!channelId && data.length) {
+        setChannelId(data[0].id);
+      }
+    });
+  }, [spaceId, currentUser]);
+
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    if (spaceId) qs.set('spaceId', spaceId);
+    if (channelId) qs.set('channelId', channelId);
+    navigate({ pathname: '/contents', search: qs.toString() }, { replace: true });
+  }, [spaceId, channelId]);
+
+  const handleSaved = () => {
+    formModal?.hide();
+    refetch();
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
+
   const handleCreatePost = (chId: string) => {
-    setEditingId(undefined)
+    setEditingId(undefined);
     setWizardInitialValues({
       ...initialNewValues,
       channelId: chId,
       authorId: String(currentUser!.id),
       companyId: currentUser!.companyId,
-    })
-    formModal?.show()
-  }
+    });
+    formModal?.show();
+  };
 
-  // abrir modal de edição, filtrando URLs nulas
   const handleEditContent = async (id: string) => {
-    const original = await ContentService.get(id)
-    setEditingId(id)
+    const original = await ContentService.get(id);
+    setEditingId(id);
     setWizardInitialValues({
       title: original.title,
       subtitle: original.subtitle,
@@ -116,42 +128,37 @@ const ContentPage: React.FC = () => {
         .filter(u => u)
         .map(u => ({ url: u, name: u.split('/').pop()! })),
       settings: { ...original.settings },
-    })
-    formModal?.show()
-  }
+    });
+    formModal?.show();
+  };
 
-  // seleção individual
   const handleSelect = (id: string, checked: boolean) =>
-    setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)))
+    setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)));
 
-  // acionar modal de delete single
   const handleDeleteContent = (id: string) => {
-    setToDeleteIds([id])
-    deleteModal?.show()
-  }
-  // acionar modal de delete múltiplo
+    setToDeleteIds([id]);
+    deleteModal?.show();
+  };
   const handleDeleteMultiple = () => {
-    setToDeleteIds([...selectedIds])
-    deleteModal?.show()
-  }
-
-  // confirmação de delete
+    setToDeleteIds([...selectedIds]);
+    deleteModal?.show();
+  };
   const handleConfirmDelete = async () => {
-    await Promise.all(toDeleteIds.map(id => deleteItem(id)))
-    setSelectedIds(prev => prev.filter(id => !toDeleteIds.includes(id)))
-    deleteModal?.hide()
-  }
+    await Promise.all(toDeleteIds.map(id => deleteItem(id)));
+    setSelectedIds(prev => prev.filter(id => !toDeleteIds.includes(id)));
+    deleteModal?.hide();
+  };
 
-  // duplicar múltiplos
   const handleDuplicateMultiple = async () => {
-    await Promise.all(selectedIds.map(id => duplicateItem(id)))
-    setSelectedIds([])
-  }
-  // toggle publish múltiplos
+    await Promise.all(selectedIds.map(id => duplicateItem(id)));
+    setSelectedIds([]);
+  };
   const handleTogglePublishMultiple = async () => {
-    await togglePublishItems(selectedIds)
-    setSelectedIds([])
-  }
+    await togglePublishItems(selectedIds);
+    setSelectedIds([]);
+  };
+
+  const currentSpaceName = spaces.find(s => s.id === spaceId)?.name ?? 'Conteúdos';
 
   return (
     <div className="app-container container-xxl">
@@ -160,6 +167,12 @@ const ContentPage: React.FC = () => {
           <AsideDefault />
           <div className="app-main" id="kt_app_main">
             <Content>
+              <div className="d-flex align-items-center justify-content-between mb-6">
+                <h2 className="fw-bold text-dark m-0">
+                  Espaço: <span className="text-primary">{currentSpaceName}</span>
+                </h2>
+              </div>
+
               {success && (
                 <div className="alert alert-success">
                   Ação realizada com sucesso!
@@ -180,15 +193,9 @@ const ContentPage: React.FC = () => {
                 </div>
                 <div className="col-lg-8">
                   <ContentList
-                    channelName={
-                      channels.find(c => c.id === channelId)?.name ?? null
-                    }
-                    onEditChannel={() =>
-                      channelId && console.log('editar canal', channelId)
-                    }
-                    onCreatePost={() =>
-                      channelId && handleCreatePost(channelId)
-                    }
+                    channelName={channels.find(c => c.id === channelId)?.name ?? null}
+                    onEditChannel={() => channelId && console.log('editar canal', channelId)}
+                    onCreatePost={() => channelId && handleCreatePost(channelId)}
                     items={items}
                     loading={loading}
                     error={error}
@@ -204,7 +211,6 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* ContentForm modal */}
               <div className="modal fade modal-xl" tabIndex={-1} ref={formRef}>
                 <div className="modal-dialog modal-fullscreen-lg-down">
                   <div className="modal-content">
@@ -217,7 +223,6 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Delete Confirmation Modal */}
               <div className="modal fade" tabIndex={-1} ref={deleteRef} id="kt_modal_delete">
                 <div className="modal-dialog">
                   <div className="modal-content">
@@ -264,7 +269,7 @@ const ContentPage: React.FC = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ContentPage
+export default ContentPage;
