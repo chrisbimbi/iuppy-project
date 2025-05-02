@@ -13,4 +13,11 @@ export * from './UserEngagement';
 export * from './NewsStatus';
 export * from './Space';
 export * from './Channel';
+export * from './CreateSpaceDto';
+export * from './UpdateSpaceDto';
+export * from './UserGroup';
+export * from '../constants/UserGroupType';
+export * from '../constants/newsDefaults';
+
+
 

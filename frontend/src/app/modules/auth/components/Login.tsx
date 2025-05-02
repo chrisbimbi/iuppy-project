@@ -70,7 +70,7 @@ export function Login() {
           >
             <img
               alt='Logo'
-              src={toAbsoluteUrl('media/svg/brand-logos/google-icon.svg')}
+              src={toAbsoluteUrl('../media/svg/brand-logos/google-icon.svg')}
               className='h-15px me-3'
             />
             <span className='d-flex flex-column align-items-start ms-2'>
@@ -85,7 +85,7 @@ export function Login() {
           >
             <img
               alt='Logo'
-              src={toAbsoluteUrl('media/svg/brand-logos/microsoft-5.svg')}
+              src={toAbsoluteUrl('../media/svg/brand-logos/microsoft-5.svg')}
               className='h-15px me-3'
             />
             <span className='d-flex flex-column align-items-start ms-2'>

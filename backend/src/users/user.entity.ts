@@ -1,5 +1,4 @@
-// src/users/user.entity.ts
-
+// backend/src/users/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -7,10 +6,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { Role, User } from '@shared/types';
+import { GroupEntity } from 'src/groups/group.entity';
 
-@Entity()
+@Entity('user_entity')
 export class UserEntity implements User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -38,29 +40,21 @@ export class UserEntity implements User {
   @Column()
   companyId: string;
 
-  @Column({ nullable: true })
-  spaceId?: string;
+  /** lista de _IDs_ de grupos — corresponde ao seu `User.groups: string[]` */
+  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
+  groups: string[];
 
-  @Column('text', { array: true, nullable: true })
-  groups?: string[];
+  /** relação M:N com GroupEntity */
+  @ManyToMany(() => GroupEntity, (g) => g.members)
+  @JoinTable({
+    name: 'user_group_members',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'group_id', referencedColumnName: 'id' },
+  })
+  memberOf: GroupEntity[];
 
   @Column('text', { array: true, nullable: true })
   visibleGroups?: string[];
-
-  @Column({ nullable: true })
-  recoveryToken?: string;
-
-  @Column({ type: 'timestamp', nullable: true })
-  recoveryTokenExpiration?: Date;
-
-  @Column({ nullable: true })
-  phone?: string;
-
-  @Column({ nullable: true })
-  avatarUrl?: string;
-
-  @Column({ nullable: true })
-  locale?: string;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -68,5 +62,3 @@ export class UserEntity implements User {
   @UpdateDateColumn()
   updatedAt: Date;
 }
-export { User };
-

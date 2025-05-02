@@ -50,7 +50,7 @@
     "react-flatpickr": "^3.10.13",
     "react-inlinesvg": "4.1.3",
     "react-intl": "^6.6.8",
-    "react-quill": "^2.0.0",
+    "react-quill": "^2.0.0-beta.4",
     "react-router-dom": "6.25.1",
     "react-select": "^5.8.0",
     "react-topbar-progress-indicator": "4.1.1",

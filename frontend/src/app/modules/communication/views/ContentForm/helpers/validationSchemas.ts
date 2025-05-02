@@ -16,12 +16,14 @@ export const createNewSchema = Yup.object().shape({
     Yup.mixed().test('fileSize', 'Arquivo muito grande', v => !(v instanceof File) || v.size <= 10485760)
   ),
   settings: Yup.object().shape({
-    visibility: Yup.string().oneOf(['public','private','specific_groups']).required(),
+    visibility: Yup.string().oneOf(['public', 'private', 'specific_groups']).required(),
     allowComments: Yup.boolean().required(),
     moderateComments: Yup.boolean().required(),
     allowReactions: Yup.boolean().required(),
     notifyUsers: Yup.boolean().required(),
     pushNotification: Yup.boolean().required(),
+    pushTitle: Yup.string(),
+    pushContent: Yup.string(),
     emailNotification: Yup.boolean().required(),
     allowSharing: Yup.boolean().required(),
     showAuthor: Yup.boolean().required(),

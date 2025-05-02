@@ -171,7 +171,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                       onClick={prev}
                     >
                       <KTSVG
-                        path="/media/icons/duotune/arrows/arr063.svg"
+                        path="../media/icons/duotune/arrows/arr063.svg"
                         className="svg-icon-2 me-0"
                       />
                       {intl.formatMessage({ id: 'BUTTON.BACK' })}
@@ -185,7 +185,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                     >
                       {intl.formatMessage({ id: 'BUTTON.NEXT' })}
                       <KTSVG
-                        path="/media/icons/duotune/arrows/arr064.svg"
+                        path="../media/icons/duotune/arrows/arr064.svg"
                         className="svg-icon-2 ms-0"
                       />
                     </button>

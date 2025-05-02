@@ -56,7 +56,7 @@ const ConnectedAccounts: React.FC = () => {
             <div className='d-flex flex-stack'>
               <div className='d-flex'>
                 <img
-                  src={toAbsoluteUrl('media/svg/brand-logos/google-icon.svg')}
+                  src={toAbsoluteUrl('../media/svg/brand-logos/google-icon.svg')}
                   className='w-30px me-6'
                   alt=''
                 />
@@ -91,7 +91,7 @@ const ConnectedAccounts: React.FC = () => {
             <div className='d-flex flex-stack'>
               <div className='d-flex'>
                 <img
-                  src={toAbsoluteUrl('media/svg/brand-logos/github.svg')}
+                  src={toAbsoluteUrl('../media/svg/brand-logos/github.svg')}
                   className='w-30px me-6'
                   alt=''
                 />
@@ -126,7 +126,7 @@ const ConnectedAccounts: React.FC = () => {
             <div className='d-flex flex-stack'>
               <div className='d-flex'>
                 <img
-                  src={toAbsoluteUrl('media/svg/brand-logos/slack-icon.svg')}
+                  src={toAbsoluteUrl('../media/svg/brand-logos/slack-icon.svg')}
                   className='w-30px me-6'
                   alt=''
                 />

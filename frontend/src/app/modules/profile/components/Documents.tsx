@@ -33,21 +33,21 @@ export function Documents() {
       <div className='row g-6 g-xl-9 mb-6 mb-xl-9'>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/folder-document.svg'
+            icon='../media/svg/files/folder-document.svg'
             title='Finance'
             description='7 files'
           />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/folder-document.svg'
+            icon='../media/svg/files/folder-document.svg'
             title='Customers'
             description='3 files'
           />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/folder-document.svg'
+            icon='../media/svg/files/folder-document.svg'
             title='CRM Project'
             description='25 files'
           />
@@ -56,37 +56,37 @@ export function Documents() {
 
       <div className='row g-6 g-xl-9 mb-6 mb-xl-9'>
         <div className='col-12 col-sm-12 col-xl'>
-          <Card4 icon='media/svg/files/pdf.svg' title='Project Reqs..' description='3 days ago' />
+          <Card4 icon='../media/svg/files/pdf.svg' title='Project Reqs..' description='3 days ago' />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
-          <Card4 icon='media/svg/files/doc.svg' title='CRM App Docs..' description='3 days ago' />
+          <Card4 icon='../media/svg/files/doc.svg' title='CRM App Docs..' description='3 days ago' />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/css.svg'
+            icon='../media/svg/files/css.svg'
             title='User CRUD Styles'
             description='4 days ago'
           />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
-          <Card4 icon='media/svg/files/ai.svg' title='Metronic Logo' description='5 days ago' />
+          <Card4 icon='../media/svg/files/ai.svg' title='Metronic Logo' description='5 days ago' />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
-          <Card4 icon='media/svg/files/sql.svg' title='Orders backup' description='1 week ago' />
+          <Card4 icon='../media/svg/files/sql.svg' title='Orders backup' description='1 week ago' />
         </div>
       </div>
 
       <div className='row g-6 g-xl-9 mb-6 mb-xl-9'>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/xml.svg'
+            icon='../media/svg/files/xml.svg'
             title='UTAIR CRM API Co..'
             description='2 week ago'
           />
         </div>
         <div className='col-12 col-sm-12 col-xl'>
           <Card4
-            icon='media/svg/files/tif.svg'
+            icon='../media/svg/files/tif.svg'
             title='Tower Hill App..'
             description='3 week ago'
           />

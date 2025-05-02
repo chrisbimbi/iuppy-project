@@ -54,14 +54,14 @@ const Step4: FC = () => {
           </div>
 
           <div className='position-absolute translate-middle-y top-50 end-0 me-5'>
-            <img src={toAbsoluteUrl('media/svg/card-logos/visa.svg')} alt='' className='h-25px' />
+            <img src={toAbsoluteUrl('../media/svg/card-logos/visa.svg')} alt='' className='h-25px' />
             <img
-              src={toAbsoluteUrl('media/svg/card-logos/mastercard.svg')}
+              src={toAbsoluteUrl('../media/svg/card-logos/mastercard.svg')}
               alt=''
               className='h-25px'
             />
             <img
-              src={toAbsoluteUrl('media/svg/card-logos/american-express.svg')}
+              src={toAbsoluteUrl('../media/svg/card-logos/american-express.svg')}
               alt=''
               className='h-25px'
             />

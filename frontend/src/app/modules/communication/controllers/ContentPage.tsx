@@ -258,7 +258,7 @@ const ContentPage: React.FC = () => {
                         className="btn btn-danger"
                         onClick={handleConfirmDelete}
                       >
-                        Excluir
+                        Confirmar exclusão
                       </button>
                     </div>
                   </div>

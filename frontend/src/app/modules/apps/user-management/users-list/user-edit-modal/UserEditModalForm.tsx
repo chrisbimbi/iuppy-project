@@ -46,7 +46,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
     setItemIdForUpdate(undefined)
   }
 
-  const blankImg = toAbsoluteUrl('media/svg/avatars/blank.svg')
+  const blankImg = toAbsoluteUrl('../media/svg/avatars/blank.svg')
   const userAvatarImg = toAbsoluteUrl(`media/${userForEdit.avatar}`)
 
   const formik = useFormik({

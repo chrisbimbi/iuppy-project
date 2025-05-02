@@ -18,12 +18,12 @@ const Error500: FC = () => {
       {/* begin::Illustration */}
       <div className='mb-11'>
         <img
-          src={toAbsoluteUrl('media/auth/500-error.png')}
+          src={toAbsoluteUrl('../media/auth/500-error.png')}
           className='mw-100 mh-300px theme-light-show'
           alt=''
         />
         <img
-          src={toAbsoluteUrl('media/auth/500-error-dark.png')}
+          src={toAbsoluteUrl('../media/auth/500-error-dark.png')}
           className='mw-100 mh-300px theme-dark-show'
           alt=''
         />

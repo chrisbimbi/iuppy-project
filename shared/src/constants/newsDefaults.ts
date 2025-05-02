@@ -26,5 +26,7 @@ export const newsSettingsDefaults: NewsSettings = {
   // campos opcionais
   acknowledgementRequired: false,
   maxAudienceSize: undefined,
-  restrictAccess: undefined
+  restrictAccess: undefined,
+  pushContent: '',
+  pushTitle: ''
 };

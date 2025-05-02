@@ -214,7 +214,7 @@ export const Step1: React.FC<StepProps> = ({
                               onClick={() => removeImage(idx)}
                             >
                               <KTSVG
-                                path="/media/icons/duotune/general/gen027.svg"
+                                path="../media/icons/duotune/general/gen027.svg"
                                 className="svg-icon-2"
                               />
                             </button>
@@ -356,7 +356,7 @@ export const Step1: React.FC<StepProps> = ({
                   onClick={() => removeAttachment(idx)}
                 >
                   <KTSVG
-                    path="/media/icons/duotune/general/gen027.svg"
+                    path="../media/icons/duotune/general/gen027.svg"
                     className="svg-icon-2"
                   />
                 </button>

@@ -42,7 +42,7 @@ export function Projects() {
       <div className='row g-6 g-xl-9'>
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/plurk.svg'
+            icon='../media/svg/brand-logos/plurk.svg'
             badgeColor='primary'
             status='In Progress'
             statusColor='primary'
@@ -57,7 +57,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/disqus.svg'
+            icon='../media/svg/brand-logos/disqus.svg'
             badgeColor='info'
             status='Pending'
             statusColor='info'
@@ -72,7 +72,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/figma-1.svg'
+            icon='../media/svg/brand-logos/figma-1.svg'
             badgeColor='success'
             status='Completed'
             statusColor='success'
@@ -87,7 +87,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/sentry-3.svg'
+            icon='../media/svg/brand-logos/sentry-3.svg'
             badgeColor='info'
             status='Pending'
             statusColor='info'
@@ -102,7 +102,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/xing-icon.svg'
+            icon='../media/svg/brand-logos/xing-icon.svg'
             badgeColor='primary'
             status='In Progress'
             statusColor='primary'
@@ -117,7 +117,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/tvit.svg'
+            icon='../media/svg/brand-logos/tvit.svg'
             badgeColor='primary'
             status='In Progress'
             statusColor='primary'
@@ -132,7 +132,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/aven.svg'
+            icon='../media/svg/brand-logos/aven.svg'
             badgeColor='primary'
             status='In Progress'
             statusColor='primary'
@@ -147,7 +147,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/treva.svg'
+            icon='../media/svg/brand-logos/treva.svg'
             badgeColor='danger'
             status='Overdue'
             statusColor='danger'
@@ -162,7 +162,7 @@ export function Projects() {
 
         <div className='col-md-6 col-xl-4'>
           <Card2
-            icon='media/svg/brand-logos/kanba.svg'
+            icon='../media/svg/brand-logos/kanba.svg'
             badgeColor='success'
             status='Completed'
             statusColor='success'
@@ -234,19 +234,19 @@ export function Projects() {
 }
 
 const users1: Array<IconUserModel> = [
-  {name: 'Emma Smith', avatar: 'media/avatars/300-6.jpg'},
-  {name: 'Rudy Stone', avatar: 'media/avatars/300-1.jpg'},
+  {name: 'Emma Smith', avatar: '../media/avatars/300-6.jpg'},
+  {name: 'Rudy Stone', avatar: '../media/avatars/300-1.jpg'},
   {name: 'Susan Redwood', initials: 'S', color: 'primary'},
 ]
 
 const users2 = [
   {name: 'Alan Warden', initials: 'A', color: 'warning'},
-  {name: 'Brian Cox', avatar: 'media/avatars/300-5.jpg'},
+  {name: 'Brian Cox', avatar: '../media/avatars/300-5.jpg'},
 ]
 
 const users3 = [
-  {name: 'Mad Masy', avatar: 'media/avatars/300-6.jpg'},
-  {name: 'Cris Willson', avatar: 'media/avatars/300-1.jpg'},
+  {name: 'Mad Masy', avatar: '../media/avatars/300-6.jpg'},
+  {name: 'Cris Willson', avatar: '../media/avatars/300-1.jpg'},
   {name: 'Mike Garcie', initials: 'M', color: 'info'},
 ]
 
@@ -256,29 +256,29 @@ const users4 = [
 ]
 
 const users5 = [
-  {name: 'Francis Mitcham', avatar: 'media/avatars/300-20.jpg'},
-  {name: 'Michelle Swanston', avatar: 'media/avatars/300-7.jpg'},
+  {name: 'Francis Mitcham', avatar: '../media/avatars/300-20.jpg'},
+  {name: 'Michelle Swanston', avatar: '../media/avatars/300-7.jpg'},
   {name: 'Susan Redwood', initials: 'S', color: 'primary'},
 ]
 
 const users6 = [
-  {name: 'Emma Smith', avatar: 'media/avatars/300-6.jpg'},
-  {name: 'Rudy Stone', avatar: 'media/avatars/300-1.jpg'},
+  {name: 'Emma Smith', avatar: '../media/avatars/300-6.jpg'},
+  {name: 'Rudy Stone', avatar: '../media/avatars/300-1.jpg'},
   {name: 'Susan Redwood', initials: 'S', color: 'primary'},
 ]
 
 const users7 = [
-  {name: 'Meloday Macy', avatar: 'media/avatars/300-2.jpg'},
+  {name: 'Meloday Macy', avatar: '../media/avatars/300-2.jpg'},
   {name: 'Rabbin Watterman', initials: 'S', color: 'success'},
 ]
 
 const users8 = [
-  {name: 'Emma Smith', avatar: 'media/avatars/300-6.jpg'},
-  {name: 'Rudy Stone', avatar: 'media/avatars/300-1.jpg'},
+  {name: 'Emma Smith', avatar: '../media/avatars/300-6.jpg'},
+  {name: 'Rudy Stone', avatar: '../media/avatars/300-1.jpg'},
   {name: 'Susan Redwood', initials: 'S', color: 'primary'},
 ]
 
 const users9 = [
-  {name: 'Meloday Macy', avatar: 'media/avatars/300-2.jpg'},
+  {name: 'Meloday Macy', avatar: '../media/avatars/300-2.jpg'},
   {name: 'Rabbin Watterman', initials: 'S', color: 'danger'},
 ]

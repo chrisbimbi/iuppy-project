@@ -1,8 +1,12 @@
 import {
-    IsUUID, IsNotEmpty, IsString, IsEnum, IsOptional, IsArray, ArrayNotEmpty, ArrayUnique
+    IsNotEmpty,
+    IsUUID,
+    IsString,
+    IsOptional,
+    IsEnum,
+    IsArray,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { GroupType } from '@shared/constants/GroupType';
+import { UserGroupType } from '@shared/types';
 
 export class CreateGroupDto {
     @IsNotEmpty() @IsUUID()
@@ -14,17 +18,12 @@ export class CreateGroupDto {
     @IsOptional() @IsString()
     identifier?: string;
 
-    @IsNotEmpty() @IsEnum(GroupType)
-    type: GroupType;
+    @IsNotEmpty() @IsEnum(UserGroupType)
+    type: UserGroupType;
 
-    @IsOptional() @IsArray()
-    @ArrayUnique()
-    @Type(() => String)
+    @IsOptional() @IsArray() @IsString({ each: true })
     conditions?: string[];
 
-    @IsOptional() @IsArray()
-    @ArrayNotEmpty()
-    @ArrayUnique()
-    @IsUUID('4', { each: true })
+    @IsOptional() @IsArray() @IsUUID('all', { each: true })
     adminIds?: string[];
 }

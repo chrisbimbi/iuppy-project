@@ -7,6 +7,8 @@ export interface NewsSettings {
   allowReactions: boolean;
   notifyUsers: boolean;                   // email interno
   pushNotification: boolean;
+  pushContent?: string;
+  pushTitle?: string;
   emailNotification: boolean;
   inAppNotification: boolean;             // notificação in-app
   allowSharing: boolean;
