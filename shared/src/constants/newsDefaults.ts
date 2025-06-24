@@ -28,5 +28,6 @@ export const newsSettingsDefaults: NewsSettings = {
   maxAudienceSize: undefined,
   restrictAccess: undefined,
   pushContent: '',
-  pushTitle: ''
+  pushTitle: '',
+  authorId: null
 };

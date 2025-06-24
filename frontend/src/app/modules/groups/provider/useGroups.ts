@@ -1,30 +1,36 @@
-// frontend/src/app/modules/groups/provider/useGroups.ts
-import { useState, useEffect } from 'react'
-import { GroupsService } from '../services/groups.service'
-import { UserGroup } from '@shared/types'
+import { useState, useEffect } from 'react';
+import { GroupsService } from '../services/groups.service';
+import { UserGroup } from '@shared/types';
 
-interface Props { companyId: string }
+interface Props {
+  companyId: string;
+  spaceId?: string;
+  channelId?: string;
+}
 
-export const useGroups = ({ companyId }: Props) => {
-  const [groups, setGroups] = useState<UserGroup[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const useGroups = ({ companyId, spaceId, channelId }: Props) => {
+  const [groups, setGroups] = useState<UserGroup[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetch = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      setGroups(await GroupsService.list(companyId))
+      const list = await GroupsService.list(companyId, spaceId, channelId);
+      setGroups(list);
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar grupos')
+      setError(err.message || 'Erro ao carregar grupos');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (companyId) fetch()
-  }, [companyId])
+    if (companyId) {
+      fetch();
+    }
+  }, [companyId, spaceId, channelId]);
 
-  return { groups, loading, error, refetch: fetch }
-}
+  return { groups, loading, error, refetch: fetch };
+};

@@ -185,9 +185,9 @@ const ContentPage: React.FC = () => {
                     channels={channels}
                     selectedChannelId={channelId}
                     onChannelSelect={setChannelId}
-                    onCreateChannel={() => {}}
-                    onEditChannel={() => {}}
-                    onChannelReorder={() => {}}
+                    onCreateChannel={() => { }}
+                    onEditChannel={() => { }}
+                    onChannelReorder={() => { }}
                     onCreatePost={handleCreatePost}
                   />
                 </div>
@@ -213,7 +213,7 @@ const ContentPage: React.FC = () => {
 
               <div className="modal fade modal-xl" tabIndex={-1} ref={formRef}>
                 <div className="modal-dialog modal-fullscreen-lg-down">
-                  <div className="modal-content">
+                  <div className="modal-content p-4">
                     <ContentForm
                       initialValues={wizardInitialValues}
                       editingId={editingId}
@@ -225,7 +225,7 @@ const ContentPage: React.FC = () => {
 
               <div className="modal fade" tabIndex={-1} ref={deleteRef} id="kt_modal_delete">
                 <div className="modal-dialog">
-                  <div className="modal-content">
+                  <div className="modal-content p-4">
                     <div className="modal-header">
                       <h3 className="modal-title">Confirmação de exclusão</h3>
                       <div

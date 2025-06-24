@@ -1,5 +1,6 @@
 // shared/src/types/NewsSettings.ts
 export interface NewsSettings {
+  authorId: null;
   visibility: 'public' | 'private' | 'specific_groups';
   targetAudience: string[];               // públicos específicos
   allowComments: boolean;
@@ -12,6 +13,8 @@ export interface NewsSettings {
   emailNotification: boolean;
   inAppNotification: boolean;             // notificação in-app
   allowSharing: boolean;
+  shareUrl?: string;
+  shareText?: string;
   showAuthor: boolean;
   showPublishDate: boolean;
   pinToTop: boolean;
