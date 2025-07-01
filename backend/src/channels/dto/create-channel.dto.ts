@@ -1,19 +1,35 @@
+// backend/src/channels/dto/create-channel.dto.ts
+import { ChannelType } from '@shared/types';
 import {
   IsNotEmpty,
   IsString,
   IsOptional,
   IsUUID,
   IsArray,
+  IsEnum,
+  IsBoolean,
 } from 'class-validator';
 
+
 export class CreateChannelDto {
-  @IsNotEmpty() @IsString()
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
+
+  @IsNotEmpty()
+  @IsString()
   name: string;
 
-  @IsOptional() @IsString()
+  @IsNotEmpty()
+  @IsEnum(ChannelType)
+  type: ChannelType;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsNotEmpty() @IsUUID()
+  @IsNotEmpty()
+  @IsUUID()
   companyId: string;
 
   @IsOptional()

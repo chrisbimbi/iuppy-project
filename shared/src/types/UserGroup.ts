@@ -4,6 +4,7 @@ import { UserGroupType } from "../constants/UserGroupType"
 
 /** Tipagem principal do grupo de usuários */
 export interface UserGroup {
+  members: any
   id: string
   companyId: string
   name: string

@@ -1,44 +1,44 @@
-import React, { useEffect, useRef } from 'react';
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
-import { News as Content } from '@shared/types';
-import clsx from 'clsx';
-import { toAbsoluteUrl } from 'src/helpers';
+// src/app/modules/communication/views/ContentList.tsx
+import React, { useEffect, useRef } from 'react'
+import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
+import { News as Content } from '@shared/types'
+import { toAbsoluteUrl } from 'src/helpers'
 
 interface Props {
-    channelName: string | null;
-    onEditChannel(): void;
-    onCreatePost(): void;
-    items: Content[];
-    loading: boolean;
-    error: any;
-    selectedIds: string[];
-    onSelect(id: string, checked: boolean): void;
-    onEdit(id: string): void;
-    onDuplicate(id: string): void;
-    onDelete(id: string): void;
-    onDeleteMultiple(): void;
-    onDuplicateMultiple(): void;
-    onTogglePublishMultiple(): void;
+    channelName: string | null
+    onEditChannel(): void
+    onCreatePost(): void
+    items?: Content[]
+    loading: boolean
+    error: any
+    selectedIds?: string[]
+    onSelect(id: string, checked: boolean): void
+    onEdit(id: string): void
+    onDuplicate(id: string): void
+    onDelete(id: string): void
+    onDeleteMultiple(): void
+    onDuplicateMultiple(): void
+    onTogglePublishMultiple(): void
 }
 
-const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg';
+const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg'
 
-const Spinner = () => (
-    <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
+const Spinner: React.FC = () => (
+    <div className="d-flex justify-content-center align-items-center" style={{ height: 300 }}>
         <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Carregando...</span>
         </div>
     </div>
-);
+)
 
 const ContentList: React.FC<Props> = ({
     channelName,
     onEditChannel,
     onCreatePost,
-    items,
+    items: itemsProp = [],           // fallback para array vazio
     loading,
     error,
-    selectedIds,
+    selectedIds: selectedIdsProp = [], // fallback para array vazio
     onSelect,
     onEdit,
     onDuplicate,
@@ -47,36 +47,45 @@ const ContentList: React.FC<Props> = ({
     onDuplicateMultiple,
     onTogglePublishMultiple,
 }) => {
-    const headerRef = useRef<HTMLInputElement>(null);
+    const headerRef = useRef<HTMLInputElement>(null)
 
+    // re-renderiza menus sempre que items mudam
     useEffect(() => {
-        MenuComponent.reinitialization();
-    }, [items]);
+        MenuComponent.reinitialization()
+    }, [itemsProp])
+
+    const items = Array.isArray(itemsProp) ? itemsProp : []
+    const selectedIds = Array.isArray(selectedIdsProp) ? selectedIdsProp : []
 
     const sorted = [...items].sort(
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    )
 
-    const selectedItems = sorted.filter(i => selectedIds.includes(i.id));
-    const allPublished = selectedItems.every(i => i.isPublished);
-    const allDraft = selectedItems.every(i => !i.isPublished);
+    const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
+    const allPublished = selectedItems.length > 0 && selectedItems.every(i => i.isPublished)
+    const allDraft = selectedItems.length > 0 && selectedItems.every(i => !i.isPublished)
 
     const openStats = (item: Content) => {
-        const drawerEl = document.getElementById('kt_stats_drawer');
-        if (!drawerEl) return;
-        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl);
-        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement;
-        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`;
-        dr.show();
-    };
+        const drawerEl = document.getElementById('kt_stats_drawer')
+        if (!drawerEl) return
+        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl)
+        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement
+        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`
+        dr.show()
+    }
 
-    if (loading) return <Spinner />;
-    if (error) return <div className="text-danger p-5">Erro ao carregar conteúdos.</div>;
+    if (loading) return <Spinner />
+    if (error) return <div className="text-danger p-5">Erro ao carregar conteúdos.</div>
 
     return (
         <div className="card card-flush h-lg-100">
             <div className="card-header py-5 d-flex justify-content-between align-items-center">
-                <h3>{channelName ?? 'Conteúdos'}</h3>
+                <h3>{channelName ?? 'Canais'} &nbsp;
+                    <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
+                        <i className="bi bi-gear"></i>
+                    </button>
+                </h3>
+
                 <div className="d-flex align-items-center">
                     {selectedIds.length > 0 && (
                         <div className="me-3">
@@ -95,9 +104,7 @@ const ContentList: React.FC<Props> = ({
                     )}
                     {channelName && (
                         <>
-                            <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
-                                <i className="bi bi-gear"></i>
-                            </button>
+
                             <button className="btn btn-primary btn-sm" onClick={onCreatePost}>
                                 Criar post
                             </button>
@@ -139,8 +146,8 @@ const ContentList: React.FC<Props> = ({
                         </thead>
                         <tbody>
                             {sorted.map(item => {
-                                const isChecked = selectedIds.includes(item.id);
-                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB;
+                                const isChecked = selectedIds.includes(item.id)
+                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB
                                 return (
                                     <tr key={item.id}>
                                         <td>
@@ -173,14 +180,10 @@ const ContentList: React.FC<Props> = ({
                                                     type="button"
                                                     id={`dropdown-${item.id}`}
                                                     data-bs-toggle="dropdown"
-                                                    aria-expanded="false"
                                                 >
                                                     <i className="bi bi-three-dots-vertical"></i>
                                                 </button>
-                                                <ul
-                                                    className="dropdown-menu dropdown-menu-end"
-                                                    aria-labelledby={`dropdown-${item.id}`}
-                                                >
+                                                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdown-${item.id}`}>
                                                     <li>
                                                         <button className="dropdown-item" onClick={() => onEdit(item.id)}>
                                                             <i className="bi bi-pencil me-2" /> Editar
@@ -200,14 +203,14 @@ const ContentList: React.FC<Props> = ({
                                             </div>
                                         </td>
                                     </tr>
-                                );
+                                )
                             })}
                         </tbody>
                     </table>
                 )}
             </div>
         </div>
-    );
-};
+    )
+}
 
-export default ContentList;
+export default ContentList

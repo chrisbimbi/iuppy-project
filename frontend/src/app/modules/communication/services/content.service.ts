@@ -29,4 +29,26 @@ export const ContentService = {
   async remove(id: string): Promise<void> {
     await axios.delete(`${API_URL}/news/${id}`);
   },
-};
+/**
+   * Retorna quantos posts existem naquele canal (usa o `list` por enquanto)
+   */
+  async countByChannel(channelId: string): Promise<number> {
+    const items = await this.list(channelId)
+    return items.length
+  },
+
+  /**
+   * Busca o último post publicado no canal (por data de publicação)
+   */
+  async getLatestByChannel(channelId: string): Promise<News | null> {
+    const items = await this.list(channelId)
+    if (items.length === 0) return null
+    // supõe que `publishedAt` exista em News e seja um ISO string
+    items.sort(
+      (a, b) =>
+        new Date(b.createdAt!).getTime() -
+        new Date(a.createdAt!).getTime()
+    )
+    return items[0]
+  },
+}

@@ -1,4 +1,3 @@
-// backend/src/users/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -7,10 +6,9 @@ import {
   UpdateDateColumn,
   Index,
   ManyToMany,
-  JoinTable,
 } from 'typeorm';
 import { Role, User } from '@shared/types';
-import { GroupEntity } from 'src/groups/group.entity';
+import { GroupEntity } from '../groups/group.entity';
 
 @Entity('user_entity')
 export class UserEntity implements User {
@@ -40,17 +38,12 @@ export class UserEntity implements User {
   @Column()
   companyId: string;
 
-  /** lista de _IDs_ de grupos — corresponde ao seu `User.groups: string[]` */
+  // lista de IDs de grupos (campo legado, pode manter ou remover se não usar)
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
   groups: string[];
 
-  /** relação M:N com GroupEntity */
-  @ManyToMany(() => GroupEntity, (g) => g.members)
-  @JoinTable({
-    name: 'user_group_members',
-    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'group_id', referencedColumnName: 'id' },
-  })
+  // relação M-N propriamente dita
+  @ManyToMany(() => GroupEntity, group => group.members)
   memberOf: GroupEntity[];
 
   @Column('text', { array: true, nullable: true })

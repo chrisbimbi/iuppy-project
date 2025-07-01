@@ -1,5 +1,5 @@
 // frontend/src/services/spacesService.ts
-import { Space } from '@shared/types';
+import { Space, User } from '@shared/types';
 import baseApi from 'src/services/baseApi';
 import axios, { AxiosError, isAxiosError } from 'axios'
 
@@ -58,4 +58,27 @@ export const spacesService = {
       handleAxiosError(err, 'Erro ao remover o space');
     }
   },
-};
+ /**
+   * Busca vários espaços pelo ID (faz N requests em paralelo)
+   */
+  async getByIds(ids: string[]): Promise<Space[]> {
+    const calls = ids.map(id => this.get(id))
+    return Promise.all(calls)
+  },
+
+  /**
+   * Lista todos os usuários que pertencem a esses espaços.
+   * Pede ao backend via: GET /spaces/{spaceId}/users
+   */
+  async listUsers(spaceIds: string[]): Promise<User[]> {
+    const calls = spaceIds.map(id =>
+      baseApi
+        .get<User[]>(`/spaces/${id}/users`)
+        .then(resp => resp.data)
+        .catch(() => [])    // se um space não tiver rota, retorna vazio
+    )
+    const results = await Promise.all(calls)
+    // "flatten"
+    return results.reduce<User[]>((all, arr) => all.concat(arr), [])
+  },
+}

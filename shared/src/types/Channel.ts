@@ -1,4 +1,5 @@
 export interface Channel {
+  type: string;
   id: string;
   name: string;
   description?: string;
@@ -17,4 +18,13 @@ export interface Channel {
 
   /** quem é admin deste canal */
   adminIds?: string[];
+
+  /** publicado / despublicado */
+  isPublished?: boolean;
+}
+
+export enum ChannelType {
+  ARTICLES = 'articles',
+  MEDIA = 'media',
+  UPDATES = 'updates',
 }

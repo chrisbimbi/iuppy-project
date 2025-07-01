@@ -1,14 +1,16 @@
+// src/app/modules/communication/controllers/ContentPage.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault';
 import { Content } from 'src/layout/components/Content';
 import { ChannelsList } from 'src/app/modules/channels/components/ChannelsList';
+import ChannelModal from 'src/app/modules/channels/components/ChannelModal';
 import ContentList from 'src/app/modules/communication/views/ContentList';
 import { useAuth } from 'src/app/modules/auth';
 import { useContent } from '../providers/useContent';
 import { useContentActions } from '../providers/useContentActions';
 import { spacesService } from 'src/app/modules/spaces/services/spaces.service';
-import { channelsService } from 'src/app/modules/channels/services/channels.service';
+import { ChannelsService } from '../../channels/services/channels.service';
 import { ContentService } from '../services/content.service';
 import { CreateNewsDto as CreateContentDto } from '@shared/types';
 import { Modal } from 'bootstrap';
@@ -25,9 +27,14 @@ const ContentPage: React.FC = () => {
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [channels, setChannels] = useState<any[]>([]);
   const [channelId, setChannelId] = useState<string | null>(null);
+
+  // canal-modal
+  const [showChannelModal, setShowChannelModal] = useState(false);
+  const [editingChannelId, setEditingChannelId] = useState<string | undefined>();
+
+  // conteúdo
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [success, setSuccess] = useState(false);
-
   const formRef = useRef<HTMLDivElement>(null);
   const deleteRef = useRef<HTMLDivElement>(null);
   const [formModal, setFormModal] = useState<Modal | null>(null);
@@ -36,7 +43,6 @@ const ContentPage: React.FC = () => {
   const [editingId, setEditingId] = useState<string>();
   const [wizardInitialValues, setWizardInitialValues] =
     useState<CreateContentDto>({ ...initialNewValues, channelId: '' });
-
   const [toDeleteIds, setToDeleteIds] = useState<string[]>([]);
 
   const { items, loading, error, refetch } = useContent({ channelId });
@@ -48,6 +54,7 @@ const ContentPage: React.FC = () => {
     togglePublishItems,
   } = useContentActions(refetch);
 
+  // inicializações
   useEffect(() => {
     if (formRef.current) setFormModal(new Modal(formRef.current));
     if (deleteRef.current) setDeleteModal(new Modal(deleteRef.current));
@@ -56,6 +63,7 @@ const ContentPage: React.FC = () => {
     setTimeout(() => DrawerComponent.createInstances('#kt_stats_drawer'), 50);
   }, []);
 
+  // query params
   useEffect(() => {
     const p = new URLSearchParams(location.search);
     const sp = p.get('spaceId');
@@ -64,26 +72,25 @@ const ContentPage: React.FC = () => {
     if (ch && ch !== channelId) setChannelId(ch);
   }, [location.search]);
 
+  // carregar spaces
   useEffect(() => {
     if (!currentUser) return;
     spacesService.list(currentUser.companyId).then(data => {
       setSpaces(data);
-      if (!spaceId && data.length) {
-        setSpaceId(data[0].id);
-      }
+      if (!spaceId && data.length) setSpaceId(data[0].id);
     });
   }, [currentUser]);
 
+  // carregar canais
   useEffect(() => {
     if (!spaceId || !currentUser) return;
-    channelsService.list(currentUser.companyId, spaceId).then(data => {
+    ChannelsService.list(currentUser.companyId, spaceId).then(data => {
       setChannels(data);
-      if (!channelId && data.length) {
-        setChannelId(data[0].id);
-      }
+      if (!channelId && data.length) setChannelId(data[0].id);
     });
   }, [spaceId, currentUser]);
 
+  // manter URL em sincronia
   useEffect(() => {
     const qs = new URLSearchParams();
     if (spaceId) qs.set('spaceId', spaceId);
@@ -91,6 +98,7 @@ const ContentPage: React.FC = () => {
     navigate({ pathname: '/contents', search: qs.toString() }, { replace: true });
   }, [spaceId, channelId]);
 
+  // conteúdo: sucesso
   const handleSaved = () => {
     formModal?.hide();
     refetch();
@@ -98,6 +106,7 @@ const ContentPage: React.FC = () => {
     setTimeout(() => setSuccess(false), 3000);
   };
 
+  // criar post
   const handleCreatePost = (chId: string) => {
     setEditingId(undefined);
     setWizardInitialValues({
@@ -109,6 +118,7 @@ const ContentPage: React.FC = () => {
     formModal?.show();
   };
 
+  // editar conteúdo
   const handleEditContent = async (id: string) => {
     const original = await ContentService.get(id);
     setEditingId(id);
@@ -132,9 +142,11 @@ const ContentPage: React.FC = () => {
     formModal?.show();
   };
 
+  // seleção
   const handleSelect = (id: string, checked: boolean) =>
     setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)));
 
+  // exclusão
   const handleDeleteContent = (id: string) => {
     setToDeleteIds([id]);
     deleteModal?.show();
@@ -149,6 +161,7 @@ const ContentPage: React.FC = () => {
     deleteModal?.hide();
   };
 
+  // duplicar / publicar múltiplos
   const handleDuplicateMultiple = async () => {
     await Promise.all(selectedIds.map(id => duplicateItem(id)));
     setSelectedIds([]);
@@ -156,6 +169,22 @@ const ContentPage: React.FC = () => {
   const handleTogglePublishMultiple = async () => {
     await togglePublishItems(selectedIds);
     setSelectedIds([]);
+  };
+
+  // modal de canal
+  const openChannelModal = (id?: string) => {
+    setEditingChannelId(id);
+    setShowChannelModal(true);
+  };
+  const closeChannelModal = () => setShowChannelModal(false);
+  const handleChannelSaved = async () => {
+    // recarrega lista de canais
+    if (currentUser && spaceId) {
+      const data = await ChannelsService.list(currentUser.companyId, spaceId);
+      setChannels(data);
+      if (!channelId && data.length) setChannelId(data[0].id);
+    }
+    closeChannelModal();
   };
 
   const currentSpaceName = spaces.find(s => s.id === spaceId)?.name ?? 'Conteúdos';
@@ -180,21 +209,29 @@ const ContentPage: React.FC = () => {
               )}
 
               <div className="row">
+                {/* coluna canais */}
                 <div className="col-lg-4">
                   <ChannelsList
                     channels={channels}
                     selectedChannelId={channelId}
                     onChannelSelect={setChannelId}
-                    onCreateChannel={() => { }}
-                    onEditChannel={() => { }}
-                    onChannelReorder={() => { }}
-                    onCreatePost={handleCreatePost}
-                  />
+                    onCreateChannel={() => openChannelModal()}
+                    onEditChannel={id => openChannelModal(id)}
+                    onChannelReorder={newOrder => {
+                      const reordered = newOrder.map(
+                        id => channels.find(c => c.id === id)!
+                      );
+                      setChannels(reordered);
+                    } } onCreatePost={function (channelId: string): void {
+                      throw new Error('Function not implemented.');
+                    } }                  />
                 </div>
+
+                {/* coluna conteúdos */}
                 <div className="col-lg-8">
                   <ContentList
                     channelName={channels.find(c => c.id === channelId)?.name ?? null}
-                    onEditChannel={() => channelId && console.log('editar canal', channelId)}
+                    onEditChannel={() => openChannelModal(channelId ?? undefined)}
                     onCreatePost={() => channelId && handleCreatePost(channelId)}
                     items={items}
                     loading={loading}
@@ -211,6 +248,7 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* modal de criação/edição de conteúdo */}
               <div className="modal fade modal-xl" tabIndex={-1} ref={formRef}>
                 <div className="modal-dialog modal-fullscreen-lg-down">
                   <div className="modal-content p-4">
@@ -223,6 +261,7 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* modal de excluir conteúdo */}
               <div className="modal fade" tabIndex={-1} ref={deleteRef} id="kt_modal_delete">
                 <div className="modal-dialog">
                   <div className="modal-content p-4">
@@ -264,6 +303,17 @@ const ContentPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* ***  AQUI ***  modal de criar/editar canal */}
+              {showChannelModal && (
+                <ChannelModal
+                  show={showChannelModal}
+                  onHide={closeChannelModal}
+                  channelId={editingChannelId}
+                  companyId={currentUser!.companyId}
+                  onSave={handleChannelSaved}
+                />
+              )}
             </Content>
           </div>
         </div>

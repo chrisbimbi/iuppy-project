@@ -7,6 +7,7 @@ import { useSpaces } from 'src/app/modules/spaces/hooks/useSpaces';
 import { DrawerComponent, ToggleComponent } from 'src/assets/ts/components';
 import { AsideMenuItemWithSub } from './AsideMenuItemWithSub';
 import { AsideMenuItem } from './AsideMenuItem';
+import { AsideMenu } from './AsideMenu';
 
 export function AsideMenuMain() {
   const intl = useIntl();
@@ -75,28 +76,34 @@ export function AsideMenuMain() {
               ))
             )}
           </AsideMenuItemWithSub>
-
-          <AsideMenuItemWithSub
-            to="/contents/modules"
-            title={t('MENU.MODULES', 'Módulos')}
-            fontIcon="bi-stack"
+          <AsideMenuItem
+            to="/channels"
+            title={t('MENU.CHANNELS', 'Canais')}
+            fontIcon="bi-chat-left-text"
           >
-            {[
-              { to: '/contents/pages', icon: 'bi-journal-text', label: t('MENU.PAGES','Pages') },
-              { to: '/contents/surveys', icon: 'bi-bar-chart',   label: t('MENU.SURVEYS','Surveys') },
-            ].map(mod => (
-              <AsideMenuItem
-                key={mod.to}
-                to={mod.to}
-                hasBullet
-                fontIcon={mod.icon}
-                title={mod.label}
-              />
-            ))}
-          </AsideMenuItemWithSub>
+
+          </AsideMenuItem>
+
         </>
       )}
-
+      <AsideMenuItemWithSub
+        to="/contents/modules"
+        title={t('MENU.MODULES', 'Módulos')}
+        fontIcon="bi-stack"
+      >
+        {[
+          { to: '/contents/pages', icon: 'bi-journal-text', label: t('MENU.PAGES', 'Pages') },
+          { to: '/contents/surveys', icon: 'bi-bar-chart', label: t('MENU.SURVEYS', 'Surveys') },
+        ].map(mod => (
+          <AsideMenuItem
+            key={mod.to}
+            to={mod.to}
+            hasBullet
+            fontIcon={mod.icon}
+            title={mod.label}
+          />
+        ))}
+      </AsideMenuItemWithSub>
       {/* --- Usuários & Grupos (sempre visível) --- */}
       <AsideMenuItemWithSub
         to="#"
