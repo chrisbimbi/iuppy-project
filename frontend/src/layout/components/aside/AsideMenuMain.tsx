@@ -1,4 +1,3 @@
-// frontend/src/layout/components/AsideMenuMain.tsx
 import React, { useEffect } from 'react';
 import { useIntl } from 'react-intl';
 import { useLocation } from 'react-router';
@@ -7,7 +6,6 @@ import { useSpaces } from 'src/app/modules/spaces/hooks/useSpaces';
 import { DrawerComponent, ToggleComponent } from 'src/assets/ts/components';
 import { AsideMenuItemWithSub } from './AsideMenuItemWithSub';
 import { AsideMenuItem } from './AsideMenuItem';
-import { AsideMenu } from './AsideMenu';
 
 export function AsideMenuMain() {
   const intl = useIntl();
@@ -15,10 +13,10 @@ export function AsideMenuMain() {
   const { currentUser } = useAuth();
   const companyId = currentUser?.companyId ?? '';
 
-  // espaços só para segmento
   const { data: spaces = [], loading } = useSpaces(companyId);
 
   const isContents = pathname.startsWith('/contents');
+  const isSurveys = pathname.startsWith('/contents/surveys');
 
   const t = (id: string, defaultMsg: string) => {
     try {
@@ -76,35 +74,82 @@ export function AsideMenuMain() {
               ))
             )}
           </AsideMenuItemWithSub>
+
           <AsideMenuItem
             to="/channels"
             title={t('MENU.CHANNELS', 'Canais')}
             fontIcon="bi-chat-left-text"
-          >
-
-          </AsideMenuItem>
-
+          />
         </>
       )}
+
+      {/* --- Módulos (inclui Pesquisas e Enquetes) --- */}
       <AsideMenuItemWithSub
-        to="/contents/modules"
+        to="/modules"
         title={t('MENU.MODULES', 'Módulos')}
         fontIcon="bi-stack"
       >
-        {[
-          { to: '/contents/pages', icon: 'bi-journal-text', label: t('MENU.PAGES', 'Pages') },
-          { to: '/contents/surveys', icon: 'bi-bar-chart', label: t('MENU.SURVEYS', 'Surveys') },
-        ].map(mod => (
-          <AsideMenuItem
-            key={mod.to}
-            to={mod.to}
-            hasBullet
-            fontIcon={mod.icon}
-            title={mod.label}
-          />
-        ))}
+        <AsideMenuItem
+          to="/modules/surveys"
+          hasBullet
+          fontIcon="bi-bar-chart"
+          title={t('MENU.SURVEYS', 'Pesquisas e Enquetes')}
+        />
       </AsideMenuItemWithSub>
-      {/* --- Usuários & Grupos (sempre visível) --- */}
+
+      {/* --- Sub-menus de segmentação das enquetes (quando em /modules/surveys) --- */}
+      {isSurveys && (
+        <AsideMenuItemWithSub
+          to="/modules/surveys"
+          title={t('MENU.SEGMENTATION', 'Segmentação')}
+          fontIcon="bi-diagram-3"
+        >
+          {loading ? (
+            <AsideMenuItem
+              to=""
+              hasBullet
+              title={t('MENU.LOADING', 'Carregando...')}
+            />
+          ) : (
+            spaces.map(space => (
+              <AsideMenuItem
+                key={space.id}
+                to={`/modules/surveys?spaceId=${space.id}`}
+                hasBullet
+                title={space.name}
+              />
+            ))
+          )}
+        </AsideMenuItemWithSub>
+      )}
+
+      {/* --- Sub-menus de segmentação das enquetes (quando em /contents/surveys) --- */}
+      {isSurveys && (
+        <AsideMenuItemWithSub
+          to="/contents/surveys"
+          title={t('MENU.SEGMENTATION', 'Segmentação')}
+          fontIcon="bi-diagram-3"
+        >
+          {loading ? (
+            <AsideMenuItem
+              to=""
+              hasBullet
+              title={t('MENU.LOADING', 'Carregando...')}
+            />
+          ) : (
+            spaces.map(space => (
+              <AsideMenuItem
+                key={space.id}
+                to={`/surveys?spaceId=${space.id}`}
+                hasBullet
+                title={space.name}
+              />
+            ))
+          )}
+        </AsideMenuItemWithSub>
+      )}
+
+      {/* --- Usuários & Grupos --- */}
       <AsideMenuItemWithSub
         to="#"
         title={t('MENU.USERS_GROUPS', 'Meus usuários e grupos')}

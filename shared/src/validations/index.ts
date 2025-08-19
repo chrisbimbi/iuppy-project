@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { Role, NewsType } from '../types';
+import * as Yup from 'yup'
+import { SurveyQuestionType, SurveyStatus } from '../types'
 
 const UserEngagementSchema = z.object({
   totalLogins: z.number().nonnegative(),
@@ -80,3 +82,16 @@ export const CreateNewSchema = z.object({
   segmentacao: z.array(z.string()),
   publicado: z.boolean(),
 });
+
+export const CreateSurveySchema = Yup.object({
+  title: Yup.string().required(),
+  // …
+  status: Yup.mixed<SurveyStatus>().oneOf(Object.values(SurveyStatus)).required(),
+  questions: Yup.array().of(
+    Yup.object({
+      type: Yup.mixed<SurveyQuestionType>().oneOf(Object.values(SurveyQuestionType)),
+      questionText: Yup.string().required(),
+      // …
+    })
+  )
+})

@@ -18,6 +18,13 @@ export * from './UpdateSpaceDto';
 export * from './UserGroup';
 export * from '../constants/UserGroupType';
 export * from '../constants/newsDefaults';
-
-
-
+export * from './CreateSurveyDto'
+export * from './UpdateSurveyDto'
+export * from './CreateSurveyQuestionDto'
+export * from './UpdateSurveyQuestionDto'
+export * from './CreateSurveyResponseDto'
+export * from './Survey'
+export * from './SurveyQuestion'
+export * from './SurveyResponse'
+export * from './QuestionStatisticsDto'
+export * from './SurveyStatisticsDto'

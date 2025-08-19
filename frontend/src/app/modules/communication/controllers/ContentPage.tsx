@@ -216,15 +216,7 @@ const ContentPage: React.FC = () => {
                     selectedChannelId={channelId}
                     onChannelSelect={setChannelId}
                     onCreateChannel={() => openChannelModal()}
-                    onEditChannel={id => openChannelModal(id)}
-                    onChannelReorder={newOrder => {
-                      const reordered = newOrder.map(
-                        id => channels.find(c => c.id === id)!
-                      );
-                      setChannels(reordered);
-                    } } onCreatePost={function (channelId: string): void {
-                      throw new Error('Function not implemented.');
-                    } }                  />
+                  />
                 </div>
 
                 {/* coluna conteúdos */}

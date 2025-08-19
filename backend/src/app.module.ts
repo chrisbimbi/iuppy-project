@@ -10,6 +10,7 @@ import { NewsModule } from './news/news.module';
 import { ChannelsModule } from './channels/channels.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { GroupsModule } from './groups/groups.module';
+import { SurveysModule } from './modules/surveys/surveys.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { GroupsModule } from './groups/groups.module';
     ChannelsModule,
     SpacesModule,
     GroupsModule,
+    SurveysModule,
   ],
   controllers: [AppController],
   providers: [AppService],

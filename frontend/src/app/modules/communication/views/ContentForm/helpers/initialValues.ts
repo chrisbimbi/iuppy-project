@@ -11,16 +11,16 @@ export const initialNewValues: CreateNewsDto = {
   highlightImages: [],
   settings: {
     visibility: 'public',
-    targetAudience: [],               // públicos específicos
+    targetAudience: [], // públicos específicos
     allowComments: false,
     moderateComments: false,
     allowReactions: false,
-    notifyUsers: false,                   // email interno
+    notifyUsers: false, // email interno
     pushNotification: false,
     pushTitle: '',
     pushContent: '',
     emailNotification: false,
-    inAppNotification: false,             // notificação in-app
+    inAppNotification: false, // notificação in-app
     allowSharing: false,
     showAuthor: false,
     showPublishDate: false,
@@ -29,9 +29,10 @@ export const initialNewValues: CreateNewsDto = {
     schedulePublishDate: undefined,
     expirePublication: false,
     expirationDate: undefined,
-    acknowledgementRequired: false,       // “Li e aceito”
+    acknowledgementRequired: false, // “Li e aceito”
     maxAudienceSize: undefined,
     restrictAccess: false,
+    authorId: null
   },
   isPublished: false,
   attachments: [],
