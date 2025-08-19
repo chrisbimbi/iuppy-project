@@ -1,15 +1,14 @@
-// backend/src/modules/surveys/surveys.controller.ts
 import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Param,
-    Body,
-    Query,
-    ParseBoolPipe,
-    DefaultValuePipe,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  ParseBoolPipe,
+  DefaultValuePipe,
 } from '@nestjs/common'
 import { SurveysService } from './surveys.service'
 
@@ -21,131 +20,98 @@ import { CreateSurveyResponseDto } from './dto/create-survey-response.dto'
 
 @Controller('modules/:companyId/surveys')
 export class SurveysController {
-    constructor(private readonly surveysService: SurveysService) { }
+  constructor(private readonly surveysService: SurveysService) {}
 
-    @Post()
-    create(
-        @Param('companyId') companyId: string,
-        @Body() dto: CreateSurveyDto,
-    ) {
-        return this.surveysService.create(companyId, dto)
-    }
+  @Post()
+  create(@Param('companyId') companyId: string, @Body() dto: CreateSurveyDto) {
+    return this.surveysService.create(companyId, dto)
+  }
 
-    /**
-     * Query params:
-     * - spaceId=abc
-     * - spaceIds=id1,id2,id3
-     * - includeGlobal=true | false
-     */
-    @Get()
-    findAll(
-        @Param('companyId') companyId: string,
-        @Query('spaceId') spaceId?: string,
-        @Query('spaceIds') spaceIdsStr?: string,
-        @Query('includeGlobal', new DefaultValuePipe(false), ParseBoolPipe)
-        includeGlobal?: boolean,
-    ) {
-        const spaceIds = spaceIdsStr
-            ? spaceIdsStr.split(',').map((s) => s.trim()).filter(Boolean)
-            : undefined
+  @Get()
+  findAll(
+    @Param('companyId') companyId: string,
+    @Query('spaceId') spaceId?: string,
+    @Query('spaceIds') spaceIdsStr?: string,
+    @Query('includeGlobal', new DefaultValuePipe(false), ParseBoolPipe) includeGlobal?: boolean,
+  ) {
+    const spaceIds = spaceIdsStr
+      ? spaceIdsStr.split(',').map(s => s.trim()).filter(Boolean)
+      : undefined
 
-        return this.surveysService.findAll(companyId, {
-            spaceId,
-            spaceIds,
-            includeGlobal,
-        })
-    }
+    return this.surveysService.findAll(companyId, { spaceId, spaceIds, includeGlobal })
+  }
 
-    @Get(':id')
-    findOne(
-        @Param('companyId') companyId: string,
-        @Param('id') id: string,
-    ) {
-        return this.surveysService.findOne(companyId, id)
-    }
+  @Get(':id')
+  findOne(@Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.surveysService.findOne(companyId, id)
+  }
 
-    @Patch(':id')
-    update(
-        @Param('companyId') companyId: string,
-        @Param('id') id: string,
-        @Body() dto: UpdateSurveyDto,
-    ) {
-        return this.surveysService.update(companyId, id, dto)
-    }
+  @Patch(':id')
+  update(@Param('companyId') companyId: string, @Param('id') id: string, @Body() dto: UpdateSurveyDto) {
+    return this.surveysService.update(companyId, id, dto)
+  }
 
-    @Delete(':id')
-    remove(
-        @Param('companyId') companyId: string,
-        @Param('id') id: string,
-    ) {
-        return this.surveysService.remove(companyId, id)
-    }
+  @Delete(':id')
+  remove(@Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.surveysService.remove(companyId, id)
+  }
 
-    // --- Questions ---
-    @Post(':surveyId/questions')
-    addQuestion(
-        @Param('companyId') companyId: string,
-        @Param('surveyId') surveyId: string,
-        @Body() dto: CreateSurveyQuestionDto,
-    ) {
-        return this.surveysService.addQuestion(companyId, surveyId, dto)
-    }
+  // --- Questions ---
+  @Post(':surveyId/questions')
+  addQuestion(
+    @Param('companyId') companyId: string,
+    @Param('surveyId') surveyId: string,
+    @Body() dto: CreateSurveyQuestionDto,
+  ) {
+    return this.surveysService.addQuestion(companyId, surveyId, dto)
+  }
 
-    @Patch('questions/:id')
-    updateQuestion(
-        @Param('companyId') companyId: string,
-        @Param('id') id: string,
-        @Body() dto: UpdateSurveyQuestionDto,
-    ) {
-        return this.surveysService.updateQuestion(companyId, id, dto)
-    }
+  @Patch('questions/:id')
+  updateQuestion(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateSurveyQuestionDto,
+  ) {
+    return this.surveysService.updateQuestion(companyId, id, dto)
+  }
 
-    @Delete('questions/:id')
-    removeQuestion(
-        @Param('companyId') companyId: string,
-        @Param('id') id: string,
-    ) {
-        return this.surveysService.removeQuestion(companyId, id)
-    }
+  @Delete('questions/:id')
+  removeQuestion(@Param('companyId') companyId: string, @Param('id') id: string) {
+    return this.surveysService.removeQuestion(companyId, id)
+  }
 
-    // --- Responses ---
-    // Mantém compatível com DTO que carrega o surveyId no body
-    @Post('responses')
-    addResponse(
-        @Param('companyId') companyId: string,
-        @Body() dto: CreateSurveyResponseDto,
-    ) {
-        return this.surveysService.addResponse(companyId, dto)
-    }
+  @Patch(':surveyId/questions/reorder')
+  reorderQuestions(
+    @Param('companyId') companyId: string,
+    @Param('surveyId') surveyId: string,
+    @Body() body: { items: { id: string; order: number }[] },
+  ) {
+    return this.surveysService.reorderQuestions(companyId, surveyId, body.items || [])
+  }
 
-    // Listar respostas de uma survey específica
-    @Get(':surveyId/responses')
-    findResponses(
-        @Param('companyId') companyId: string,
-        @Param('surveyId') surveyId: string,
-    ) {
-        return this.surveysService.findResponses(companyId, surveyId)
-    }
+  // --- Responses ---
+  @Post('responses')
+  addResponse(@Param('companyId') companyId: string, @Body() dto: CreateSurveyResponseDto) {
+    return this.surveysService.addResponse(companyId, dto)
+  }
 
-    // --- Statistics ---
-    @Get(':surveyId/statistics')
-    getSurveyStatistics(
-        @Param('companyId') companyId: string,
-        @Param('surveyId') surveyId: string,
-    ) {
-        return this.surveysService.getSurveyStatistics(companyId, surveyId)
-    }
+  @Get(':surveyId/responses')
+  findResponses(@Param('companyId') companyId: string, @Param('surveyId') surveyId: string) {
+    return this.surveysService.findResponses(companyId, surveyId)
+  }
 
-    @Get(':surveyId/questions/:questionId/statistics')
-    getQuestionStatistics(
-        @Param('companyId') companyId: string,
-        @Param('surveyId') surveyId: string,
-        @Param('questionId') questionId: string,
-    ) {
-        return this.surveysService.getQuestionStatistics(
-            companyId,
-            surveyId,
-            questionId,
-        )
-    }
+  // --- Statistics ---
+  @Get(':surveyId/statistics')
+  getSurveyStatistics(@Param('companyId') companyId: string, @Param('surveyId') surveyId: string) {
+    return this.surveysService.getSurveyStatistics(companyId, surveyId)
+  }
+
+  @Get(':surveyId/questions/:questionId/statistics')
+  getQuestionStatistics(
+    @Param('companyId') companyId: string,
+    @Param('surveyId') surveyId: string,
+    @Param('questionId') questionId: string,
+  ) {
+    return this.surveysService.getQuestionStatistics(companyId, surveyId, questionId)
+  }
 }

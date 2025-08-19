@@ -302,4 +302,31 @@ export class SurveysService {
 
         return { surveyId, totalResponses, questions }
     }
+
+    async reorderQuestions(
+        companyId: string,
+        surveyId: string,
+        items: { id: string; order: number }[],
+    ): Promise<void> {
+        // valida survey pertence à empresa
+        const survey = await this.findOne(companyId, surveyId)
+
+        if (!Array.isArray(items) || items.length === 0) return
+
+        const map = new Map(items.map(i => [i.id, i.order]))
+        const qs = await this.questionsRepo.find({
+            where: { survey: { id: survey.id, companyId } },
+        })
+
+        // aplica apenas nos ids válidos desta survey
+        qs.forEach(q => {
+            const newOrder = map.get(q.id)
+            if (typeof newOrder === 'number') {
+                q.order = newOrder
+            }
+        })
+
+        // salva em batch
+        await this.questionsRepo.save(qs)
+    }
 }

@@ -1,244 +1,155 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { useAuth } from 'src/app/modules/auth'
-import * as types from '@shared/types'
+import { FC, useMemo, useState } from 'react'
+import { CreateSurveyDto, Survey } from '@shared/types'
 import { SurveyService } from '../../services/surveys.service'
-
-// Steps (como você já tem prontos)
 import SurveyStep1Basic from './SurveyStep1Basic'
 import SurveyStep2Publish from './SurveyStep2Publish'
+import SurveyStep3Questions from './SurveyStep3Questions'
 
 type Props = {
-    /** Dados iniciais no formato CreateSurveyDto */
-    initialValues: types.CreateSurveyDto
-    /** Se vier, atualizamos a survey existente */
-    editingId?: string
-    onSaved: () => void
+    companyId: string
+    userId: string
+    surveyId?: string
+    initialValues: CreateSurveyDto
+    onFinished: () => void
 }
 
-type Visibility = 'public' | 'private' | 'specific_groups'
+const cleanDto = (v: CreateSurveyDto): Partial<Survey> => ({
+    // somente campos aceitos pelo backend
+    companyId: v.companyId,
+    title: v.title,
+    description: v.description || '',
+    authorId: v.authorId,
+    adminIds: v.adminIds,
+    spaceIds: v.spaceIds,
+    visibility: v.visibility,
+    notifyUsers: !!v.notifyUsers,
+    pushNotification: !!v.pushNotification,
+    pushContent: v.pushContent || undefined,
+    pushTitle: v.pushTitle || undefined,
+    acknowledgementRequired: !!v.acknowledgementRequired,
+    emailNotification: !!v.emailNotification,
+    inAppNotification: !!v.inAppNotification,
+    groupIds: v.groupIds || [],
+    isAnonymous: !!v.isAnonymous,
+    scheduleSurvey: !!v.scheduleSurvey,
+    expireSurvey: !!v.expireSurvey,
+    startsAt: v.startsAt,
+    endsAt: v.endsAt,
+    status: v.status,
+})
 
-/** Normaliza os valores iniciais para o estado interno (sempre strings e defaults coerentes) */
-function normalizeInit(
-    init: types.CreateSurveyDto,
-    ctx: { companyId: string; authorId: string }
-): types.CreateSurveyDto {
-    const toIso = (v: string | Date | undefined | null): string => {
-        if (!v) return ''
-        if (typeof v === 'string') return v
-        if (v instanceof Date) return v.toISOString()
-        return ''
-    }
+const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValues, onFinished }) => {
+    const [data, setData] = useState<CreateSurveyDto>(initialValues)
+    const [step, setStep] = useState<number>(1)
+    const [saving, setSaving] = useState(false)
 
-    const visibility = (init.visibility as Visibility) || 'public'
-    const scheduleSurvey = !!init.scheduleSurvey
-    const expireSurvey = !!init.expireSurvey
+    const setFieldValue = (field: keyof CreateSurveyDto, value: any) =>
+        setData(prev => ({ ...prev, [field]: value }))
 
-    const base: types.CreateSurveyDto = {
-        companyId: ctx.companyId,
-        title: init.title || '',
-        description: init.description || '',
-        authorId: init.authorId || ctx.authorId || '',
-        adminIds:
-            init.adminIds && init.adminIds.length
-                ? init.adminIds
-                : ctx.authorId
-                    ? [ctx.authorId]
-                    : [],
-        spaceIds: init.spaceIds || [],
-        visibility,
+    const canGoQuestions = !!surveyId
 
-        notifyUsers: !!init.notifyUsers,
-        pushNotification: !!init.pushNotification,
-        ...(init.pushNotification ? { pushTitle: init.pushTitle || '' } : {}),
-        ...(init.pushNotification ? { pushContent: init.pushContent || '' } : {}),
-
-        acknowledgementRequired: !!init.acknowledgementRequired,
-        emailNotification: !!init.emailNotification,
-        inAppNotification: !!init.inAppNotification,
-
-        groupIds: visibility === 'specific_groups' ? init.groupIds || [] : [],
-
-        isAnonymous: !!init.isAnonymous,
-
-        scheduleSurvey,
-        expireSurvey,
-
-        startsAt: scheduleSurvey ? toIso(init.startsAt as any) : '',
-        endsAt: expireSurvey ? toIso(init.endsAt as any) : '',
-
-        status: init.status || types.SurveyStatus.Draft,
-        createdAt: init.createdAt,
-        updatedAt: init.updatedAt,
-    }
-
-    return base
-}
-
-/** Validação do Step 1 */
-function validateStep1(form: types.CreateSurveyDto): string | null {
-    if (!form.title?.trim()) return 'Informe um título.'
-    if (!form.spaceIds || form.spaceIds.length === 0) return 'Selecione ao menos um espaço.'
-    if (form.visibility === 'specific_groups' && (!form.groupIds || form.groupIds.length === 0)) {
-        return 'Selecione pelo menos um grupo para "Grupos específicos".'
-    }
-    return null
-}
-
-/** Monta o payload final; remove campos não aceitos pelo backend */
-function buildPayload(form: types.CreateSurveyDto): types.CreateSurveyDto {
-    const toIso = (v: string | Date | undefined | null): string => {
-        if (!v) return ''
-        if (typeof v === 'string') return v
-        if (v instanceof Date) return v.toISOString()
-        return ''
-    }
-
-    // Clona e aplica coerências
-    const draft: types.CreateSurveyDto = {
-        ...form,
-        groupIds: form.visibility === 'specific_groups' ? (form.groupIds || []) : [],
-        startsAt: form.scheduleSurvey ? toIso(form.startsAt as any) : '',
-        endsAt: form.expireSurvey ? toIso(form.endsAt as any) : '',
-    }
-
-    if (!draft.pushNotification) {
-        delete (draft as any).pushTitle
-        delete (draft as any).pushContent
-    } else {
-        draft.pushTitle = (draft.pushTitle || '').trim()
-        draft.pushContent = (draft.pushContent || '').trim()
-    }
-
-    // Remove campos que o backend NÃO aceita em Create/Update
-    const { createdAt, updatedAt, ...clean } = draft
-    // Garantia extra: não enviar undefined em opcionais (classe-validator com whitelist costuma tolerar, mas evitamos ruído)
-    if (!clean.pushNotification) {
-        delete (clean as any).pushTitle
-        delete (clean as any).pushContent
-    }
-
-    return clean
-}
-
-const SurveyWizardForm: React.FC<Props> = ({ initialValues, editingId, onSaved }) => {
-    const { currentUser } = useAuth()
-    const companyId = initialValues.companyId || currentUser?.companyId || ''
-    const currentUserId = currentUser?.id || initialValues.authorId
-
-    // Estado do formulário (CreateSurveyDto)
-    const [form, setForm] = useState<types.CreateSurveyDto>(() =>
-        normalizeInit(initialValues, { companyId, authorId: currentUserId || '' })
-    )
-
-    useEffect(() => {
-        setForm(normalizeInit(initialValues, { companyId, authorId: currentUserId || '' }))
-    }, [initialValues, companyId, currentUserId])
-
-    // Controle de passos
-    const [step, setStep] = useState<1 | 2>(1)
-
-    // Evita submit implícito do <form> (Enter/Click em button sem type)
-    const preventSubmit = (e: React.FormEvent) => e.preventDefault()
-
-    // setFieldValue usado pelos steps
-    const setFieldValue = (field: string, value: any) => {
-        setForm(prev => {
-            const next: any = { ...prev, [field]: value }
-
-            if (field === 'visibility' && value !== 'specific_groups') {
-                next.groupIds = []
-            }
-            if (field === 'scheduleSurvey' && !value) {
-                next.startsAt = ''
-            }
-            if (field === 'expireSurvey' && !value) {
-                next.endsAt = ''
-            }
-            if (field === 'pushNotification' && !value) {
-                delete next.pushTitle
-                delete next.pushContent
-            }
-
-            return next
-        })
-    }
-
-    const canGoNext = useMemo(() => validateStep1(form) === null, [form])
-
-    const handleNext = () => {
-        const err = validateStep1(form)
-        if (err) {
-            alert(err)
-            return
-        }
-        setStep(2)
-    }
-
-    const handleBack = () => setStep(1)
-
-    const handleSave = async () => {
-        // valida Step 1 antes de salvar
-        const err = validateStep1(form)
-        if (err) {
-            alert(err)
-            setStep(1)
-            return
-        }
-
-        const payload = buildPayload(form)
-
+    const saveStep = async () => {
+        setSaving(true)
         try {
-            if (editingId) {
-                await SurveyService.update(companyId, editingId, payload)
+            const payload = cleanDto({ ...data, companyId, authorId: data.authorId || userId })
+            if (surveyId) {
+                await SurveyService.update(companyId, surveyId, payload)
             } else {
-                await SurveyService.create(companyId, payload)
+                const created = await SurveyService.create(companyId, payload)
+                // após criar, vá para step 3 (perguntas)
+                window.location.assign(`/modules/surveys/${created.id}/edit`)
+                return
             }
-            onSaved()
-        } catch (error) {
-            console.error('Erro ao salvar survey', error)
-            alert('Não foi possível salvar. Veja o console para detalhes.')
+            return
+        } finally {
+            setSaving(false)
         }
     }
+
+    const handleNext = async (e: React.FormEvent) => {
+        e.preventDefault()
+        await saveStep()
+        setStep(prev => Math.min(prev + 1, 3))
+    }
+
+    const handlePrev = (e?: React.FormEvent) => {
+        e?.preventDefault()
+        setStep(prev => Math.max(prev - 1, 1))
+    }
+
+    const handleFinish = async (e: React.FormEvent) => {
+        e.preventDefault()
+        await saveStep()
+        onFinished()
+    }
+
+    const header = useMemo(() => (
+        <div className="d-flex align-items-center justify-content-between mb-6">
+            <div className="btn-group" role="group" aria-label="steps">
+                <button
+                    type="button"
+                    className={`btn ${step === 1 ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setStep(1)}
+                >1</button>
+                <button
+                    type="button"
+                    className={`btn ${step === 2 ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setStep(2)}
+                >2</button>
+                <button
+                    type="button"
+                    className={`btn ${step === 3 ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setStep(3)}
+                >3</button>
+            </div>
+
+            {canGoQuestions && step !== 3 && (
+                <button className="btn btn-outline-primary" onClick={() => setStep(3)}>
+                    Ir para perguntas
+                </button>
+            )}
+        </div>
+    ), [step, canGoQuestions])
 
     return (
-        <form onSubmit={preventSubmit}>
-            {/* Header */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h5 className="mb-0">{editingId ? 'Editar Enquete' : 'Nova Enquete'}</h5>
-                <div className="d-flex align-items-center gap-2">
-                    <span className={`badge ${step === 1 ? 'badge-primary' : 'badge-light-primary'}`}>1</span>
-                    <span>→</span>
-                    <span className={`badge ${step === 2 ? 'badge-primary' : 'badge-light-primary'}`}>2</span>
-                </div>
+        <div className="card">
+            <div className="card-body">
+                {header}
+
+                {/* Step 1 e 2 ficam dentro de <form>; Step 3 sem <form> */}
+                {step === 1 && (
+                    <form onSubmit={handleNext}>
+                        <SurveyStep1Basic data={data} setFieldValue={setFieldValue as any} />
+                        <div className="d-flex justify-content-end gap-2 mt-6">
+                            <button className="btn btn-primary" type="submit" disabled={saving}>Continuar</button>
+                        </div>
+                    </form>
+                )}
+
+                {step === 2 && (
+                    <form onSubmit={handleNext}>
+                        <SurveyStep2Publish data={data} setFieldValue={setFieldValue as any} />
+                        <div className="d-flex justify-content-between gap-2 mt-6">
+                            <button className="btn btn-light" onClick={handlePrev}>Voltar</button>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-light" onClick={handleFinish} disabled={saving}>Salvar</button>
+                                <button className="btn btn-primary" type="submit" disabled={saving}>Continuar</button>
+                            </div>
+                        </div>
+                    </form>
+                )}
+
+                {step === 3 && (
+                    <>
+                        <SurveyStep3Questions companyId={companyId} surveyId={surveyId} />
+                        <div className="d-flex justify-content-between gap-2 mt-6">
+                            <button className="btn btn-light" onClick={() => setStep(2)}>Voltar</button>
+                            <button className="btn btn-success" onClick={() => onFinished()}>Concluir</button>
+                        </div>
+                    </>
+                )}
             </div>
-
-            {/* Conteúdo */}
-            {step === 1 && <SurveyStep1Basic data={form} setFieldValue={setFieldValue} />}
-            {step === 2 && <SurveyStep2Publish data={form} setFieldValue={setFieldValue} />}
-
-            {/* Footer */}
-            <div className="d-flex justify-content-between mt-5">
-                <div>
-                    {step === 2 && (
-                        <button type="button" className="btn btn-light" onClick={handleBack}>
-                            Voltar
-                        </button>
-                    )}
-                </div>
-
-                <div className="d-flex gap-2">
-                    {step === 1 ? (
-                        <button type="button" className="btn btn-primary" onClick={handleNext} disabled={!canGoNext}>
-                            Continuar
-                        </button>
-                    ) : (
-                        <button type="button" className="btn btn-primary" onClick={handleSave}>
-                            {editingId ? 'Atualizar' : 'Publicar'}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </form>
+        </div>
     )
 }
 

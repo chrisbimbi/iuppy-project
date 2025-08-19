@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Modal } from 'bootstrap'
 import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
@@ -11,42 +11,30 @@ import { Survey } from '@shared/types'
 import SurveysList from '../views/SurveysList'
 import { SurveyService } from '../services/surveys.service'
 import BulkActionsBar from '../views/BulkActionsBar'
-import { initialSurveyValues } from '../views/wizard/initialValues'
 import { useGroups } from 'src/app/modules/groups/provider/useGroups'
-import SurveyWizardForm from '../views/wizard/SurveyWizardForm'
-import * as types from '@shared/types'
+import { useNavigate } from 'react-router-dom'
 
 const SurveysPage: React.FC = () => {
+    const navigate = useNavigate()
     const { currentUser } = useAuth()
     const companyId = currentUser!.companyId
     const userId = currentUser!.id
 
     const { data: spaces = [] } = useSpaces(companyId)
-    useGroups({ companyId }) // carregado se precisar em outros lugares
-
+    const { groups = [] } = useGroups({ companyId })
     const { data: surveys = [], loading } = useSurveys(companyId)
-
-    const sortedData = useMemo(
-        () =>
-            surveys?.slice().sort(
-                (a, b) =>
-                    new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-            ),
-        [surveys]
+    const sortedData = surveys?.slice().sort(
+        (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
     )
-
     const [shouldRefetch, setShouldRefetch] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<string[]>([])
-    const [editing, setEditing] = useState<Survey | null>(null)
 
-    const formRef = useRef<HTMLDivElement>(null)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
     const deleteRef = useRef<HTMLDivElement>(null)
-    const [formModal, setFormModal] = useState<Modal | null>(null)
     const [deleteModal, setDeleteModal] = useState<Modal | null>(null)
     const [toDelete, setToDelete] = useState<string[]>([])
+    const [spaceFilter, setSpaceFilter] = useState<string | undefined>(undefined)
 
     useEffect(() => {
-        if (formRef.current) setFormModal(Modal.getOrCreateInstance(formRef.current))
         if (deleteRef.current) setDeleteModal(Modal.getOrCreateInstance(deleteRef.current))
     }, [])
 
@@ -58,13 +46,11 @@ const SurveysPage: React.FC = () => {
     }, [shouldRefetch])
 
     const openCreate = () => {
-        setEditing(null)
-        Modal.getOrCreateInstance(formRef.current!).show()
+        navigate(`/modules/surveys/new`)
     }
 
     const openEdit = (survey: Survey) => {
-        setEditing(survey)
-        Modal.getOrCreateInstance(formRef.current!).show()
+        navigate(`/modules/surveys/${survey.id}/edit`)
     }
 
     const openDelete = (ids: string[]) => {
@@ -98,74 +84,10 @@ const SurveysPage: React.FC = () => {
         setShouldRefetch(true)
     }
 
-    const onSaved = () => {
-        formModal?.hide()
-        setSelectedIds([])
-        setShouldRefetch(true)
-    }
-
-    // ---------------- Filtro por espaço ----------------
-    const [spaceFilter, setSpaceFilter] = useState<string | undefined>(undefined)
-    const filteredData = useMemo(
-        () =>
-            (sortedData || []).filter(s => (spaceFilter ? s.spaceIds.includes(spaceFilter) : true)),
-        [sortedData, spaceFilter]
-    )
-
-    // ---------------- Valores iniciais do form (create/edit) ----------------
-    const formInitialValues = useMemo<types.CreateSurveyDto>(() => {
-        if (!editing) {
-            // criação: usa helper padrão e garante companyId correto
-            const init = initialSurveyValues(companyId, userId)
-            return { ...init, companyId }
-        }
-
-        // EDIT: normaliza para CreateSurveyDto (campos obrigatórios & tipos)
-        const startsAtStr =
-            editing.scheduleSurvey
-                ? (typeof editing.startsAt === 'string'
-                    ? editing.startsAt
-                    : (editing.startsAt ? (editing.startsAt as Date).toISOString() : ''))
-                : ''
-
-        const endsAtStr =
-            editing.expireSurvey
-                ? (typeof editing.endsAt === 'string'
-                    ? editing.endsAt
-                    : (editing.endsAt ? (editing.endsAt as Date).toISOString() : ''))
-                : ''
-
-        return {
-            companyId,                          // <== OBRIGATÓRIO NO DTO
-            title: editing.title || '',
-            description: editing.description || '',
-            authorId: userId,
-            adminIds: editing.adminIds?.length ? editing.adminIds : [userId],
-            spaceIds: editing.spaceIds || [],
-            visibility: (editing.visibility as types.CreateSurveyDto['visibility']) || 'public',
-            notifyUsers: !!editing.notifyUsers,
-            pushNotification: !!editing.pushNotification,
-            // pushContent/pushTitle só fazem sentido se pushNotification ativo; podem ser omitidos
-            ...(editing.pushNotification ? { pushContent: editing.pushContent || '' } : {}),
-            ...(editing.pushNotification ? { pushTitle: editing.pushTitle || '' } : {}),
-            acknowledgementRequired: !!editing.acknowledgementRequired,
-            emailNotification: !!editing.emailNotification,
-            inAppNotification: !!editing.inAppNotification,
-            groupIds: editing.visibility === 'specific_groups' ? (editing.groupIds || []) : [],
-            isAnonymous: !!editing.isAnonymous,
-            scheduleSurvey: !!editing.scheduleSurvey,
-            expireSurvey: !!editing.expireSurvey,
-            startsAt: startsAtStr,              // obrigatórios no DTO: usa '' quando não aplicável
-            endsAt: endsAtStr,                  // idem
-            status: editing.status,
-            createdAt: typeof editing.createdAt === 'string'
-                ? editing.createdAt
-                : (editing.createdAt as Date | undefined)?.toISOString(),
-            updatedAt: typeof editing.updatedAt === 'string'
-                ? editing.updatedAt
-                : (editing.updatedAt as Date | undefined)?.toISOString(),
-        }
-    }, [editing, companyId, userId])
+    const filteredData = sortedData?.filter(survey => {
+        if (!spaceFilter) return true
+        return survey.spaceIds.includes(spaceFilter)
+    })
 
     return (
         <div className="app-container container-xxl">
@@ -217,20 +139,6 @@ const SurveysPage: React.FC = () => {
                         onDuplicate={handleDuplicate}
                     />
                 </Content>
-            </div>
-
-            {/* Modal: Wizard de criação/edição */}
-            <div className="modal fade" ref={formRef} tabIndex={-1}>
-                <div className="modal-dialog modal-xl">
-                    <div className="modal-content p-5">
-                        <SurveyWizardForm
-                            key={editing?.id ?? 'new'}       // força re-montagem ao alternar
-                            initialValues={formInitialValues} // passa valores normalizados
-                            editingId={editing?.id}           // se existir, fará update
-                            onSaved={onSaved}
-                        />
-                    </div>
-                </div>
             </div>
 
             {/* Modal de Delete */}

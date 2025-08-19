@@ -8,6 +8,7 @@ import ContentPage from 'src/app/modules/communication/controllers/ContentPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
 import ChannelsPage from '../modules/channels/views/ChannelsPage'
 import SurveysPage from '../modules/surveys/controllers/SurveysPage'
+import SurveyEditPage from '../modules/surveys/controllers/SurveyEditPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -29,6 +30,8 @@ const PrivateRoutes: FC = () => {
 
         {/* Surveys (novo caminho) */}
         <Route path="modules/surveys" element={<SurveysPage />} />
+        <Route path="/modules/surveys/new" element={<SurveyEditPage />} />
+        <Route path="/modules/surveys/:surveyId/edit" element={<SurveyEditPage />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/error/404" />} />

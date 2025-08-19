@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Survey, SurveyResponse } from '@shared/types'
+import { Survey, SurveyResponse, CreateSurveyQuestionDto, SurveyQuestion } from '@shared/types'
 
 type Filters = {
   spaceId?: string
@@ -20,25 +20,22 @@ function buildUrl(companyId: string, path: string, filters?: Filters) {
 
 export const SurveyService = {
   async list(companyId: string, filters?: Filters): Promise<Survey[]> {
-    const { data } = await axios.get<Survey[]>(
-      buildUrl(companyId, '/surveys', filters)
-    )
+    const { data } = await axios.get<Survey[]>(buildUrl(companyId, '/surveys', filters))
+    return data
+  },
+
+  async getOne(companyId: string, surveyId: string): Promise<Survey> {
+    const { data } = await axios.get<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`)
     return data
   },
 
   async create(companyId: string, payload: Partial<Survey>): Promise<Survey> {
-    const { data } = await axios.post<Survey>(
-      `${API_BASE}/modules/${companyId}/surveys`,
-      payload
-    )
+    const { data } = await axios.post<Survey>(`${API_BASE}/modules/${companyId}/surveys`, payload)
     return data
   },
 
   async update(companyId: string, surveyId: string, payload: Partial<Survey>): Promise<Survey> {
-    const { data } = await axios.patch<Survey>(
-      `${API_BASE}/modules/${companyId}/surveys/${surveyId}`,
-      payload
-    )
+    const { data } = await axios.patch<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`, payload)
     return data
   },
 
@@ -51,5 +48,36 @@ export const SurveyService = {
       `${API_BASE}/modules/${companyId}/surveys/${surveyId}/responses`
     )
     return data
+  },
+
+  // --- Questions ---
+  async addQuestion(companyId: string, surveyId: string, payload: CreateSurveyQuestionDto): Promise<SurveyQuestion> {
+    const { data } = await axios.post<SurveyQuestion>(
+      `${API_BASE}/modules/${companyId}/surveys/${surveyId}/questions`,
+      payload
+    )
+    return data
+  },
+
+  async updateQuestion(companyId: string, questionId: string, payload: CreateSurveyQuestionDto): Promise<SurveyQuestion> {
+    const { data } = await axios.patch<SurveyQuestion>(
+      `${API_BASE}/modules/${companyId}/surveys/questions/${questionId}`,
+      payload
+    )
+    return data
+  },
+
+  async removeQuestion(companyId: string, questionId: string): Promise<void> {
+    await axios.delete(`${API_BASE}/modules/${companyId}/surveys/questions/${questionId}`)
+  },
+
+  async reorderQuestions(
+    companyId: string,
+    surveyId: string,
+    items: { id: string; order: number }[]
+  ): Promise<void> {
+    await axios.patch(`${API_BASE}/modules/${companyId}/surveys/${surveyId}/questions/reorder`, {
+      items,
+    })
   },
 }
