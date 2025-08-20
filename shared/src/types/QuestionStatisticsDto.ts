@@ -1,25 +1,46 @@
-/**
- * Estatísticas de uma única questão dentro de uma survey.
- */
+import { SurveyQuestionType } from './SurveyQuestion'
+
 export interface QuestionStatisticsDto {
-    /** ID da pergunta */
-    questionId: string
+  /** id da pergunta */
+  questionId: string
 
-    /** Quantos responderam esta pergunta */
-    totalRespondents: number
+  /** título/enunciado da pergunta (render no frontend) */
+  questionText?: string
 
-    /** Para perguntas com opções (single, multi) */
-    options?: Record<string, number>
+  /** enum vindo de SurveyQuestion */
+  type?: SurveyQuestionType
 
-    /** Para perguntas abertas (text) */
-    answers?: string[]
+  /** total de respondentes (após filtros) */
+  totalRespondents: number
 
-    /** Para perguntas numéricas (stars, scale, nps): contagem por valor */
-    distribution?: Record<number, number>
+  /** contadores de resposta/pulo */
+  answeredCount?: number
+  skippedCount?: number
 
-    /** Para perguntas numéricas (stars, scale): média */
-    average?: number
+  /** para single/multi */
+  options?: Record<string, number>
+  optionsPct?: Record<string, string> // ex: "34.5%"
 
-    /** Somente para NPS: pontuação NPS */
-    npsScore?: number
+  /** para text */
+  answers?: string[]
+  topWords?: Array<{ word: string; count: number }>
+  /** novos */
+  bigrams?: Array<{ phrase: string; count: number }>
+  trigrams?: Array<{ phrase: string; count: number }>
+
+  /** para numéricas (stars/scale/nps) */
+  distribution?: Record<number, number>
+  average?: number
+  median?: number
+  p25?: number
+  p75?: number
+  stddev?: number
+  min?: number
+  max?: number
+
+  /** somente NPS */
+  npsScore?: number
+  promoters?: number
+  passives?: number
+  detractors?: number
 }

@@ -1,11 +1,10 @@
+// frontend/src/app/modules/surveys/services/surveys.service.ts
 import axios from 'axios'
-import { Survey, SurveyResponse, CreateSurveyQuestionDto, SurveyQuestion } from '@shared/types'
+import {
+  Survey, SurveyResponse, SurveyStatisticsDto, QuestionStatisticsDto,
+} from '@shared/types'
 
-type Filters = {
-  spaceId?: string
-  spaceIds?: string[]
-  includeGlobal?: boolean
-}
+type Filters = { spaceId?: string; spaceIds?: string[]; includeGlobal?: boolean }
 
 const API_BASE =
   (import.meta as any).env?.VITE_API_URL?.replace(/\/$/, '') || 'http://localhost:4000'
@@ -19,65 +18,55 @@ function buildUrl(companyId: string, path: string, filters?: Filters) {
 }
 
 export const SurveyService = {
-  async list(companyId: string, filters?: Filters): Promise<Survey[]> {
-    const { data } = await axios.get<Survey[]>(buildUrl(companyId, '/surveys', filters))
-    return data
+  list(companyId: string, filters?: Filters) {
+    return axios.get<Survey[]>(buildUrl(companyId, '/surveys', filters)).then(r => r.data)
   },
 
-  async getOne(companyId: string, surveyId: string): Promise<Survey> {
-    const { data } = await axios.get<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`)
-    return data
+  getOne(companyId: string, surveyId: string) {
+    return axios.get<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`).then(r => r.data)
   },
 
-  async create(companyId: string, payload: Partial<Survey>): Promise<Survey> {
-    const { data } = await axios.post<Survey>(`${API_BASE}/modules/${companyId}/surveys`, payload)
-    return data
+  create(companyId: string, payload: Partial<Survey>) {
+    return axios.post<Survey>(`${API_BASE}/modules/${companyId}/surveys`, payload).then(r => r.data)
   },
 
-  async update(companyId: string, surveyId: string, payload: Partial<Survey>): Promise<Survey> {
-    const { data } = await axios.patch<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`, payload)
-    return data
+  update(companyId: string, surveyId: string, payload: Partial<Survey>) {
+    return axios.patch<Survey>(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`, payload).then(r => r.data)
   },
 
-  async remove(companyId: string, surveyId: string): Promise<void> {
-    await axios.delete(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`)
+  remove(companyId: string, surveyId: string) {
+    return axios.delete(`${API_BASE}/modules/${companyId}/surveys/${surveyId}`).then(() => { })
   },
 
-  async getResponses(companyId: string, surveyId: string): Promise<SurveyResponse[]> {
-    const { data } = await axios.get<SurveyResponse[]>(
-      `${API_BASE}/modules/${companyId}/surveys/${surveyId}/responses`
-    )
-    return data
+  getResponses(companyId: string, surveyId: string) {
+    return axios.get<SurveyResponse[]>(
+      `${API_BASE}/modules/${companyId}/surveys/${surveyId}/responses`,
+    ).then(r => r.data)
   },
 
-  // --- Questions ---
-  async addQuestion(companyId: string, surveyId: string, payload: CreateSurveyQuestionDto): Promise<SurveyQuestion> {
-    const { data } = await axios.post<SurveyQuestion>(
-      `${API_BASE}/modules/${companyId}/surveys/${surveyId}/questions`,
-      payload
-    )
-    return data
-  },
-
-  async updateQuestion(companyId: string, questionId: string, payload: CreateSurveyQuestionDto): Promise<SurveyQuestion> {
-    const { data } = await axios.patch<SurveyQuestion>(
-      `${API_BASE}/modules/${companyId}/surveys/questions/${questionId}`,
-      payload
-    )
-    return data
-  },
-
-  async removeQuestion(companyId: string, questionId: string): Promise<void> {
-    await axios.delete(`${API_BASE}/modules/${companyId}/surveys/questions/${questionId}`)
-  },
-
-  async reorderQuestions(
+  getSurveyStatistics(
     companyId: string,
     surveyId: string,
-    items: { id: string; order: number }[]
-  ): Promise<void> {
-    await axios.patch(`${API_BASE}/modules/${companyId}/surveys/${surveyId}/questions/reorder`, {
-      items,
-    })
+    opts?: { from?: string; to?: string; onlyIdentified?: boolean },
+  ) {
+    const url = new URL(`${API_BASE}/modules/${companyId}/surveys/${surveyId}/statistics`)
+    if (opts?.from) url.searchParams.set('from', opts.from)
+    if (opts?.to) url.searchParams.set('to', opts.to)
+    if (opts?.onlyIdentified) url.searchParams.set('onlyIdentified', 'true')
+    return axios.get<SurveyStatisticsDto>(url.toString()).then(r => r.data)
+  },
+
+  // opcional, mas útil:
+  getQuestionStatistics(
+    companyId: string,
+    surveyId: string,
+    questionId: string,
+    opts?: { from?: string; to?: string; onlyIdentified?: boolean },
+  ) {
+    const url = new URL(`${API_BASE}/modules/${companyId}/surveys/${surveyId}/questions/${questionId}/statistics`)
+    if (opts?.from) url.searchParams.set('from', opts.from)
+    if (opts?.to) url.searchParams.set('to', opts.to)
+    if (opts?.onlyIdentified) url.searchParams.set('onlyIdentified', 'true')
+    return axios.get<QuestionStatisticsDto>(url.toString()).then(r => r.data)
   },
 }

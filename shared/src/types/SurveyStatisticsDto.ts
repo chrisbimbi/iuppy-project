@@ -1,15 +1,30 @@
 import { QuestionStatisticsDto } from './QuestionStatisticsDto'
 
-/**
- * Estatísticas agregadas de uma survey inteira.
- */
 export interface SurveyStatisticsDto {
-    /** ID da survey */
-    surveyId: string
+  surveyId: string
+  totalResponses: number
 
-    /** Total de respostas recebidas na survey */
-    totalResponses: number
+  /** % de respostas anônimas no resultado filtrado */
+  anonymousRate?: number
 
-    /** Estatísticas por cada pergunta */
-    questions: QuestionStatisticsDto[]
+  /** % que respondeu todas as perguntas */
+  completionRate?: number
+
+  /** janela temporal (após filtros) */
+  windowFrom?: string
+  windowTo?: string
+
+  /** série de respostas por dia (AAAA-MM-DD) */
+  responsesOverTime?: { date: string; count: number }[]
+
+  /** Heatmap por dia (0=Dom..6=Sáb) x hora (0..23) */
+  responsesHeatmap?: { day: number; hour: number; count: number }[]
+
+  /** agregados */
+  npsOverall?: { npsScore: number; promoters: number; passives: number; detractors: number }
+  starsAverage?: number
+  scaleAverage?: number
+
+  /** estatísticas por pergunta */
+  questions: QuestionStatisticsDto[]
 }
