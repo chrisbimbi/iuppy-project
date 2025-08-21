@@ -22,13 +22,16 @@ export class CompaniesService {
         })
 
         // 2) Modules
-        const defaults: Array<{ key: ModuleKey; enabled: boolean }> = [
+        const defaults: Array<{ key: ModuleKey; enabled: boolean; config?: any }> = [
             { key: 'news', enabled: true },
             { key: 'channels', enabled: true },
             { key: 'groups', enabled: true },
             { key: 'surveys', enabled: true },
         ]
-        const mods = dto.modules?.length ? dto.modules : defaults
+        const mods = (dto.modules?.length ? dto.modules : defaults).map(m => ({
+            ...m,
+            config: m.config ?? undefined,
+        }))
         for (const m of mods) {
             await this.modules.upsert(companyId, m.key, m.enabled, m.config)
         }

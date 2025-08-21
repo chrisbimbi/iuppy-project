@@ -21,8 +21,8 @@ const loginSchema = Yup.object().shape({
 })
 
 const initialValues = {
-  email: 'admin@iuppy.com',
-  password: 'admin123',
+  email: 'admin@contateste.com',
+  password: 'P@ssw0rd!',
 }
 
 export function Login() {
@@ -106,7 +106,7 @@ export function Login() {
       ) : (
         <div className='mb-10 bg-light-info p-8 rounded'>
           <div className='text-info'>
-            {intl.formatMessage({ id: 'AUTH.LOGIN.INFO' }, { email: 'admin@iuppy.com', password: 'admin123' })}
+            {intl.formatMessage({ id: 'AUTH.LOGIN.INFO' }, { email: 'admin@contateste.com', password: 'P@ssw0rd!' })}
           </div>
         </div>
       )}

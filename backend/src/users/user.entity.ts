@@ -31,7 +31,7 @@ export class UserEntity implements User {
   @Column({
     type: 'enum',
     enum: Role,
-    default: Role.USER,
+    default: Role.HRAdmin,
   })
   role: Role;
 

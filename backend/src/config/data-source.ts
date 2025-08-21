@@ -8,6 +8,9 @@ import { GroupEntity } from 'src/groups/group.entity';
 import { SurveyEntity } from 'src/modules/surveys/entities/survey.entity';
 import { SurveyQuestionEntity } from 'src/modules/surveys/entities/survey-question.entity';
 import { SurveyResponseEntity } from 'src/modules/surveys/entities/survey-response.entity';
+import { CompanyEntity } from '../companies/company.entity';
+import { CompanySettingsEntity } from 'src/modules/company-settings/company-settings.entity';
+import { CompanyModuleEntity } from 'src/modules/company-modules/company-module.entity';
 
 dotenv.config();
 
@@ -18,7 +21,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
- entities: [
+  entities: [
     UserEntity,
     Channel,
     SpaceEntity,
@@ -26,8 +29,11 @@ export const AppDataSource = new DataSource({
     GroupEntity,
     SurveyEntity,
     SurveyQuestionEntity,
-    SurveyResponseEntity
-  ],  migrations: ['src/migrations/*.ts'],
+    SurveyResponseEntity,
+    CompanySettingsEntity,
+    CompanyModuleEntity,
+    CompanyEntity,
+  ], migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
   synchronize: false,
 });
