@@ -6,52 +6,63 @@ import {
   UpdateDateColumn,
   Index,
   ManyToMany,
-} from 'typeorm';
-import { Role, User } from '@shared/types';
-import { GroupEntity } from '../groups/group.entity';
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm'
+import { Role, User } from '@shared/types'
+import { GroupEntity } from '../groups/group.entity'
+import * as argon2 from 'argon2'
 
 @Entity('user_entity')
 export class UserEntity implements User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: string
 
   @Index({ unique: true })
   @Column()
-  email: string;
+  email: string
 
   @Column()
-  name: string;
+  name: string
 
   @Column({ nullable: true })
-  displayName?: string;
+  displayName?: string
 
   @Column()
-  password: string;
+  password: string
 
   @Column({
     type: 'enum',
     enum: Role,
-    default: Role.USER,
+    default: Role.HRAdmin,
   })
-  role: Role;
+  role: Role
 
   @Column()
-  companyId: string;
+  companyId: string
 
-  // lista de IDs de grupos (campo legado, pode manter ou remover se não usar)
+  // lista de IDs de grupos (legado)
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  groups: string[];
+  groups: string[]
 
   // relação M-N propriamente dita
-  @ManyToMany(() => GroupEntity, group => group.members)
-  memberOf: GroupEntity[];
+  @ManyToMany(() => GroupEntity, (group) => group.members)
+  memberOf: GroupEntity[]
 
   @Column('text', { array: true, nullable: true })
-  visibleGroups?: string[];
+  visibleGroups?: string[]
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt: Date
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt: Date
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword() {
+    if (this.password && !this.password.startsWith('$argon2')) {
+      this.password = await argon2.hash(this.password)
+    }
+  }
 }

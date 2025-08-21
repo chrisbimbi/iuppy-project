@@ -6,10 +6,13 @@ import { SurveysController } from './surveys.controller';
 import { SurveyEntity } from './entities/survey.entity';
 import { SurveyQuestionEntity } from './entities/survey-question.entity';
 import { SurveyResponseEntity } from './entities/survey-response.entity';
+import { CompanyModulesModule } from '../company-modules/company-modules.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([SurveyEntity, SurveyQuestionEntity, SurveyResponseEntity]),
+        CompanyModulesModule,
+
     ],
     providers: [SurveysService],
     controllers: [SurveysController],

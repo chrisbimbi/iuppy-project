@@ -1,14 +1,14 @@
 
 
-import {useState, useEffect} from 'react'
-import {useFormik} from 'formik'
+import { useState, useEffect } from 'react'
+import { useFormik } from 'formik'
 import * as Yup from 'yup'
 import clsx from 'clsx'
-import {getUserByToken, register} from '../core/_requests'
-import {Link} from 'react-router-dom'
-import {toAbsoluteUrl} from '../../../..//helpers'
-import {PasswordMeterComponent} from '../../../..//assets/ts/components'
-import {useAuth} from '../core/Auth'
+import { getUserByToken } from '../core/_requests'
+import { Link } from 'react-router-dom'
+import { toAbsoluteUrl } from '../../../..//helpers'
+import { PasswordMeterComponent } from '../../../..//assets/ts/components'
+import { useAuth } from '../core/Auth'
 
 const initialValues = {
   firstname: '',
@@ -47,30 +47,13 @@ const registrationSchema = Yup.object().shape({
 
 export function Registration() {
   const [loading, setLoading] = useState(false)
-  const {saveAuth, setCurrentUser} = useAuth()
+  const { saveAuth, setCurrentUser } = useAuth()
   const formik = useFormik({
     initialValues,
     validationSchema: registrationSchema,
-    onSubmit: async (values, {setStatus, setSubmitting}) => {
+    onSubmit: async (values, { setStatus, setSubmitting }) => {
       setLoading(true)
-      try {
-        const {data: auth} = await register(
-          values.email,
-          values.firstname,
-          values.lastname,
-          values.password,
-          values.changepassword
-        )
-        saveAuth(auth)
-        const {data: user} = await getUserByToken(auth.api_token)
-        setCurrentUser(user)
-      } catch (error) {
-        console.error(error)
-        saveAuth(undefined)
-        setStatus('The registration details is incorrect')
-        setSubmitting(false)
-        setLoading(false)
-      }
+
     },
   })
 
@@ -215,7 +198,7 @@ export function Registration() {
           {...formik.getFieldProps('email')}
           className={clsx(
             'form-control bg-transparent',
-            {'is-invalid': formik.touched.email && formik.errors.email},
+            { 'is-invalid': formik.touched.email && formik.errors.email },
             {
               'is-valid': formik.touched.email && !formik.errors.email,
             }
@@ -346,7 +329,7 @@ export function Registration() {
         >
           {!loading && <span className='indicator-label'>Submit</span>}
           {loading && (
-            <span className='indicator-progress' style={{display: 'block'}}>
+            <span className='indicator-progress' style={{ display: 'block' }}>
               Please wait...{' '}
               <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
             </span>

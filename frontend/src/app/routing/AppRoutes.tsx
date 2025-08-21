@@ -1,39 +1,43 @@
-// frontend/src/app/routes/AppRoutes.tsx
-import { FC } from 'react';
-import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
-import { PrivateRoutes } from './PrivateRoutes';
-import { ErrorsPage } from '../modules/errors/ErrorsPage';
-import { Logout, AuthPage, useAuth } from '../modules/auth';
-import { App } from '../App';
-import { MasterLayout } from '../../layout/MasterLayout';
+import { FC } from 'react'
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
+import { PrivateRoutes } from './PrivateRoutes'
+import { ErrorsPage } from '../modules/errors/ErrorsPage'
+import { Logout, AuthPage, useAuth } from '../modules/auth'
+import { App } from '../App'
+import { MasterLayout } from '../../layout/MasterLayout'
 
-const { BASE_URL } = import.meta.env;
+const { BASE_URL } = import.meta.env
 
 const AppRoutes: FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth()
 
   return (
     <BrowserRouter basename={BASE_URL}>
       <Routes>
         <Route element={<App />}>
-          <Route path='error/*' element={<ErrorsPage />} />
-          <Route path='logout' element={<Logout />} />
+          {/* Páginas públicas */}
+          <Route path="error/*" element={<ErrorsPage />} />
+          <Route path="logout" element={<Logout />} />
 
           {currentUser ? (
+            // Área privada com layout do Metronic
             <Route element={<MasterLayout />}>
-              <Route path='/*' element={<PrivateRoutes />} />
-              <Route index element={<Navigate to='/contents' />} />
+              {/* Tudo que exige login */}
+              <Route path="/*" element={<PrivateRoutes />} />
+              {/* default do site "/" → dashboard (em vez de contents) */}
+              <Route index element={<Navigate to="/dashboard" />} />
             </Route>
           ) : (
             <>
-              <Route path='auth/*' element={<AuthPage />} />
-              <Route path='*' element={<Navigate to='/auth' />} />
+              <Route path="auth/*" element={<AuthPage />} />
+              {/* Visitante vai para /auth */}
+              <Route path="*" element={<Navigate to="/auth" />} />
             </>
           )}
         </Route>
       </Routes>
     </BrowserRouter>
-  );
-};
+  )
+}
 
-export { AppRoutes };
+export { AppRoutes }

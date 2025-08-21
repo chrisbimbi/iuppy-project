@@ -9,6 +9,7 @@ import {
   Query,
   ParseBoolPipe,
   DefaultValuePipe,
+  UseGuards,
 } from '@nestjs/common'
 import { SurveysService } from './surveys.service'
 
@@ -18,15 +19,17 @@ import { CreateSurveyQuestionDto } from './dto/create-survey-question.dto'
 import { UpdateSurveyQuestionDto } from './dto/update-survey-question.dto'
 import { CreateSurveyResponseDto } from './dto/create-survey-response.dto'
 
+import { RolesGuard } from 'src/common/guards/roles.guard'
+import { ModuleEnabled, ModuleEnabledGuard } from 'src/common/guards/module-enabled.guard'
+
+@UseGuards(RolesGuard, ModuleEnabledGuard)
+@ModuleEnabled('surveys')
 @Controller('modules/:companyId/surveys')
 export class SurveysController {
   constructor(private readonly surveysService: SurveysService) { }
 
   @Post()
-  create(
-    @Param('companyId') companyId: string,
-    @Body() dto: CreateSurveyDto,
-  ) {
+  create(@Param('companyId') companyId: string, @Body() dto: CreateSurveyDto) {
     return this.surveysService.create(companyId, dto)
   }
 
@@ -56,10 +59,7 @@ export class SurveysController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('companyId') companyId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.findOne(companyId, id)
   }
 
@@ -73,10 +73,7 @@ export class SurveysController {
   }
 
   @Delete(':id')
-  remove(
-    @Param('companyId') companyId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.remove(companyId, id)
   }
 
@@ -100,19 +97,13 @@ export class SurveysController {
   }
 
   @Delete('questions/:id')
-  removeQuestion(
-    @Param('companyId') companyId: string,
-    @Param('id') id: string,
-  ) {
+  removeQuestion(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.removeQuestion(companyId, id)
   }
 
   // --- Responses ---
   @Post('responses')
-  addResponse(
-    @Param('companyId') companyId: string,
-    @Body() dto: CreateSurveyResponseDto,
-  ) {
+  addResponse(@Param('companyId') companyId: string, @Body() dto: CreateSurveyResponseDto) {
     return this.surveysService.addResponse(companyId, dto)
   }
 

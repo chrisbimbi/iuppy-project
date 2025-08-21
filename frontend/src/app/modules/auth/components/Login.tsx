@@ -21,8 +21,8 @@ const loginSchema = Yup.object().shape({
 })
 
 const initialValues = {
-  email: 'admin@iuppy.com',
-  password: 'admin123',
+  email: '',
+  password: '',
 }
 
 export function Login() {
@@ -37,14 +37,15 @@ export function Login() {
       setLoading(true)
       try {
         const { data: auth } = await login(values.email, values.password)
-        saveAuth(auth)
+        saveAuth(auth) // { api_token }
         const { data: user } = await getUserByToken(auth.api_token)
         setCurrentUser(user)
       } catch (error) {
         console.error(error)
         saveAuth(undefined)
-        setStatus(intl.formatMessage({ id: 'AUTH.VALIDATION.INVALID_LOGIN' }))
+        setStatus(intl.formatMessage({ id: 'AUTH.VALIDATION.INVALID_LOGIN', defaultMessage: 'Credenciais inválidas' }))
         setSubmitting(false)
+      } finally {
         setLoading(false)
       }
     },
@@ -58,8 +59,12 @@ export function Login() {
       id='kt_login_signin_form'
     >
       <div className='text-center mb-11'>
-        <h1 className='text-gray-900 fw-bolder mb-3'>{intl.formatMessage({ id: 'AUTH.LOGIN.TITLE' })}</h1>
-        <div className='text-gray-500 fw-semibold fs-6'>{intl.formatMessage({ id: 'AUTH.LOGIN.DESCRIPTION' })}</div>
+        <h1 className='text-gray-900 fw-bolder mb-3'>
+          {intl.formatMessage({ id: 'AUTH.LOGIN.TITLE', defaultMessage: 'Entrar' })}
+        </h1>
+        <div className='text-gray-500 fw-semibold fs-6'>
+          {intl.formatMessage({ id: 'AUTH.LOGIN.DESCRIPTION', defaultMessage: 'Faça login para continuar' })}
+        </div>
       </div>
 
       <div className='row g-3 mb-9'>
@@ -74,7 +79,9 @@ export function Login() {
               className='h-15px me-3'
             />
             <span className='d-flex flex-column align-items-start ms-2'>
-              <span className='fs-6 fw-bolder'>{intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.GOOGLE' })}</span>
+              <span className='fs-6 fw-bolder'>
+                {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.GOOGLE', defaultMessage: 'Entrar com Google' })}
+              </span>
             </span>
           </a>
         </div>
@@ -89,14 +96,18 @@ export function Login() {
               className='h-15px me-3'
             />
             <span className='d-flex flex-column align-items-start ms-2'>
-              <span className='fs-6 fw-bolder'>{intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.MICROSOFT' })}</span>
+              <span className='fs-6 fw-bolder'>
+                {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.MICROSOFT', defaultMessage: 'Entrar com Microsoft' })}
+              </span>
             </span>
           </a>
         </div>
       </div>
 
       <div className='separator separator-content my-14'>
-        <span className='w-125px text-gray-500 fw-semibold fs-7'>{intl.formatMessage({ id: 'AUTH.LOGIN.CONTINUE_WITH_EMAIL' })}</span>
+        <span className='w-125px text-gray-500 fw-semibold fs-7'>
+          {intl.formatMessage({ id: 'AUTH.LOGIN.CONTINUE_WITH_EMAIL', defaultMessage: 'Ou continue com e-mail' })}
+        </span>
       </div>
 
       {formik.status ? (
@@ -106,22 +117,25 @@ export function Login() {
       ) : (
         <div className='mb-10 bg-light-info p-8 rounded'>
           <div className='text-info'>
-            {intl.formatMessage({ id: 'AUTH.LOGIN.INFO' }, { email: 'admin@iuppy.com', password: 'admin123' })}
+            {intl.formatMessage({
+              id: 'AUTH.LOGIN.INFO',
+              defaultMessage: 'Dica: use o e-mail do admin criado no seed e senha P@ssw0rd!',
+            })}
           </div>
         </div>
       )}
 
       <div className='fv-row mb-8'>
-        <label className='form-label fs-6 fw-bolder text-gray-900'>{intl.formatMessage({ id: 'AUTH.INPUT.EMAIL' })}</label>
+        <label className='form-label fs-6 fw-bolder text-gray-900'>
+          {intl.formatMessage({ id: 'AUTH.INPUT.EMAIL', defaultMessage: 'E-mail' })}
+        </label>
         <input
-          placeholder={intl.formatMessage({ id: 'AUTH.INPUT.EMAIL' })}
+          placeholder={intl.formatMessage({ id: 'AUTH.INPUT.EMAIL', defaultMessage: 'E-mail' })}
           {...formik.getFieldProps('email')}
           className={clsx(
             'form-control bg-transparent',
             { 'is-invalid': formik.touched.email && formik.errors.email },
-            {
-              'is-valid': formik.touched.email && !formik.errors.email,
-            }
+            { 'is-valid': formik.touched.email && !formik.errors.email }
           )}
           type='email'
           name='email'
@@ -129,31 +143,31 @@ export function Login() {
         />
         {formik.touched.email && formik.errors.email && (
           <div className='fv-plugins-message-container'>
-            <span role='alert'>{intl.formatMessage({ id: formik.errors.email })}</span>
+            <span role='alert'>{intl.formatMessage({ id: formik.errors.email, defaultMessage: 'E-mail inválido' })}</span>
           </div>
         )}
       </div>
 
       <div className='fv-row mb-3'>
-        <label className='form-label fw-bolder text-gray-900 fs-6 mb-0'>{intl.formatMessage({ id: 'AUTH.INPUT.PASSWORD' })}</label>
+        <label className='form-label fw-bolder text-gray-900 fs-6 mb-0'>
+          {intl.formatMessage({ id: 'AUTH.INPUT.PASSWORD', defaultMessage: 'Senha' })}
+        </label>
         <input
           type='password'
           autoComplete='off'
           {...formik.getFieldProps('password')}
           className={clsx(
             'form-control bg-transparent',
-            {
-              'is-invalid': formik.touched.password && formik.errors.password,
-            },
-            {
-              'is-valid': formik.touched.password && !formik.errors.password,
-            }
+            { 'is-invalid': formik.touched.password && formik.errors.password },
+            { 'is-valid': formik.touched.password && !formik.errors.password }
           )}
         />
         {formik.touched.password && formik.errors.password && (
           <div className='fv-plugins-message-container'>
             <div className='fv-help-block'>
-              <span role='alert'>{intl.formatMessage({ id: formik.errors.password })}</span>
+              <span role='alert'>
+                {intl.formatMessage({ id: formik.errors.password, defaultMessage: 'Senha inválida' })}
+              </span>
             </div>
           </div>
         )}
@@ -162,7 +176,7 @@ export function Login() {
       <div className='d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8'>
         <div />
         <Link to='/auth/forgot-password' className='link-primary'>
-          {intl.formatMessage({ id: 'AUTH.GENERAL.FORGOT_BUTTON' })}
+          {intl.formatMessage({ id: 'AUTH.GENERAL.FORGOT_BUTTON', defaultMessage: 'Esqueci minha senha' })}
         </Link>
       </div>
 
@@ -173,10 +187,14 @@ export function Login() {
           className='btn btn-primary'
           disabled={formik.isSubmitting || !formik.isValid}
         >
-          {!loading && <span className='indicator-label'>{intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON' })}</span>}
+          {!loading && (
+            <span className='indicator-label'>
+              {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON', defaultMessage: 'Entrar' })}
+            </span>
+          )}
           {loading && (
             <span className='indicator-progress' style={{ display: 'block' }}>
-              {intl.formatMessage({ id: 'AUTH.GENERAL.LOADING' })}
+              {intl.formatMessage({ id: 'AUTH.GENERAL.LOADING', defaultMessage: 'Carregando...' })}
               <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
             </span>
           )}
@@ -184,9 +202,9 @@ export function Login() {
       </div>
 
       <div className='text-gray-500 text-center fw-semibold fs-6'>
-        {intl.formatMessage({ id: 'AUTH.GENERAL.NO_ACCOUNT' })}{' '}
+        {intl.formatMessage({ id: 'AUTH.GENERAL.NO_ACCOUNT', defaultMessage: 'Não tem conta?' })}{' '}
         <Link to='/auth/registration' className='link-primary'>
-          {intl.formatMessage({ id: 'AUTH.GENERAL.SIGNUP_BUTTON' })}
+          {intl.formatMessage({ id: 'AUTH.GENERAL.SIGNUP_BUTTON', defaultMessage: 'Criar conta' })}
         </Link>
       </div>
     </form>

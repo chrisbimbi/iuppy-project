@@ -1,6 +1,9 @@
+// backend/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';                 // ⬅️ add
+import { ModuleEnabledGuard } from './common/guards/module-enabled.guard'; // ⬅️ ajuste o caminho se diferente
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,16 +14,18 @@ import { ChannelsModule } from './channels/channels.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { GroupsModule } from './groups/groups.module';
 import { SurveysModule } from './modules/surveys/surveys.module';
+import { CompanySettingsModule } from './modules/company-settings/company-settings.module';
+import { CompaniesModule } from './modules/platform/companies/companies.module';
+import { CompanyModulesModule } from './modules/company-modules/company-modules.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
-    // carrega .env.development ou .env.production
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
 
-    // conexão com Auto‑Load e sincronização em dev
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (cs: ConfigService) => {
@@ -32,23 +37,34 @@ import { SurveysModule } from './modules/surveys/surveys.module';
           username: cs.get<string>('DB_USERNAME'),
           password: cs.get<string>('DB_PASSWORD'),
           database: cs.get<string>('DB_NAME'),
-          autoLoadEntities: true,                 // carrega todas as entidades via seus módulos
-          synchronize: nodeEnv === 'development', // cria tabela em dev
+          autoLoadEntities: true,
+          synchronize: nodeEnv === 'development',
           logging: nodeEnv === 'development',
         };
       },
       inject: [ConfigService],
     }),
 
-    // seus módulos
+    // módulos da app
+    AuthModule,
     UsersModule,
     NewsModule,
     ChannelsModule,
     SpacesModule,
     GroupsModule,
     SurveysModule,
+
+    // ⚠️ IMPORTANTE: este módulo precisa estar importado aqui
+    CompanyModulesModule,
+
+    CompaniesModule,
+    CompanySettingsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // ⬅️ torna o guard global (não coloque o guard em "imports"!)
+    { provide: APP_GUARD, useClass: ModuleEnabledGuard },
+  ],
 })
 export class AppModule { }
