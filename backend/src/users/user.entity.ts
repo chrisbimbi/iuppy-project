@@ -25,29 +25,26 @@ export class UserEntity implements User {
   @Column({ nullable: true })
   displayName?: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
-  @Column({
-    type: 'enum',
-    enum: Role,
-    default: Role.HRAdmin,
-  })
+  @Column({ type: 'enum', enum: Role, default: Role.HRAdmin })
   role: Role;
 
   @Column()
   companyId: string;
 
-  // lista de IDs de grupos (campo legado, pode manter ou remover se não usar)
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
   groups: string[];
 
-  // relação M-N propriamente dita
-  @ManyToMany(() => GroupEntity, group => group.members)
+  @ManyToMany(() => GroupEntity, (group) => group.members)
   memberOf: GroupEntity[];
 
   @Column('text', { array: true, nullable: true })
   visibleGroups?: string[];
+
+  @Column({ name: 'refreshTokenHash', type: 'text', nullable: true, select: false })
+  refreshTokenHash?: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

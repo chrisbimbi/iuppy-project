@@ -3,6 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:13
+    platform: linux/arm64/v8            # <- Apple Silicon
     container_name: iuppy_postgres
     restart: unless-stopped
     environment:
@@ -18,6 +19,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    platform: linux/arm64/v8            # <- Apple Silicon
     container_name: iuppy_api
     restart: unless-stopped
     env_file:

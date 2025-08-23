@@ -11,16 +11,15 @@ import { ChannelsModule } from './channels/channels.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { GroupsModule } from './groups/groups.module';
 import { SurveysModule } from './modules/surveys/surveys.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
-    // carrega .env.development ou .env.production
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
 
-    // conexão com Auto‑Load e sincronização em dev
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (cs: ConfigService) => {
@@ -32,15 +31,15 @@ import { SurveysModule } from './modules/surveys/surveys.module';
           username: cs.get<string>('DB_USERNAME'),
           password: cs.get<string>('DB_PASSWORD'),
           database: cs.get<string>('DB_NAME'),
-          autoLoadEntities: true,                 // carrega todas as entidades via seus módulos
-          synchronize: nodeEnv === 'development', // cria tabela em dev
+          autoLoadEntities: true,
+          synchronize: nodeEnv === 'development',
           logging: nodeEnv === 'development',
         };
       },
       inject: [ConfigService],
     }),
 
-    // seus módulos
+    AuthModule,
     UsersModule,
     NewsModule,
     ChannelsModule,

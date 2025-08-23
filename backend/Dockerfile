@@ -1,22 +1,20 @@
 # backend/Dockerfile
+FROM node:18-bullseye-slim
 
-# 1. Imagem base
-FROM node:18
+# Dependências de build p/ módulos nativos (argon2)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 
-# 2. Define diretório de trabalho
 WORKDIR /usr/src/app
 
-# 3. Copia apenas os package.json pra instalar dependências
+# Copia apenas manifestos para cache de deps
 COPY package*.json ./
-
-# 4. Instala dependências
+# (opcional) se o seu package.json referencia "@shared" local, o volume do compose cobre isso em runtime
 RUN npm ci
 
-# 5. Copia todo o código do backend para dentro da imagem
+# Copia código (será sobrescrito por volume no dev, mas é bom p/ build inicial)
 COPY . .
 
-# 6. Expõe porta (a API roda na 3000 dentro do container)
 EXPOSE 3000
-
-# 7. Comando default (usado pelo docker-compose)
-CMD ["npm", "run", "start:dev"]
+CMD ["npm","run","start:dev"]
