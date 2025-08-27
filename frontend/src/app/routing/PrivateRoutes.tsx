@@ -1,3 +1,4 @@
+// src/app/routing/PrivateRoutes.tsx
 import { FC, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TopBarProgress from 'react-topbar-progress-indicator'
@@ -10,6 +11,9 @@ import ChannelsPage from '../modules/channels/controllers/ChannelsPage'
 import SurveysPage from '../modules/surveys/controllers/SurveysPage'
 import SurveyEditPage from '../modules/surveys/controllers/SurveyEditPage'
 import SurveyResultsPage from '../modules/surveys/views/results/SurveyResultsPage'
+
+// NOVO
+import CompanySettingsPage from 'src/app/modules/company/controllers/CompanySettingsPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -29,11 +33,14 @@ const PrivateRoutes: FC = () => {
         {/* Canais */}
         <Route path="channels" element={<ChannelsPage />} />
 
-        {/* Surveys (novo caminho) */}
+        {/* Surveys */}
         <Route path="modules/surveys" element={<SurveysPage />} />
         <Route path="/modules/surveys/new" element={<SurveyEditPage />} />
         <Route path="/modules/surveys/:surveyId/edit" element={<SurveyEditPage />} />
         <Route path="/surveys/:surveyId/results" element={<SurveyResultsPage />} />
+
+        {/* NOVO: Company Settings */}
+        <Route path="company/settings" element={<CompanySettingsPage />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/error/404" />} />

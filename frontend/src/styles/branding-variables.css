@@ -1,0 +1,24 @@
+:root {
+    /* definidas em runtime pelo applyBrandingToDocument */
+    --brand-primary: #0665d0;
+    --brand-success: #17c653;
+    --brand-info: #7239ea;
+    --brand-warning: #f6c000;
+    --brand-danger: #f1416c;
+    --brand-gray-900: #1e1e2d;
+    --brand-gray-600: #7e8299;
+}
+
+/* exemplos de mapeamento minimalista (ajuste ao seu tema/metronic) */
+.btn-primary {
+    background-color: var(--brand-primary) !important;
+    border-color: var(--brand-primary) !important;
+}
+
+.badge-success {
+    background-color: var(--brand-success) !important;
+}
+
+.text-gray-600 {
+    color: var(--brand-gray-600) !important;
+}

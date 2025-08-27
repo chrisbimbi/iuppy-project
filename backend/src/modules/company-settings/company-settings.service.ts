@@ -18,9 +18,28 @@ export class CompanySettingsService {
 
     async upsert(companyId: string, dto: UpsertCompanySettingsDto): Promise<CompanySettings> {
         const curr = await this.repo.findOne({ where: { companyId } }) || this.repo.create({ companyId })
-        if (dto.defaultLocale) (curr as any).defaultLocale = dto.defaultLocale
-        if (dto.supportedLocales) (curr as any).supportedLocales = dto.supportedLocales
-        if (dto.branding) Object.assign(curr, dto.branding)
+
+        if (dto.defaultLocale) curr.defaultLocale = dto.defaultLocale
+        if (dto.supportedLocales) curr.supportedLocales = dto.supportedLocales
+
+        if (dto.branding) {
+            const b = dto.branding as any
+            Object.assign(curr, {
+                logoUrl: b.logoUrl ?? curr.logoUrl,
+                appTitle: b.appTitle ?? curr.appTitle,
+                appSubtitle: b.appSubtitle ?? curr.appSubtitle,
+                primary: b.primary ?? curr.primary,
+                success: b.success ?? curr.success,
+                info: b.info ?? curr.info,
+                warning: b.warning ?? curr.warning,
+                danger: b.danger ?? curr.danger,
+                gray900: b.gray900 ?? curr.gray900,
+                gray600: b.gray600 ?? curr.gray600,
+                background: b.background ?? curr.background,
+                textOnBackground: b.textOnBackground ?? curr.textOnBackground,
+            })
+        }
+
         curr.updatedAt = new Date()
         return this.map(await this.repo.save(curr))
     }
@@ -32,8 +51,12 @@ export class CompanySettingsService {
             supportedLocales: (e.supportedLocales?.length ? e.supportedLocales : ['pt', 'en', 'es', 'de']) as any,
             branding: {
                 logoUrl: e.logoUrl,
+                appTitle: e.appTitle,
+                appSubtitle: e.appSubtitle,
                 primary: e.primary, success: e.success, info: e.info, warning: e.warning, danger: e.danger,
                 gray900: e.gray900, gray600: e.gray600,
+                background: e.background,
+                textOnBackground: e.textOnBackground,
             },
             updatedAt: e.updatedAt,
         }

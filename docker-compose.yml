@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:13
-    platform: linux/arm64/v8            # <- Apple Silicon
+    platform: linux/arm64/v8
     container_name: iuppy_postgres
     restart: unless-stopped
     environment:
@@ -19,7 +19,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    platform: linux/arm64/v8            # <- Apple Silicon
+    platform: linux/arm64/v8
     container_name: iuppy_api
     restart: unless-stopped
     env_file:
@@ -28,13 +28,14 @@ services:
       - postgres
     command: >
       sh -c "npm run migration:run &&
-             npm run start:dev"
+        npm run start:dev"
     ports:
       - "4000:3000"
     volumes:
       - ./backend:/usr/src/app
       - ./shared:/usr/src/shared
-      - /usr/src/app/node_modules
+      - api_node_modules:/usr/src/app/node_modules   # << NOMEADO
 
 volumes:
   iuppy_postgres_data:
+  api_node_modules:

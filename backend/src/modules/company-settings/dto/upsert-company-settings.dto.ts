@@ -15,7 +15,11 @@ type Locale = (typeof LOCALES)[number];
 class BrandingDto {
     @IsOptional() @IsString() logoUrl?: string;
 
-    // hex #RRGGBB (opcional)
+    // nomes exibidos no app mobile
+    @IsOptional() @IsString() appTitle?: string;
+    @IsOptional() @IsString() appSubtitle?: string;
+
+    // cores hex #RRGGBB
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/, { message: 'primary deve ser hex (#RRGGBB)' }) primary?: string;
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) success?: string;
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) info?: string;
@@ -23,6 +27,10 @@ class BrandingDto {
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) danger?: string;
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) gray900?: string;
     @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) gray600?: string;
+
+    // fundo e texto do preview/app
+    @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) background?: string;
+    @IsOptional() @Matches(/^#([0-9A-Fa-f]{6})$/) textOnBackground?: string;
 }
 
 export class UpsertCompanySettingsDto {

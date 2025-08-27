@@ -12,6 +12,12 @@ import { SpacesModule } from './spaces/spaces.module';
 import { GroupsModule } from './groups/groups.module';
 import { SurveysModule } from './modules/surveys/surveys.module';
 import { AuthModule } from './auth/auth.module';
+import { CompanySettingsModule } from './modules/company-settings/company-settings.module';
+import { CompanyModulesModule } from './modules/company-modules/company-modules.module';
+import { CompaniesModule } from './modules/platform/companies/companies.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -19,6 +25,13 @@ import { AuthModule } from './auth/auth.module';
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
+    // serve arquivos enviados em http://localhost:4000/uploads/...
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
+    UploadsModule,
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -46,6 +59,11 @@ import { AuthModule } from './auth/auth.module';
     SpacesModule,
     GroupsModule,
     SurveysModule,
+
+    // ⬇️ novos
+    CompanySettingsModule,
+    CompanyModulesModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

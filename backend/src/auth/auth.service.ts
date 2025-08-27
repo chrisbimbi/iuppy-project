@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Response, Request } from 'express';
+import type { Request, Response } from 'express';
 import * as argon2 from 'argon2';
 import { UsersService } from '../users/users.service';
 
