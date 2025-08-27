@@ -12,6 +12,8 @@ export function MenuInner() {
       <MenuItem title={intl.formatMessage({ id: 'MENU.DASHBOARD' })} to='/dashboard' />
 
       <MenuItem title='Conteúdos' to='/contents' />
+      <MenuItem title='Configurações' to='/company/settings' />
+
       <MenuInnerWithSub
         title='Crafted'
         to='/crafted'

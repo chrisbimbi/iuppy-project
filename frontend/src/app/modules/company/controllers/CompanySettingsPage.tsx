@@ -68,10 +68,9 @@ const CompanySettingsPage: React.FC = () => {
     const { groups } = useGroups({ companyId })
 
     const canToggleModules = useMemo(
-        () => currentUser?.role === Role.SuperAdmin,
+        () => !!currentUser && [Role.SuperAdmin, Role.CompanyAdmin].includes(currentUser.role),
         [currentUser?.role]
     )
-
     useEffect(() => {
         if (!companyId) return
         CompanySettingsService.get(companyId).then(setSettings)
@@ -117,8 +116,10 @@ const CompanySettingsPage: React.FC = () => {
         if (!canToggleModules) return
         setUpdatingKey(key)
         try {
-            const updated = await CompanyModulesService.upsert(companyId, key, enabled)
-            setModules(prev => prev.map(m => (m.key === key ? updated : m)))
+            await CompanyModulesService.upsert(companyId, key, enabled)
+            // opção 1 (simples, o que você pediu):
+            window.location.reload()
+            // opção 2 (sem reload): refetch dos módulos + algum mecanismo no Provider para revalidar
         } finally {
             setUpdatingKey(null)
         }
@@ -490,7 +491,7 @@ const CompanySettingsPage: React.FC = () => {
                                         <div className="fs-5 fw-bold">Módulos</div>
                                         {!canToggleModules && (
                                             <span className="badge badge-light-warning">
-                                                Alterações permitidas apenas para SuperAdmin
+                                                Alterações permitidas para SuperAdmin/CompanyAdmin
                                             </span>
                                         )}
                                     </div>

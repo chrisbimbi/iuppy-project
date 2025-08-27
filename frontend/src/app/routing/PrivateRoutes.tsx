@@ -1,19 +1,25 @@
-// src/app/routing/PrivateRoutes.tsx
 import { FC, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TopBarProgress from 'react-topbar-progress-indicator'
+
 import { DashboardWrapper } from '../pages/dashboard/DashboardWrapper'
 import { MenuTestPage } from '../pages/MenuTestPage'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
+
 import ContentPage from 'src/app/modules/communication/controllers/ContentPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
 import ChannelsPage from '../modules/channels/controllers/ChannelsPage'
+
 import SurveysPage from '../modules/surveys/controllers/SurveysPage'
 import SurveyEditPage from '../modules/surveys/controllers/SurveyEditPage'
 import SurveyResultsPage from '../modules/surveys/views/results/SurveyResultsPage'
 
-// NOVO
+// Company
 import CompanySettingsPage from 'src/app/modules/company/controllers/CompanySettingsPage'
+
+// Guard de módulos
+import { RequireModule } from 'src/app/components/RequireModule'
+import ModulesLanding from '../pages/ModulesLanding'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -33,13 +39,52 @@ const PrivateRoutes: FC = () => {
         {/* Canais */}
         <Route path="channels" element={<ChannelsPage />} />
 
-        {/* Surveys */}
-        <Route path="modules/surveys" element={<SurveysPage />} />
-        <Route path="/modules/surveys/new" element={<SurveyEditPage />} />
-        <Route path="/modules/surveys/:surveyId/edit" element={<SurveyEditPage />} />
-        <Route path="/surveys/:surveyId/results" element={<SurveyResultsPage />} />
+        {/* Surveys (protegidas pelo módulo 'surveys') */}
+        <Route path="modules" element={<ModulesLanding />} />
 
-        {/* NOVO: Company Settings */}
+        <Route
+          path="modules/surveys"
+          element={
+            <RequireModule moduleKey="surveys">
+              <SurveysPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="modules/surveys/new"
+          element={
+            <RequireModule moduleKey="surveys">
+              <SurveyEditPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="modules/surveys/:surveyId/edit"
+          element={
+            <RequireModule moduleKey="surveys">
+              <SurveyEditPage />
+            </RequireModule>
+          }
+        />
+        {/* results — mantive tua rota antiga e adicionei o alias sob /modules */}
+        <Route
+          path="surveys/:surveyId/results"
+          element={
+            <RequireModule moduleKey="surveys">
+              <SurveyResultsPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="modules/surveys/:surveyId/results"
+          element={
+            <RequireModule moduleKey="surveys">
+              <SurveyResultsPage />
+            </RequireModule>
+          }
+        />
+
+        {/* Company Settings */}
         <Route path="company/settings" element={<CompanySettingsPage />} />
 
         {/* Catch-all */}
