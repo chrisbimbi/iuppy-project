@@ -32,7 +32,6 @@ export const initialNewValues: CreateNewsDto = {
     acknowledgementRequired: false, // “Li e aceito”
     maxAudienceSize: undefined,
     restrictAccess: false,
-    authorId: null
   },
   isPublished: false,
   attachments: [],

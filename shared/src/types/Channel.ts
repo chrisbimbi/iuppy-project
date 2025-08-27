@@ -1,5 +1,10 @@
+export enum ChannelType {
+  ARTICLES = 'articles',
+  MEDIA = 'media',
+  UPDATES = 'updates',
+}
+
 export interface Channel {
-  type: string;
   id: string;
   name: string;
   description?: string;
@@ -21,10 +26,7 @@ export interface Channel {
 
   /** publicado / despublicado */
   isPublished?: boolean;
-}
 
-export enum ChannelType {
-  ARTICLES = 'articles',
-  MEDIA = 'media',
-  UPDATES = 'updates',
+  /** tipo consistente com o backend */
+  type: ChannelType;
 }

@@ -1,35 +1,30 @@
-import axios from 'axios';
-import { Channel } from '@shared/types/Channel';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/';
+// src/app/modules/channels/services/channels.service.ts
+import { Channel } from '@shared/types/Channel'
+import { api } from 'src/app/modules/auth/core/_requests'
 
 export const ChannelsService = {
   async list(companyId: string, spaceId?: string): Promise<Channel[]> {
-    const { data } = await axios.get<Channel[]>(`${API_URL}/channels`, {
+    const { data } = await api.get<Channel[]>('/channels', {
       params: { companyId, spaceId },
-    });
-    return data;
+    })
+    return data
   },
 
   async createChannel(channel: Partial<Channel>): Promise<Channel> {
-    const { data } = await axios.post<Channel>(`${API_URL}/channels`, channel);
-    return data;
+    const { data } = await api.post<Channel>('/channels', channel)
+    return data
   },
 
   async updateChannel(id: string, channel: Partial<Channel>): Promise<Channel> {
-    const { data } = await axios.put<Channel>(`${API_URL}/channels/${id}`, channel);
-    return data;
+    const { data } = await api.put<Channel>(`/channels/${id}`, channel)
+    return data
   },
 
   async deleteChannel(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/channels/${id}`);
+    await api.delete(`/channels/${id}`)
   },
 
-  /** Chama o novo endpoint de reorder */
-  async reorderChannels(
-    companyId: string,
-    channelIds: string[],
-  ): Promise<void> {
-    await axios.post(`${API_URL}/channels/order`, { companyId, channelIds });
+  async reorderChannels(companyId: string, channelIds: string[]): Promise<void> {
+    await api.post('/channels/order', { companyId, channelIds })
   },
-};
+}

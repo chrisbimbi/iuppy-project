@@ -1,3 +1,4 @@
+// frontend/src/app/modules/surveys/controllers/SurveysPage.tsx
 import React, { useEffect, useRef, useState } from 'react'
 import { Modal } from 'bootstrap'
 import { PageTitle } from 'src/layout/core'
@@ -21,11 +22,17 @@ const SurveysPage: React.FC = () => {
     const userId = currentUser!.id
 
     const { data: spaces = [] } = useSpaces(companyId)
-    const { groups = [] } = useGroups({ companyId })
+    const { groups = [] } = useGroups({ companyId }) // mantido se for usar depois
     const { data: surveys = [], loading } = useSurveys(companyId)
-    const sortedData = surveys?.slice().sort(
-        (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-    )
+
+    const sortedData = surveys
+        ?.slice()
+        .sort(
+            (a, b) =>
+                new Date(b.createdAt as any).getTime() -
+                new Date(a.createdAt as any).getTime()
+        )
+
     const [shouldRefetch, setShouldRefetch] = useState(false)
 
     const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -65,23 +72,68 @@ const SurveysPage: React.FC = () => {
         setShouldRefetch(true)
     }
 
+    // DUPLICA UMA ENQUETE (retorna quando TODAS as perguntas tiverem sido copiadas)
     const handleDuplicate = async (survey: Survey) => {
-        const clone = {
-            ...survey,
-            id: undefined,
+        // 1) Monta payload SÓ com campos permitidos pelo CreateSurveyDto
+        const payload: Partial<Survey> = {
+            companyId, // precisa ir no body pro DTO
             title: `${survey.title} (Cópia)`,
-            authorId: userId,
-            adminIds: survey.adminIds?.length > 0 ? survey.adminIds : [userId],
-            companyId,
-            createdAt: typeof survey.createdAt === 'string' ? survey.createdAt : (survey.createdAt as Date).toISOString(),
-            updatedAt: typeof survey.updatedAt === 'string' ? survey.updatedAt : (survey.updatedAt as Date).toISOString(),
-            startsAt: typeof survey.startsAt === 'string' ? survey.startsAt : (survey.startsAt as Date).toISOString(),
-            endsAt: survey.endsAt ? (typeof survey.endsAt === 'string' ? survey.endsAt : (survey.endsAt as Date).toISOString()) : '',
-            groupIds: survey.groupIds ?? [],
-        } as any
+            description: survey.description || '',
+            authorId: userId, // quem está duplicando vira autor
+            adminIds: survey.adminIds?.length ? survey.adminIds : [userId],
+            spaceIds: survey.spaceIds ?? [],
+            visibility: survey.visibility,
 
-        await SurveyService.create(companyId, clone)
-        setShouldRefetch(true)
+            notifyUsers: !!survey.notifyUsers,
+            emailNotification: !!survey.emailNotification,
+            inAppNotification: !!survey.inAppNotification,
+            pushNotification: !!survey.pushNotification,
+            pushTitle: survey.pushTitle || undefined,
+            pushContent: survey.pushContent || undefined,
+
+            acknowledgementRequired: !!survey.acknowledgementRequired,
+
+            scheduleSurvey: !!survey.scheduleSurvey,
+            expireSurvey: !!survey.expireSurvey,
+            startsAt:
+                typeof survey.startsAt === 'string'
+                    ? survey.startsAt
+                    : (survey.startsAt as any)?.toISOString?.(),
+            endsAt: survey.endsAt
+                ? (typeof survey.endsAt === 'string'
+                    ? survey.endsAt
+                    : (survey.endsAt as any)?.toISOString?.())
+                : undefined,
+
+            isAnonymous: !!survey.isAnonymous,
+            status: survey.status,
+            groupIds: survey.groupIds ?? [],
+        }
+
+        // 2) Cria a cópia (sem perguntas)
+        const created = await SurveyService.create(companyId, payload)
+
+        // 3) Copia as perguntas na mesma ordem (sequencialmente)
+        if (survey.questions?.length) {
+            const ordered = survey.questions
+                .slice()
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+            for (const q of ordered) {
+                await SurveyService.addQuestion(companyId, created.id, {
+                    order: q.order ?? 0,
+                    type: q.type,
+                    questionText: q.questionText ?? '',
+                    description: q.description ?? undefined,
+                    isRequired: !!q.isRequired,
+                    shuffleOptions: !!q.shuffleOptions,
+                    options: q.options ?? undefined,
+                })
+            }
+        }
+
+        // não dá refresh aqui para não interromper duplicações em massa
+        return created.id
     }
 
     const filteredData = sortedData?.filter(survey => {
@@ -118,14 +170,21 @@ const SurveysPage: React.FC = () => {
                     {selectedIds.length > 0 && (
                         <BulkActionsBar
                             count={selectedIds.length}
-                            onAction={act =>
-                                act === 'delete'
-                                    ? openDelete(selectedIds)
-                                    : selectedIds.forEach(id => {
-                                        const survey = surveys.find(s => s.id === id)
-                                        if (survey) handleDuplicate(survey)
-                                    })
-                            }
+                            onAction={async act => {
+                                if (act === 'delete') {
+                                    openDelete(selectedIds)
+                                    return
+                                }
+                                // Duplicação em massa: executa em SÉRIE e só depois atualiza
+                                for (const id of selectedIds) {
+                                    const survey = surveys.find(s => s.id === id)
+                                    if (survey) {
+                                        try { await handleDuplicate(survey) } catch (e) { console.error(e) }
+                                    }
+                                }
+                                setSelectedIds([])
+                                setShouldRefetch(true)
+                            }}
                         />
                     )}
 
@@ -136,7 +195,10 @@ const SurveysPage: React.FC = () => {
                         onSelect={setSelectedIds}
                         onEdit={openEdit}
                         onDelete={openDelete}
-                        onDuplicate={handleDuplicate}
+                        // Duplicação de UMA linha: espera concluir e só então refaz o fetch
+                        onDuplicate={async (survey) => {
+                            try { await handleDuplicate(survey) } finally { setShouldRefetch(true) }
+                        }}
                     />
                 </Content>
             </div>

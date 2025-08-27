@@ -14,6 +14,7 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
 
   async validate(payload: any) {
     // payload: { sub, email, role, companyId, iat, exp }
-    return payload;
+    const roles = payload?.role ? [payload.role] : [];
+    return { ...payload, roles };
   }
 }

@@ -142,10 +142,10 @@ const SurveysList: FC<Props> = ({
                                                         <li>
                                                             <button
                                                                 className="dropdown-item"
-                                                                onClick={() => navigate(`/surveys/${survey.id}/edit?step=3`)}
+                                                                onClick={() => navigate(`/modules/surveys/${survey.id}/edit?step=3`)}
                                                                 title="Ir direto para o passo de perguntas"
                                                             >
-                                                                Ir para Questões
+                                                                Ir para Perguntas
                                                             </button>
                                                         </li>
 

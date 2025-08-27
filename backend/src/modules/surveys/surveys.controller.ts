@@ -20,13 +20,10 @@ import { CreateSurveyResponseDto } from './dto/create-survey-response.dto'
 
 @Controller('modules/:companyId/surveys')
 export class SurveysController {
-  constructor(private readonly surveysService: SurveysService) { }
+  constructor(private readonly surveysService: SurveysService) {}
 
   @Post()
-  create(
-    @Param('companyId') companyId: string,
-    @Body() dto: CreateSurveyDto,
-  ) {
+  create(@Param('companyId') companyId: string, @Body() dto: CreateSurveyDto) {
     return this.surveysService.create(companyId, dto)
   }
 
@@ -41,8 +38,7 @@ export class SurveysController {
     @Param('companyId') companyId: string,
     @Query('spaceId') spaceId?: string,
     @Query('spaceIds') spaceIdsStr?: string,
-    @Query('includeGlobal', new DefaultValuePipe(false), ParseBoolPipe)
-    includeGlobal?: boolean,
+    @Query('includeGlobal', new DefaultValuePipe(false), ParseBoolPipe) includeGlobal?: boolean,
   ) {
     const spaceIds = spaceIdsStr
       ? spaceIdsStr.split(',').map((s) => s.trim()).filter(Boolean)
@@ -56,10 +52,7 @@ export class SurveysController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('companyId') companyId: string,
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.findOne(companyId, id)
   }
 
@@ -73,10 +66,7 @@ export class SurveysController {
   }
 
   @Delete(':id')
-  remove(
-    @Param('companyId') companyId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.remove(companyId, id)
   }
 
@@ -99,28 +89,28 @@ export class SurveysController {
     return this.surveysService.updateQuestion(companyId, id, dto)
   }
 
-  @Delete('questions/:id')
-  removeQuestion(
+  @Patch(':surveyId/questions/reorder')
+  reorderQuestions(
     @Param('companyId') companyId: string,
-    @Param('id') id: string,
+    @Param('surveyId') surveyId: string,
+    @Body() payload: Array<{ id: string; order: number }>,
   ) {
+    return this.surveysService.reorderQuestions(companyId, surveyId, payload)
+  }
+
+  @Delete('questions/:id')
+  removeQuestion(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.surveysService.removeQuestion(companyId, id)
   }
 
   // --- Responses ---
   @Post('responses')
-  addResponse(
-    @Param('companyId') companyId: string,
-    @Body() dto: CreateSurveyResponseDto,
-  ) {
+  addResponse(@Param('companyId') companyId: string, @Body() dto: CreateSurveyResponseDto) {
     return this.surveysService.addResponse(companyId, dto)
   }
 
   @Get(':surveyId/responses')
-  findResponses(
-    @Param('companyId') companyId: string,
-    @Param('surveyId') surveyId: string,
-  ) {
+  findResponses(@Param('companyId') companyId: string, @Param('surveyId') surveyId: string) {
     return this.surveysService.findResponses(companyId, surveyId)
   }
 
@@ -131,13 +121,14 @@ export class SurveysController {
     @Param('surveyId') surveyId: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query('onlyIdentified', new DefaultValuePipe(false), ParseBoolPipe)
-    onlyIdentified?: boolean,
+    @Query('onlyIdentified', new DefaultValuePipe(false), ParseBoolPipe) onlyIdentified?: boolean,
+    @Query('tz') tz?: string,
   ) {
     return this.surveysService.getSurveyStatistics(companyId, surveyId, {
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       onlyIdentified,
+      tz: tz || 'UTC',
     })
   }
 
@@ -148,13 +139,14 @@ export class SurveysController {
     @Param('questionId') questionId: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query('onlyIdentified', new DefaultValuePipe(false), ParseBoolPipe)
-    onlyIdentified?: boolean,
+    @Query('onlyIdentified', new DefaultValuePipe(false), ParseBoolPipe) onlyIdentified?: boolean,
+    @Query('tz') tz?: string,
   ) {
     return this.surveysService.getQuestionStatistics(companyId, surveyId, questionId, {
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       onlyIdentified,
+      tz: tz || 'UTC',
     })
   }
 }

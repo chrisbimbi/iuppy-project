@@ -6,7 +6,7 @@ export const initialSurveyValues = (companyId: string, authorId: string): Create
     authorId,
     title: '',
     description: '',
-    adminIds: [],
+    adminIds: [authorId],
     spaceIds: [],
     visibility: 'public',
     groupIds: [],

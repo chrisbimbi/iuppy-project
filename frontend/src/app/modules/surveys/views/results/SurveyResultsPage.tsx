@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
@@ -35,6 +35,7 @@ const SurveyResultsPage = () => {
   const { currentUser } = useAuth()
   const companyId = currentUser!.companyId
   const { surveyId = '' } = useParams()
+  const navigate = useNavigate()
 
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [stats, setStats] = useState<SurveyStatisticsDto | null>(null)
@@ -194,6 +195,17 @@ const SurveyResultsPage = () => {
           <PageTitle breadcrumbs={[]}>
             Resultados da Enquete {survey ? `– ${survey.title}` : ''}
           </PageTitle>
+
+          {/* Botão de voltar */}
+          <div className="d-flex justify-content-between align-items-center mb-6">
+            <button
+              className="btn btn-light"
+              onClick={() => navigate('/modules/surveys')}
+              title="Voltar para a lista de enquetes"
+            >
+              ← Voltar para a lista
+            </button>
+          </div>
 
           {/* overlay global simples enquanto exporta */}
           {isExporting && (
@@ -472,7 +484,7 @@ const SurveyResultsPage = () => {
                             heightRatio={0.65}
                             minHeight={420}
                             maxWords={120}
-                            fontRange={[35, 180]}
+                            fontRange={[25, 120]}
                           />
                         </div>
                       </div>

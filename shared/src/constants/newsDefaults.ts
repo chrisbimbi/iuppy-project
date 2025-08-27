@@ -1,4 +1,3 @@
-// shared/src/constants/newsDefaults.ts
 import { NewsSettings } from '../types/NewsSettings';
 
 export const newsSettingsDefaults: NewsSettings = {
@@ -23,11 +22,9 @@ export const newsSettingsDefaults: NewsSettings = {
   schedulePublication: false,
   expirePublication: false,
 
-  // campos opcionais
   acknowledgementRequired: false,
   maxAudienceSize: undefined,
   restrictAccess: undefined,
   pushContent: '',
   pushTitle: '',
-  authorId: null
 };

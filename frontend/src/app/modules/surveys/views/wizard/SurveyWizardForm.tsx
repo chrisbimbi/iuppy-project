@@ -1,4 +1,4 @@
-import { FC, useMemo, useState } from 'react'
+import { FC, useEffect, useMemo, useState } from 'react'
 import { CreateSurveyDto, Survey } from '@shared/types'
 import { SurveyService } from '../../services/surveys.service'
 import SurveyStep1Basic from './SurveyStep1Basic'
@@ -11,6 +11,8 @@ type Props = {
     surveyId?: string
     initialValues: CreateSurveyDto
     onFinished: () => void
+    /** passo inicial (1..3), usado quando abrimos com ?step=3 */
+    initialStep?: number
 }
 
 const cleanDto = (v: CreateSurveyDto): Partial<Survey> => ({
@@ -19,7 +21,7 @@ const cleanDto = (v: CreateSurveyDto): Partial<Survey> => ({
     title: v.title,
     description: v.description || '',
     authorId: v.authorId,
-    adminIds: v.adminIds,
+    adminIds: v.adminIds || [v.authorId],
     spaceIds: v.spaceIds,
     visibility: v.visibility,
     notifyUsers: !!v.notifyUsers,
@@ -38,10 +40,24 @@ const cleanDto = (v: CreateSurveyDto): Partial<Survey> => ({
     status: v.status,
 })
 
-const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValues, onFinished }) => {
+const clampStep = (n: number) => Math.min(3, Math.max(1, Math.floor(n || 1)))
+
+const SurveyWizardForm: FC<Props> = ({
+    companyId,
+    userId,
+    surveyId,
+    initialValues,
+    onFinished,
+    initialStep = 1,
+}) => {
     const [data, setData] = useState<CreateSurveyDto>(initialValues)
-    const [step, setStep] = useState<number>(1)
+    const [step, setStep] = useState<number>(clampStep(initialStep))
     const [saving, setSaving] = useState(false)
+
+    // Se o query param mudar (ou ao trocar de survey), sincroniza o passo
+    useEffect(() => {
+        setStep(clampStep(initialStep))
+    }, [initialStep, surveyId])
 
     const setFieldValue = (field: keyof CreateSurveyDto, value: any) =>
         setData(prev => ({ ...prev, [field]: value }))
@@ -51,13 +67,24 @@ const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValue
     const saveStep = async () => {
         setSaving(true)
         try {
-            const payload = cleanDto({ ...data, companyId, authorId: data.authorId || userId })
+            const payload = cleanDto({
+                ...data,
+                companyId,
+                authorId: data.authorId || userId,
+                adminIds: (data.adminIds && data.adminIds.length) ? data.adminIds : [userId],
+            })
+
+            if (!payload.spaceIds?.length) {
+                alert('Selecione pelo menos 1 espaço')
+                return
+            }
+
             if (surveyId) {
                 await SurveyService.update(companyId, surveyId, payload)
             } else {
                 const created = await SurveyService.create(companyId, payload)
-                // após criar, vá para step 3 (perguntas)
-                window.location.assign(`/modules/surveys/${created.id}/edit`)
+                // após criar, vá direto ao passo 3 (perguntas)
+                window.location.assign(`/modules/surveys/${created.id}/edit?step=3`)
                 return
             }
             return
@@ -83,33 +110,42 @@ const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValue
         onFinished()
     }
 
-    const header = useMemo(() => (
-        <div className="d-flex align-items-center justify-content-between mb-6">
-            <div className="btn-group" role="group" aria-label="steps">
-                <button
-                    type="button"
-                    className={`btn ${step === 1 ? 'btn-primary' : 'btn-light'}`}
-                    onClick={() => setStep(1)}
-                >1</button>
-                <button
-                    type="button"
-                    className={`btn ${step === 2 ? 'btn-primary' : 'btn-light'}`}
-                    onClick={() => setStep(2)}
-                >2</button>
-                <button
-                    type="button"
-                    className={`btn ${step === 3 ? 'btn-primary' : 'btn-light'}`}
-                    onClick={() => setStep(3)}
-                >3</button>
-            </div>
+    const header = useMemo(
+        () => (
+            <div className="d-flex align-items-center justify-content-between mb-6">
+                <div className="btn-group" role="group" aria-label="steps">
+                    <button
+                        type="button"
+                        className={`btn ${step === 1 ? 'btn-primary' : 'btn-light'}`}
+                        onClick={() => setStep(1)}
+                    >
+                        1
+                    </button>
+                    <button
+                        type="button"
+                        className={`btn ${step === 2 ? 'btn-primary' : 'btn-light'}`}
+                        onClick={() => setStep(2)}
+                    >
+                        2
+                    </button>
+                    <button
+                        type="button"
+                        className={`btn ${step === 3 ? 'btn-primary' : 'btn-light'}`}
+                        onClick={() => setStep(3)}
+                    >
+                        3
+                    </button>
+                </div>
 
-            {canGoQuestions && step !== 3 && (
-                <button className="btn btn-outline-primary" onClick={() => setStep(3)}>
-                    Ir para perguntas
-                </button>
-            )}
-        </div>
-    ), [step, canGoQuestions])
+                {canGoQuestions && step !== 3 && (
+                    <button className="btn btn-outline-primary" onClick={() => setStep(3)}>
+                        Ir para perguntas
+                    </button>
+                )}
+            </div>
+        ),
+        [step, canGoQuestions],
+    )
 
     return (
         <div className="card">
@@ -121,7 +157,9 @@ const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValue
                     <form onSubmit={handleNext}>
                         <SurveyStep1Basic data={data} setFieldValue={setFieldValue as any} />
                         <div className="d-flex justify-content-end gap-2 mt-6">
-                            <button className="btn btn-primary" type="submit" disabled={saving}>Continuar</button>
+                            <button className="btn btn-primary" type="submit" disabled={saving}>
+                                Continuar
+                            </button>
                         </div>
                     </form>
                 )}
@@ -130,10 +168,16 @@ const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValue
                     <form onSubmit={handleNext}>
                         <SurveyStep2Publish data={data} setFieldValue={setFieldValue as any} />
                         <div className="d-flex justify-content-between gap-2 mt-6">
-                            <button className="btn btn-light" onClick={handlePrev}>Voltar</button>
+                            <button className="btn btn-light" onClick={handlePrev}>
+                                Voltar
+                            </button>
                             <div className="d-flex gap-2">
-                                <button className="btn btn-light" onClick={handleFinish} disabled={saving}>Salvar</button>
-                                <button className="btn btn-primary" type="submit" disabled={saving}>Continuar</button>
+                                <button className="btn btn-light" onClick={handleFinish} disabled={saving}>
+                                    Salvar
+                                </button>
+                                <button className="btn btn-primary" type="submit" disabled={saving}>
+                                    Continuar
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -143,8 +187,12 @@ const SurveyWizardForm: FC<Props> = ({ companyId, userId, surveyId, initialValue
                     <>
                         <SurveyStep3Questions companyId={companyId} surveyId={surveyId} />
                         <div className="d-flex justify-content-between gap-2 mt-6">
-                            <button className="btn btn-light" onClick={() => setStep(2)}>Voltar</button>
-                            <button className="btn btn-success" onClick={() => onFinished()}>Concluir</button>
+                            <button className="btn btn-light" onClick={() => setStep(2)}>
+                                Voltar
+                            </button>
+                            <button className="btn btn-success" onClick={() => onFinished()}>
+                                Concluir
+                            </button>
                         </div>
                     </>
                 )}

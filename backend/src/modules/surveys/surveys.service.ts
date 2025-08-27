@@ -19,7 +19,7 @@ import { CreateSurveyResponseDto } from './dto/create-survey-response.dto'
 import { SurveyStatisticsDto } from './dto/survey-statistics.dto'
 import { QuestionStatisticsDto } from './dto/question-statistics.dto'
 
-type StatsOpts = { from?: Date; to?: Date; onlyIdentified?: boolean }
+type StatsOpts = { from?: Date; to?: Date; onlyIdentified?: boolean; tz?: string }
 
 @Injectable()
 export class SurveysService {
@@ -39,17 +39,20 @@ export class SurveysService {
         return this.surveysRepo.save(survey)
     }
 
-    findAll(companyId: string, filters?: { spaceId?: string; spaceIds?: string[]; includeGlobal?: boolean }): Promise<SurveyEntity[]> {
+    findAll(
+        companyId: string,
+        filters?: { spaceId?: string; spaceIds?: string[]; includeGlobal?: boolean },
+    ): Promise<SurveyEntity[]> {
         const where: any = { companyId }
         return this.surveysRepo.find({
             where,
             relations: ['questions'],
-        }).then(rows => {
+        }).then((rows) => {
             const spaceId = filters?.spaceId
             const spaceIds = filters?.spaceIds
             if (!spaceId && !spaceIds?.length) return rows
             const set = new Set(spaceIds || (spaceId ? [spaceId] : []))
-            return rows.filter(s => (s.spaceIds || []).some((id: string) => set.has(id)))
+            return rows.filter((s) => (s.spaceIds || []).some((id: string) => set.has(id)))
         })
     }
 
@@ -107,13 +110,21 @@ export class SurveysService {
     }
 
     // --- Questions CRUD ---
-    async addQuestion(companyId: string, surveyId: string, dto: CreateSurveyQuestionDto): Promise<SurveyQuestionEntity> {
+    async addQuestion(
+        companyId: string,
+        surveyId: string,
+        dto: CreateSurveyQuestionDto,
+    ): Promise<SurveyQuestionEntity> {
         const survey = await this.findOne(companyId, surveyId)
         const q = this.questionsRepo.create({ ...dto, survey })
         return this.questionsRepo.save(q)
     }
 
-    async updateQuestion(companyId: string, id: string, dto: UpdateSurveyQuestionDto): Promise<SurveyQuestionEntity> {
+    async updateQuestion(
+        companyId: string,
+        id: string,
+        dto: UpdateSurveyQuestionDto,
+    ): Promise<SurveyQuestionEntity> {
         const question = await this.questionsRepo.findOne({
             where: { id },
             relations: ['survey'],
@@ -123,6 +134,24 @@ export class SurveysService {
         }
         Object.assign(question, dto)
         return this.questionsRepo.save(question)
+    }
+
+    async reorderQuestions(
+        companyId: string,
+        surveyId: string,
+        pairs: Array<{ id: string; order: number }>,
+    ): Promise<void> {
+        const survey = await this.findOne(companyId, surveyId)
+        const ids = new Set(pairs.map((p) => p.id))
+        const belongs = survey.questions.every((q) => ids.has(q.id) || !ids.has(q.id))
+        if (!belongs) throw new ForbiddenException()
+
+        const byId = new Map(pairs.map((p) => [p.id, p.order]))
+        for (const q of survey.questions) {
+            const newOrder = byId.get(q.id)
+            if (typeof newOrder === 'number') q.order = newOrder
+        }
+        await this.questionsRepo.save(survey.questions)
     }
 
     async removeQuestion(companyId: string, id: string): Promise<void> {
@@ -149,6 +178,31 @@ export class SurveysService {
         })
     }
 
+    // --- Helpers de TZ (sem libs) ---
+    /** Extrai partes de data na timezone desejada (dow, hour e YYYY-MM-DD). */
+    private partsInTz(date: Date, timeZone: string) {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+            timeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            weekday: 'short',
+        })
+        const parts = fmt.formatToParts(date)
+        const get = (t: string) => parts.find((p) => p.type === t)?.value || ''
+        const weekdayShort = get('weekday') // Sun..Sat
+        const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+        return {
+            dayKey: `${get('year')}-${get('month')}-${get('day')}`, // YYYY-MM-DD
+            hour: Number(get('hour')),
+            dow: map[weekdayShort] ?? 0,
+        }
+    }
+
     // --- Estatísticas helpers ---
     private distinctLatestByUser<T extends { userId?: string; submittedAt?: Date | string }>(rows: T[]): T[] {
         const map = new Map<string, T>()
@@ -168,10 +222,10 @@ export class SurveysService {
         { from, to, onlyIdentified }: StatsOpts,
     ): SurveyResponseEntity[] {
         let rows = all
-        if (from) rows = rows.filter(r => r.submittedAt && new Date(r.submittedAt) >= from)
-        if (to) rows = rows.filter(r => r.submittedAt && new Date(r.submittedAt) <= to)
+        if (from) rows = rows.filter((r) => r.submittedAt && new Date(r.submittedAt) >= from)
+        if (to) rows = rows.filter((r) => r.submittedAt && new Date(r.submittedAt) <= to)
         if (onlyIdentified) {
-            rows = rows.filter(r => !!r.userId)
+            rows = rows.filter((r) => !!r.userId)
             rows = this.distinctLatestByUser(rows)
         }
         return rows
@@ -179,19 +233,18 @@ export class SurveysService {
 
     private static readonly PT_STOPWORDS = new Set<string>([
         'a', 'o', 'as', 'os', 'um', 'uma', 'uns', 'umas', 'de', 'da', 'do', 'das', 'dos', 'e', 'é', 'em', 'no', 'na', 'nos', 'nas',
-        'para', 'pra', 'por', 'com', 'sem', 'entre', 'sobre', 'que', 'se', 'mas', 'ou', 'como', 'já', 'também', 'muito', 'muita', 'muitos', 'muitas',
-        'eu', 'tu', 'ele', 'ela', 'nós', 'vos', 'eles', 'elas', 'meu', 'minha', 'meus', 'minhas', 'seu', 'sua', 'seus', 'suas',
-        'isso', 'isto', 'aquilo', 'aqui', 'ali', 'lá', 'depois', 'antes', 'ontem', 'hoje', 'amanhã'
+        'para', 'pra', 'por', 'com', 'sem', 'entre', 'sobre', 'que', 'se', 'mas', 'ou', 'como', 'já', 'também', 'muito', 'muita',
+        'muitos', 'muitas', 'eu', 'tu', 'ele', 'ela', 'nós', 'vos', 'eles', 'elas', 'meu', 'minha', 'meus', 'minhas', 'seu', 'sua',
+        'seus', 'suas', 'isso', 'isto', 'aquilo', 'aqui', 'ali', 'lá', 'depois', 'antes', 'ontem', 'hoje', 'amanhã',
     ])
 
     private tokensFrom(text: string): string[] {
         const cleaned = (text || '')
             .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
         const toks = cleaned.match(/[a-zà-ú0-9]+/gi) || []
-        return toks
-            .map(t => t.trim())
-            .filter(t => t.length >= 2 && !SurveysService.PT_STOPWORDS.has(t))
+        return toks.map((t) => t.trim()).filter((t) => t.length >= 2 && !SurveysService.PT_STOPWORDS.has(t))
     }
 
     private topWordsFrom(answers: string[], limit = 20) {
@@ -232,7 +285,8 @@ export class SurveysService {
         const p = (p: number) => {
             if (sorted.length === 1) return sorted[0]
             const idx = (sorted.length - 1) * p
-            const lo = Math.floor(idx), hi = Math.ceil(idx)
+            const lo = Math.floor(idx),
+                hi = Math.ceil(idx)
             if (lo === hi) return sorted[lo]
             return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
         }
@@ -273,7 +327,7 @@ export class SurveysService {
         const totalRespondents = responses.length
 
         const rawForThisQ = responses
-            .map(r => r.answers.find(a => a.questionId === questionId))
+            .map((r) => r.answers.find((a) => a.questionId === questionId))
             .filter(Boolean) as { questionId: string; answer: any }[]
 
         const answeredCount = rawForThisQ.length
@@ -288,21 +342,20 @@ export class SurveysService {
             skippedCount,
         }
 
-        const rawAnswers = rawForThisQ.map(a => a!.answer)
+        const rawAnswers = rawForThisQ.map((a) => a!.answer)
 
         switch (question.type) {
             case 'text': {
-                const texts = (rawAnswers as string[]).filter(x => typeof x === 'string') as string[]
+                const texts = (rawAnswers as string[]).filter((x) => typeof x === 'string') as string[]
                 stats.answers = texts
                 stats.topWords = this.topWordsFrom(texts, 50)
-                // novos: bigramas e trigramas
                 stats.bigrams = this.topNgramsFrom(texts, 2, 30)
                 stats.trigrams = this.topNgramsFrom(texts, 3, 30)
                 break
             }
             case 'single':
             case 'multi': {
-                const flat = (rawAnswers as (string | string[])[]).flatMap(v => Array.isArray(v) ? v : [v])
+                const flat = (rawAnswers as (string | string[])[]).flatMap((v) => (Array.isArray(v) ? v : [v]))
                 const counts = flat.reduce((acc, val: string) => {
                     acc[val] = (acc[val] || 0) + 1
                     return acc
@@ -310,7 +363,7 @@ export class SurveysService {
                 stats.options = counts
                 if (flat.length > 0) {
                     const pct: Record<string, string> = {}
-                    Object.keys(counts).forEach(k => {
+                    Object.keys(counts).forEach((k) => {
                         pct[k] = `${((counts[k] / flat.length) * 100).toFixed(1)}%`
                     })
                     stats.optionsPct = pct
@@ -319,7 +372,7 @@ export class SurveysService {
             }
             case 'stars':
             case 'scale': {
-                const nums = (rawAnswers as number[]).filter(v => Number.isFinite(v))
+                const nums = (rawAnswers as number[]).filter((v) => Number.isFinite(v))
                 stats.distribution = nums.reduce((acc, val) => {
                     acc[val] = (acc[val] || 0) + 1
                     return acc
@@ -328,14 +381,14 @@ export class SurveysService {
                 break
             }
             case 'nps': {
-                const nums = (rawAnswers as number[]).filter(v => Number.isFinite(v))
+                const nums = (rawAnswers as number[]).filter((v) => Number.isFinite(v))
                 stats.distribution = nums.reduce((acc, val) => {
                     acc[val] = (acc[val] || 0) + 1
                     return acc
                 }, {} as Record<number, number>)
-                const promoters = nums.filter(v => v >= 9).length
-                const passives = nums.filter(v => v >= 7 && v <= 8).length
-                const detractors = nums.filter(v => v <= 6).length
+                const promoters = nums.filter((v) => v >= 9).length
+                const passives = nums.filter((v) => v >= 7 && v <= 8).length
+                const detractors = nums.filter((v) => v <= 6).length
                 const total = nums.length || 1
                 const npsScore = ((promoters - detractors) / total) * 100
                 stats.promoters = promoters
@@ -357,6 +410,7 @@ export class SurveysService {
         surveyId: string,
         opts: StatsOpts = {},
     ): Promise<SurveyStatisticsDto> {
+        const tz = opts.tz || 'UTC'
         const survey = await this.findOne(companyId, surveyId)
         const allResponses = await this.responsesRepo.find({
             where: { survey: { companyId, id: surveyId } },
@@ -364,41 +418,39 @@ export class SurveysService {
         const responses = this.filterResponses(allResponses, opts)
         const totalResponses = responses.length
 
-        // janela temporal & anonimato
+        // janela temporal & anonimato (continuam em UTC)
         let windowFrom: string | undefined
         let windowTo: string | undefined
         let anonymousRate: number | undefined
         if (responses.length) {
             const ts = responses
-                .map(r => r.submittedAt ? new Date(r.submittedAt).getTime() : undefined)
+                .map((r) => (r.submittedAt ? new Date(r.submittedAt).getTime() : undefined))
                 .filter(Boolean) as number[]
             if (ts.length) {
                 windowFrom = new Date(Math.min(...ts)).toISOString()
                 windowTo = new Date(Math.max(...ts)).toISOString()
             }
-            const anon = responses.filter(r => !r.userId).length
+            const anon = responses.filter((r) => !r.userId).length
             anonymousRate = Number(((anon / responses.length) * 100).toFixed(1))
         }
 
-        // série temporal (por dia)
+        // série temporal (por dia) -> **na TZ**
         const byDay = new Map<string, number>()
         for (const r of responses) {
             const d = r.submittedAt ? new Date(r.submittedAt) : null
-            const key = d ? d.toISOString().slice(0, 10) : 'sem_data'
+            const key = d ? this.partsInTz(d, tz).dayKey : 'sem_data'
             byDay.set(key, (byDay.get(key) || 0) + 1)
         }
         const responsesOverTime = Array.from(byDay.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([date, count]) => ({ date, count }))
 
-        // heatmap dia x hora (0=Dom..6=Sáb)
+        // heatmap dia x hora -> **na TZ**
         const heat = Array.from({ length: 7 }, () => Array(24).fill(0))
         for (const r of responses) {
             if (!r.submittedAt) continue
-            const d = new Date(r.submittedAt)
-            const day = d.getDay()
-            const hour = d.getHours()
-            heat[day][hour] = (heat[day][hour] || 0) + 1
+            const p = this.partsInTz(new Date(r.submittedAt), tz)
+            heat[p.dow][p.hour] = (heat[p.dow][p.hour] || 0) + 1
         }
         const responsesHeatmap = []
         for (let day = 0; day < 7; day++) {
@@ -409,7 +461,7 @@ export class SurveysService {
 
         // agregados numéricos
         const questions = await Promise.all(
-            survey.questions.map(q => this.getQuestionStatistics(companyId, surveyId, q.id, opts))
+            survey.questions.map((q) => this.getQuestionStatistics(companyId, surveyId, q.id, opts)),
         )
 
         let allNps: number[] = []
@@ -432,9 +484,9 @@ export class SurveysService {
 
         let npsOverall: SurveyStatisticsDto['npsOverall'] | undefined
         if (allNps.length) {
-            const promoters = allNps.filter(v => v >= 9).length
-            const passives = allNps.filter(v => v >= 7 && v <= 8).length
-            const detractors = allNps.filter(v => v <= 6).length
+            const promoters = allNps.filter((v) => v >= 9).length
+            const passives = allNps.filter((v) => v >= 7 && v <= 8).length
+            const detractors = allNps.filter((v) => v <= 6).length
             const npsScore = ((promoters - detractors) / allNps.length) * 100
             npsOverall = {
                 promoters,
@@ -454,10 +506,8 @@ export class SurveysService {
         // completionRate: % que respondeu TODAS as perguntas
         let completionRate: number | undefined
         if (responses.length && survey.questions.length) {
-            const full = responses.filter(r =>
-                survey.questions.every(q =>
-                    r.answers.some(a => a.questionId === q.id && a.answer !== undefined && a.answer !== null)
-                )
+            const full = responses.filter((r) =>
+                survey.questions.every((q) => r.answers.some((a) => a.questionId === q.id && a.answer !== undefined && a.answer !== null)),
             ).length
             completionRate = Number(((full / responses.length) * 100).toFixed(1))
         }

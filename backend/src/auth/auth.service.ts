@@ -67,7 +67,13 @@ export class AuthService {
     }
 
     async me(user: any) {
-        return user;
+        // <<< normaliza para ter `id`
+        return {
+            id: user.sub,
+            email: user.email,
+            role: user.role,
+            companyId: user.companyId,
+        };
     }
 
     async logout(userId: string, res: Response) {

@@ -1,8 +1,14 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common'
-import { CompanyModulesService } from './company-modules.service'
-import { ModuleKey } from '@shared/types'
-import { Roles } from 'src/common/guards/roles.guard'
-import { Role } from '@shared/types'
+import { Body, Controller, Get, Param, Patch, UseGuards, BadRequestException } from '@nestjs/common';
+import { CompanyModulesService } from './company-modules.service';
+import { ModuleKey, Role } from '@shared/types';
+import { Roles } from 'src/common/guards/roles.guard';
+import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
+import { UpsertCompanyModuleDto } from './dto/upsert-company-module.dto';
+
+const ALLOWED_KEYS: ModuleKey[] = [
+    'news', 'channels', 'groups', 'surveys', 'forms', 'onboarding', 'training', 'jobs', 'birthdays',
+    'recognition', 'quicklinks', 'benefits', 'vacations', 'podcasts', 'analytics', 'chat',
+];
 
 @Controller('modules/:companyId/company-modules')
 export class CompanyModulesController {
@@ -10,16 +16,20 @@ export class CompanyModulesController {
 
     @Get()
     list(@Param('companyId') companyId: string) {
-        return this.service.list(companyId)
+        return this.service.list(companyId);
     }
 
     @Patch(':key')
+    @UseGuards(JwtAccessGuard)
     @Roles(Role.SuperAdmin, Role.CompanyAdmin)
     upsert(
         @Param('companyId') companyId: string,
-        @Param('key') key: ModuleKey,
-        @Body() body: { enabled: boolean; config?: Record<string, any> }
+        @Param('key') key: string,
+        @Body() body: UpsertCompanyModuleDto
     ) {
-        return this.service.upsert(companyId, key, !!body.enabled, body.config)
+        if (!ALLOWED_KEYS.includes(key as ModuleKey)) {
+            throw new BadRequestException(`Module key inválido: ${key}`);
+        }
+        return this.service.upsert(companyId, key as ModuleKey, !!body.enabled, body.config);
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from 'src/app/modules/auth'
 import { Survey } from '@shared/types'
 import { SurveyService } from '../services/surveys.service'
@@ -15,7 +15,9 @@ const SurveyEditPage = () => {
     const userId = currentUser!.id
     const navigate = useNavigate()
     const { surveyId } = useParams<{ surveyId: string }>()
-
+    const [searchParams] = useSearchParams()
+    const stepParam = Number(searchParams.get('step') || '1')
+    const initialStep = stepParam >= 1 && stepParam <= 3 ? stepParam : 1
     const [survey, setSurvey] = useState<Survey | null>(null)
     const [loading, setLoading] = useState(!!surveyId)
 
@@ -69,6 +71,17 @@ const SurveyEditPage = () => {
                         {surveyId ? 'Editar Enquete' : 'Criar Enquete'}
                     </PageTitle>
 
+                    {/* Botão de voltar */}
+                    <div className="d-flex justify-content-between align-items-center mb-6">
+                        <button
+                            className="btn btn-light"
+                            onClick={() => navigate('/modules/surveys')}
+                            title="Voltar para a lista"
+                        >
+                            ← Voltar para a lista
+                        </button>
+                    </div>
+
                     {loading ? (
                         <div className="alert alert-info">Carregando...</div>
                     ) : (
@@ -78,6 +91,7 @@ const SurveyEditPage = () => {
                             userId={userId}
                             surveyId={surveyId}
                             initialValues={formInitialValues}
+                            initialStep={initialStep}
                             onFinished={handleDone}
                         />
                     )}

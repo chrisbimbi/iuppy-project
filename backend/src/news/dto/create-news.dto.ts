@@ -1,23 +1,24 @@
 import {
+  IsOptional,
   IsUUID,
-  IsNotEmpty,
   IsString,
   IsEnum,
   IsBoolean,
-  IsOptional,
+  IsArray,
   ValidateNested,
-  IsArray
+  IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NewsType } from '@shared/types/NewsType';
 import { NewSettingsDto } from './news-settings-dto';
 
 export class CreateNewDto {
-  @IsNotEmpty() @IsUUID()
-  companyId!: string;
+  // passaram a ser opcionais para não bloquear quando o backend sobrepõe pelo token
+  @IsOptional() @IsUUID()
+  companyId?: string;
 
-  @IsNotEmpty() @IsUUID()
-  authorId!: string;
+  @IsOptional() @IsUUID()
+  authorId?: string;
 
   @IsNotEmpty() @IsUUID()
   channelId!: string;

@@ -5,6 +5,8 @@ import { ChannelsService } from '../services/channels.service'
 import { spacesService } from 'src/app/modules/spaces/services/spaces.service'
 import { useGroups } from 'src/app/modules/groups/provider/useGroups'
 import { useUsers } from 'src/app/modules/groups/provider/useUsers'
+import { ChannelType } from '@shared/types/Channel'
+import type { AxiosError } from 'axios'
 import './ChannelModal.css'
 
 interface Props {
@@ -17,10 +19,10 @@ interface Props {
 
 type Feedback = { type: 'success' | 'error'; message: string }
 
-const TYPES = [
-  { key: 'article', label: 'Artigos', img: '/media/channel-types/articles.png' },
-  { key: 'media', label: 'Mídia', img: '/media/channel-types/media.png' },
-  { key: 'quick', label: 'Updates', img: '/media/channel-types/updates.png' },
+const TYPES: { key: ChannelType; label: string; img: string }[] = [
+  { key: ChannelType.ARTICLES, label: 'Artigos', img: '/media/channel-types/articles.png' },
+  { key: ChannelType.MEDIA, label: 'Mídia', img: '/media/channel-types/media.png' },
+  { key: ChannelType.UPDATES, label: 'Updates', img: '/media/channel-types/updates.png' },
 ]
 
 const ChannelModal: React.FC<Props> = ({
@@ -32,7 +34,7 @@ const ChannelModal: React.FC<Props> = ({
 }) => {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState(TYPES[0].key)
+  const [type, setType] = useState<ChannelType>(ChannelType.ARTICLES)
   const [spaces, setSpaces] = useState<{ id: string; name: string }[]>([])
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([])
   const { groups } = useGroups({ companyId })
@@ -51,14 +53,12 @@ const ChannelModal: React.FC<Props> = ({
   const [contribModal, setContribModal] = useState<Modal | null>(null)
   const [adminModal, setAdminModal] = useState<Modal | null>(null)
 
-  // inicializa sub-modais Bootstrap
   useEffect(() => {
     if (groupsRef.current) setGroupsModal(new Modal(groupsRef.current))
     if (contribRef.current) setContribModal(new Modal(contribRef.current))
     if (adminRef.current) setAdminModal(new Modal(adminRef.current))
   }, [])
 
-  // carrega espaços e, se editar, dados do canal
   useEffect(() => {
     spacesService.list(companyId).then(setSpaces)
   }, [companyId])
@@ -73,12 +73,13 @@ const ChannelModal: React.FC<Props> = ({
         if (!ch) return
         setName(ch.name)
         setDescription(ch.description || '')
-        setType(ch.type || TYPES[0].key)
+        // ✅ valor compatível com backend
+        setType((ch.type as ChannelType) || ChannelType.ARTICLES)
         setSelectedSpaces(ch.spaceIds || [])
         setSelectedGroups(ch.groupIds || [])
         setSelectedContrib(ch.contributorIds || [])
         setSelectedAdmins(ch.adminIds || [])
-        setIsPublished(ch.isPublished || false)
+        setIsPublished(!!ch.isPublished)
         setInitial({
           name: ch.name,
           description: ch.description,
@@ -91,7 +92,7 @@ const ChannelModal: React.FC<Props> = ({
         })
       })
     } else if (spaces.length) {
-      // criar novo: todos os espaços selecionados por padrão
+      // criar
       const allIds = spaces.map(s => s.id)
       setSelectedSpaces(allIds)
       setSelectedGroups([])
@@ -107,9 +108,9 @@ const ChannelModal: React.FC<Props> = ({
       })
       setName('')
       setDescription('')
-      setType(TYPES[0].key)
+      setType(ChannelType.ARTICLES)
     }
-  }, [show, channelId, spaces])
+  }, [show, channelId, spaces, companyId])
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -123,7 +124,7 @@ const ChannelModal: React.FC<Props> = ({
     const payload = {
       name,
       description,
-      type,
+      type, // ✅ enum correto
       companyId,
       spaceIds: selectedSpaces,
       groupIds: selectedGroups,
@@ -140,8 +141,13 @@ const ChannelModal: React.FC<Props> = ({
       setFeedback({ type: 'success', message: 'Salvo com sucesso!' })
       onSave()
       onHide()
-    } catch (err) {
-      setFeedback({ type: 'error', message: 'Erro ao salvar canal.' })
+    } catch (e) {
+      const err = e as AxiosError<any>
+      const msg =
+        (Array.isArray(err.response?.data?.message) && err.response?.data?.message.join(' • ')) ||
+        err.response?.data?.message ||
+        'Erro ao salvar canal.'
+      setFeedback({ type: 'error', message: String(msg) })
     }
   }
 
@@ -167,10 +173,7 @@ const ChannelModal: React.FC<Props> = ({
 
             <div className="modal-body">
               {feedback && (
-                <div
-                  className={`alert alert-${feedback.type === 'success' ? 'success' : 'danger'
-                    }`}
-                >
+                <div className={`alert alert-${feedback.type === 'success' ? 'success' : 'danger'}`}>
                   {feedback.message}
                 </div>
               )}
@@ -224,9 +227,7 @@ const ChannelModal: React.FC<Props> = ({
                   className="form-select"
                   value={selectedSpaces}
                   onChange={e => {
-                    const opts = Array.from(e.target.selectedOptions).map(
-                      o => o.value
-                    )
+                    const opts = Array.from(e.target.selectedOptions).map(o => o.value)
                     setSelectedSpaces(opts)
                   }}
                 >
@@ -236,9 +237,7 @@ const ChannelModal: React.FC<Props> = ({
                     </option>
                   ))}
                 </select>
-                <div className="form-text">
-                  Ctrl/Cmd + clique para múltipla seleção
-                </div>
+                <div className="form-text">Ctrl/Cmd + clique para múltipla seleção</div>
               </div>
 
               {/* Publicado */}
@@ -250,9 +249,7 @@ const ChannelModal: React.FC<Props> = ({
                   checked={isPublished}
                   onChange={e => setIsPublished(e.target.checked)}
                 />
-                <label htmlFor="isPublished" className="form-check-label">
-                  Publicado
-                </label>
+                <label htmlFor="isPublished" className="form-check-label">Publicado</label>
               </div>
 
               {/* Contribuidores */}
@@ -262,21 +259,12 @@ const ChannelModal: React.FC<Props> = ({
                   className="btn btn-outline-primary btn-sm ms-2"
                   onClick={() => contribModal?.show()}
                 >
-                  {selectedContrib.length
-                    ? 'Editar contrib.'
-                    : 'Selecionar contrib.'}
+                  {selectedContrib.length ? 'Editar contrib.' : 'Selecionar contrib.'}
                 </button>
                 <div className="mt-1">
-                  {users
-                    .filter(u => selectedContrib.includes(u.id))
-                    .map(u => (
-                      <span
-                        key={u.id}
-                        className="badge badge-success me-1"
-                      >
-                        {u.name}
-                      </span>
-                    ))}
+                  {users.filter(u => selectedContrib.includes(u.id)).map(u => (
+                    <span key={u.id} className="badge badge-success me-1">{u.name}</span>
+                  ))}
                 </div>
               </div>
 
@@ -287,32 +275,19 @@ const ChannelModal: React.FC<Props> = ({
                   className="btn btn-outline-primary btn-sm ms-2"
                   onClick={() => adminModal?.show()}
                 >
-                  {selectedAdmins.length
-                    ? 'Editar admins'
-                    : 'Selecionar admins'}
+                  {selectedAdmins.length ? 'Editar admins' : 'Selecionar admins'}
                 </button>
                 <div className="mt-1">
-                  {users
-                    .filter(u => selectedAdmins.includes(u.id))
-                    .map(u => (
-                      <span
-                        key={u.id}
-                        className="badge badge-danger me-1"
-                      >
-                        {u.name}
-                      </span>
-                    ))}
+                  {users.filter(u => selectedAdmins.includes(u.id)).map(u => (
+                    <span key={u.id} className="badge badge-danger me-1">{u.name}</span>
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-light" onClick={onHide}>
-                Cancelar
-              </button>
-              <button className="btn btn-primary" onClick={handleSubmit}>
-                Salvar
-              </button>
+              <button className="btn btn-light" onClick={onHide}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSubmit}>Salvar</button>
             </div>
           </div>
         </div>
@@ -335,10 +310,7 @@ const ChannelModal: React.FC<Props> = ({
             </div>
             <div className="modal-body">
               {groups.map(g => (
-                <div
-                  key={g.id}
-                  className="form-check form-check-custom mb-2"
-                >
+                <div key={g.id} className="form-check form-check-custom mb-2">
                   <input
                     id={`grp_${g.id}`}
                     className="form-check-input"
@@ -351,12 +323,7 @@ const ChannelModal: React.FC<Props> = ({
                       setSelectedGroups(next)
                     }}
                   />
-                  <label
-                    className="form-check-label"
-                    htmlFor={`grp_${g.id}`}
-                  >
-                    {g.name}
-                  </label>
+                  <label className="form-check-label" htmlFor={`grp_${g.id}`}>{g.name}</label>
                 </div>
               ))}
             </div>
@@ -370,12 +337,7 @@ const ChannelModal: React.FC<Props> = ({
               >
                 Cancelar
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => groupsModal?.hide()}
-              >
-                OK
-              </button>
+              <button className="btn btn-primary" onClick={() => groupsModal?.hide()}>OK</button>
             </div>
           </div>
         </div>
@@ -397,10 +359,7 @@ const ChannelModal: React.FC<Props> = ({
             </div>
             <div className="modal-body">
               {users.map(u => (
-                <div
-                  key={u.id}
-                  className="form-check form-check-custom mb-2"
-                >
+                <div key={u.id} className="form-check form-check-custom mb-2">
                   <input
                     id={`ctr_${u.id}`}
                     className="form-check-input"
@@ -413,12 +372,7 @@ const ChannelModal: React.FC<Props> = ({
                       setSelectedContrib(next)
                     }}
                   />
-                  <label
-                    className="form-check-label"
-                    htmlFor={`ctr_${u.id}`}
-                  >
-                    {u.name}
-                  </label>
+                  <label className="form-check-label" htmlFor={`ctr_${u.id}`}>{u.name}</label>
                 </div>
               ))}
             </div>
@@ -432,12 +386,7 @@ const ChannelModal: React.FC<Props> = ({
               >
                 Cancelar
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => contribModal?.hide()}
-              >
-                OK
-              </button>
+              <button className="btn btn-primary" onClick={() => contribModal?.hide()}>OK</button>
             </div>
           </div>
         </div>
@@ -459,10 +408,7 @@ const ChannelModal: React.FC<Props> = ({
             </div>
             <div className="modal-body">
               {users.map(u => (
-                <div
-                  key={u.id}
-                  className="form-check form-check-custom mb-2"
-                >
+                <div key={u.id} className="form-check form-check-custom mb-2">
                   <input
                     id={`adm_${u.id}`}
                     className="form-check-input"
@@ -475,12 +421,7 @@ const ChannelModal: React.FC<Props> = ({
                       setSelectedAdmins(next)
                     }}
                   />
-                  <label
-                    className="form-check-label"
-                    htmlFor={`adm_${u.id}`}
-                  >
-                    {u.name}
-                  </label>
+                  <label className="form-check-label" htmlFor={`adm_${u.id}`}>{u.name}</label>
                 </div>
               ))}
             </div>
@@ -494,12 +435,7 @@ const ChannelModal: React.FC<Props> = ({
               >
                 Cancelar
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => adminModal?.hide()}
-              >
-                OK
-              </button>
+              <button className="btn btn-primary" onClick={() => adminModal?.hide()}>OK</button>
             </div>
           </div>
         </div>

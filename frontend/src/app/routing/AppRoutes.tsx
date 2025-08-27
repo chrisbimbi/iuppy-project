@@ -1,4 +1,3 @@
-// frontend/src/app/routes/AppRoutes.tsx
 import { FC } from 'react';
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import { PrivateRoutes } from './PrivateRoutes';
@@ -22,7 +21,8 @@ const AppRoutes: FC = () => {
           {currentUser ? (
             <Route element={<MasterLayout />}>
               <Route path='/*' element={<PrivateRoutes />} />
-              <Route index element={<Navigate to='/contents' />} />
+              {/* >>> aqui estava '/contents' — corrigido para '/dashboard' */}
+              <Route index element={<Navigate to='/dashboard' />} />
             </Route>
           ) : (
             <>

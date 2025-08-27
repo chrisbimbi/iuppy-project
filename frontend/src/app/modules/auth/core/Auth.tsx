@@ -3,7 +3,7 @@ import {FC, useState, useEffect, createContext, useContext, Dispatch, SetStateAc
 import {LayoutSplashScreen} from '../../../../layout/core'
 import {AuthModel, UserModel} from './_models'
 import * as authHelper from './AuthHelpers'
-import {getUserByToken} from './_requests'
+import {getUserByToken, refreshAccessToken} from './_requests'
 import {WithChildren} from '../../../../helpers'
 
 type AuthContextProps = {
@@ -24,27 +24,20 @@ const initAuthContextPropsState = {
 
 const AuthContext = createContext<AuthContextProps>(initAuthContextPropsState)
 
-const useAuth = () => {
-  return useContext(AuthContext)
-}
+const useAuth = () => useContext(AuthContext)
 
 const AuthProvider: FC<WithChildren> = ({children}) => {
   const [auth, setAuth] = useState<AuthModel | undefined>(authHelper.getAuth())
   const [currentUser, setCurrentUser] = useState<UserModel | undefined>()
   const saveAuth = (auth: AuthModel | undefined) => {
     setAuth(auth)
-    if (auth) {
-      authHelper.setAuth(auth)
-    } else {
-      authHelper.removeAuth()
-    }
+    if (auth) authHelper.setAuth(auth)
+    else authHelper.removeAuth()
   }
-
   const logout = () => {
     saveAuth(undefined)
     setCurrentUser(undefined)
   }
-
   return (
     <AuthContext.Provider value={{auth, saveAuth, currentUser, setCurrentUser, logout}}>
       {children}
@@ -56,33 +49,40 @@ const AuthInit: FC<WithChildren> = ({children}) => {
   const {auth, currentUser, logout, setCurrentUser} = useAuth()
   const [showSplashScreen, setShowSplashScreen] = useState(true)
 
-  // We should request user by authToken (IN OUR EXAMPLE IT'S API_TOKEN) before rendering the application
   useEffect(() => {
-    const requestUser = async (apiToken: string) => {
+    const fetchUser = async () => {
+      if (!auth?.api_token) {
+        logout()
+        setShowSplashScreen(false)
+        return
+      }
       try {
         if (!currentUser) {
-          const {data} = await getUserByToken(apiToken)
-          if (data) {
-            setCurrentUser(data)
-          }
+          const {data} = await getUserByToken(auth.api_token)
+          setCurrentUser(data)
         }
-      } catch (error) {
-        console.error(error)
-        if (currentUser) {
-          logout()
+      } catch (err: any) {
+        // Se for 401, tenta um refresh manual e repete o /me
+        const status = err?.response?.status
+        if (status === 401) {
+          try {
+            const newToken = await refreshAccessToken()
+            const {data} = await getUserByToken(newToken)
+            setCurrentUser(data)
+          } catch {
+            logout()
+          }
+        } else {
+          // Network error / queda momentânea: não desloga
+          console.error(err)
         }
       } finally {
         setShowSplashScreen(false)
       }
     }
 
-    if (auth && auth.api_token) {
-      requestUser(auth.api_token)
-    } else {
-      logout()
-      setShowSplashScreen(false)
-    }
-    // eslint-disable-next-line
+    fetchUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return showSplashScreen ? <LayoutSplashScreen /> : <>{children}</>
