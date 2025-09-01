@@ -8,6 +8,7 @@ import { MasterLayout } from '../../layout/MasterLayout'
 
 // provider de módulos da empresa
 import { CompanyModulesProvider } from '../modules/company/providers/CompanyModulesProvider'
+import { AccessProvider } from '../modules/company/providers/AccessProvider'
 
 const { BASE_URL } = import.meta.env
 
@@ -24,9 +25,11 @@ const AppRoutes: FC = () => {
           {currentUser ? (
             <Route
               element={
-                <CompanyModulesProvider>
-                  <MasterLayout />
-                </CompanyModulesProvider>
+                <AccessProvider>
+                  <CompanyModulesProvider>
+                    <MasterLayout />
+                  </CompanyModulesProvider>
+                </AccessProvider>
               }
             >
               <Route path="/*" element={<PrivateRoutes />} />

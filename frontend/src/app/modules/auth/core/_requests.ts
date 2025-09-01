@@ -5,16 +5,16 @@ import * as authHelper from './AuthHelpers'
 const API_BASE = (import.meta.env.VITE_APP_API_URL || 'http://localhost:4000').replace(/\/$/, '')
 const AUTH_BASE = `${API_BASE}/auth`
 
-/** Client exclusivo para rotas /auth */
+/** Client exclusivo para rotas /auth (usa cookie httpOnly 'rt' no refresh) */
 export const http = axios.create({
   baseURL: AUTH_BASE,
   withCredentials: true, // necessário pro cookie 'rt' no /auth/refresh
 })
 
-/** Client "geral" da API */
+/** Client "geral" da API (tudo que precisa do access token) */
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
-  withCredentials: true,
+  withCredentials: true, // mantém consistência, e permite enviar cookies se houver
 })
 
 /** Interceptor p/ anexar Authorization em TODAS as requisições do client geral */
@@ -27,7 +27,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-/** Refresh-on-401 (apenas 1 retry) */
+/** Refresh-on-401 (apenas 1 retry) — funciona para `api` e também para `http` */
 let refreshing: Promise<string> | null = null
 async function doRefresh(): Promise<string> {
   const res = await http.post('/refresh')
@@ -44,6 +44,7 @@ function attachRefreshInterceptor(client: AxiosInstance) {
       const cfg: any = error.config || {}
       const status = error.response?.status
 
+      // só tenta 1x
       if (status === 401 && !cfg.__isRetry) {
         try {
           if (!refreshing) refreshing = doRefresh().finally(() => (refreshing = null))
@@ -66,6 +67,7 @@ function attachRefreshInterceptor(client: AxiosInstance) {
 attachRefreshInterceptor(api)
 attachRefreshInterceptor(http)
 
+/** Login: cria cookie httpOnly 'rt' no backend e retorna accessToken no body */
 export async function login(email: string, password: string) {
   const res = await http.post('/login', { email, password })
   const accessToken: string = res.data?.accessToken
@@ -75,8 +77,9 @@ export async function login(email: string, password: string) {
   return { data: auth }
 }
 
-export async function getUserByToken(token: string) {
-  // ✅ agora usa o client `api` (tem Authorization + refresh)
+/** Busca o usuário autenticado usando o access token (Authorization: Bearer ...) */
+export async function getUserByToken(_token: string) {
+  // usa o client `api` (com Authorization + refresh)
   const res = await api.get('/auth/me')
   const raw = res.data as any
   const mapped = { ...raw, id: raw.id ?? raw.sub }
@@ -93,7 +96,7 @@ export async function refreshAccessToken(): Promise<string> {
 
 export async function logout() {
   try {
-    await http.post('/logout') // limpa cookie rt no backend
+    await http.post('/logout') // limpa cookie 'rt' no backend
   } finally {
     authHelper.removeAuth()
   }

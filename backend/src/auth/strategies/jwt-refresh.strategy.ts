@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 
 function cookieExtractor(req: Request) {
+    // refresh token fica no cookie 'rt' (httpOnly)
     return req?.cookies?.rt || null;
 }
 

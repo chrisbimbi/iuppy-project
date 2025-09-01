@@ -1,4 +1,3 @@
-// frontend/src/app/modules/auth/components/Login.tsx
 import { useState } from 'react'
 import * as Yup from 'yup'
 import clsx from 'clsx'
@@ -37,7 +36,6 @@ export function Login() {
         const { data: user } = await getUserByToken(auth.api_token)
         setCurrentUser(user)
 
-        // destino após login (?to=/rota) ou /dashboard
         const qs = new URLSearchParams(location.search)
         const to = qs.get('to') || '/dashboard'
         navigate(to, { replace: true })

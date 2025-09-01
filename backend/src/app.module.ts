@@ -18,6 +18,8 @@ import { CompaniesModule } from './modules/platform/companies/companies.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { UploadsModule } from './uploads/uploads.module';
+import { AccessControlModule } from './access-control/access-control.module';
+import { AccessGrantsModule } from './modules/access-grants/access-grants.module';
 
 @Module({
   imports: [
@@ -64,6 +66,10 @@ import { UploadsModule } from './uploads/uploads.module';
     CompanySettingsModule,
     CompanyModulesModule,
     CompaniesModule,
+    AccessControlModule,
+    AccessGrantsModule,
+
+
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,3 +1,4 @@
+// frontend/src/app/modules/company/controllers/CompanySettingsPage.tsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
@@ -13,6 +14,7 @@ import { CompanyModule, CompanySettings, ModuleKey, Role, User } from '@shared/t
 import { useNavigate } from 'react-router-dom'
 import '../styles/phone-preview.css'
 import LogoUploader from '../components/LogoUploader'
+import UserPermissionsModal from '../components/UserPermissionsModal'
 
 // labels dos módulos
 const MODULE_LABELS: Record<ModuleKey, string> = {
@@ -67,17 +69,49 @@ const CompanySettingsPage: React.FC = () => {
     const [channelsCount, setChannelsCount] = useState<number>(0)
     const { groups } = useGroups({ companyId })
 
+    // ---- NOVO: filtro e modal de permissões ----
+    const [userFilter, setUserFilter] = useState<'all' | 'admins' | 'collab'>('all')
+    const [permUser, setPermUser] = useState<User | null>(null)
+
+    // roles administrativos (ajuste aqui se tiver mais perfis admin)
+    const adminRoles = useMemo(
+        () => new Set<Role | string>([
+            'super_admin',
+            'company_admin',
+            'content_admin',
+            'hr_admin',
+            // Role.SuperAdmin, Role.CompanyAdmin, Role.ContentAdmin, Role.HrAdmin // se preferir via enum
+        ]),
+        []
+    )
+
+    const filteredUsers = useMemo(() => {
+        if (userFilter === 'all') return users
+        if (userFilter === 'admins') return users.filter(u => adminRoles.has(u.role))
+        return users.filter(u => !adminRoles.has(u.role))
+    }, [users, userFilter, adminRoles])
+
+    // somente módulos habilitados (usado pelo modal)
+    const enabledModules = useMemo(
+        () => modules.filter(m => !!m.enabled),
+        [modules]
+    )
+    // --------------------------------------------
+
     const canToggleModules = useMemo(
         () => !!currentUser && [Role.SuperAdmin, Role.CompanyAdmin].includes(currentUser.role),
         [currentUser?.role]
     )
+
     useEffect(() => {
         if (!companyId) return
         CompanySettingsService.get(companyId).then(setSettings)
         CompanyModulesService.list(companyId).then(setModules)
         UsersService.list(companyId).then(setUsers)
         spacesService.list(companyId).then(setSpaces)
-        ChannelsService.list(companyId).then(list => setChannelsCount(list.length)).catch(() => setChannelsCount(0))
+        ChannelsService.list(companyId)
+            .then(list => setChannelsCount(list.length))
+            .catch(() => setChannelsCount(0))
     }, [companyId])
 
     // ---------- handlers ----------
@@ -117,9 +151,7 @@ const CompanySettingsPage: React.FC = () => {
         setUpdatingKey(key)
         try {
             await CompanyModulesService.upsert(companyId, key, enabled)
-            // opção 1 (simples, o que você pediu):
             window.location.reload()
-            // opção 2 (sem reload): refetch dos módulos + algum mecanismo no Provider para revalidar
         } finally {
             setUpdatingKey(null)
         }
@@ -129,10 +161,8 @@ const CompanySettingsPage: React.FC = () => {
     const previewStyles = useMemo(() => {
         const b = settings?.branding || {}
         return {
-            // container (screen) colors
             backgroundColor: defaultBrandingColor((b as any).background, '#ffffff'),
             color: defaultBrandingColor((b as any).textOnBackground, '#1e1e2d'),
-            // header usa primary
             ['--preview-primary' as any]: defaultBrandingColor(b.primary, '#0665d0'),
         } as React.CSSProperties
     }, [settings])
@@ -381,14 +411,38 @@ const CompanySettingsPage: React.FC = () => {
                             {/* TAB: Users */}
                             {active === 'users' && (
                                 <div className="row g-9">
-                                    <div className="col-12 d-flex justify-content-between align-items-center">
+                                    <div className="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
                                         <div>
                                             <div className="fs-5 fw-bold">Usuários ({users.length})</div>
-                                            <div className="text-muted">Lista de usuários desta empresa.</div>
+                                            <div className="text-muted">Gerencie a equipe e suas permissões por módulo.</div>
                                         </div>
-                                        <button className="btn btn-light-primary" onClick={() => navigate('/groups')}>
-                                            <i className="bi bi-people me-2" /> Gerenciar grupos
-                                        </button>
+
+                                        <div className="d-flex align-items-center gap-2">
+                                            <div className="btn-group" role="group" aria-label="Filtro de usuários">
+                                                <button
+                                                    className={`btn btn-sm ${userFilter === 'all' ? 'btn-primary' : 'btn-light-primary'}`}
+                                                    onClick={() => setUserFilter('all')}
+                                                >
+                                                    Todos
+                                                </button>
+                                                <button
+                                                    className={`btn btn-sm ${userFilter === 'admins' ? 'btn-primary' : 'btn-light-primary'}`}
+                                                    onClick={() => setUserFilter('admins')}
+                                                >
+                                                    Admins
+                                                </button>
+                                                <button
+                                                    className={`btn btn-sm ${userFilter === 'collab' ? 'btn-primary' : 'btn-light-primary'}`}
+                                                    onClick={() => setUserFilter('collab')}
+                                                >
+                                                    Colaboradores
+                                                </button>
+                                            </div>
+
+                                            <button className="btn btn-light-primary" onClick={() => navigate('/groups')}>
+                                                <i className="bi bi-people me-2" /> Gerenciar grupos
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="col-12">
@@ -399,18 +453,34 @@ const CompanySettingsPage: React.FC = () => {
                                                         <th>Nome</th>
                                                         <th>E-mail</th>
                                                         <th>Perfil</th>
+                                                        <th className="text-end">Ações</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {users.map(u => (
+                                                    {filteredUsers.map(u => (
                                                         <tr key={u.id}>
                                                             <td className="fw-semibold">{u.name || u.displayName || '-'}</td>
                                                             <td>{u.email}</td>
-                                                            <td>{u.role}</td>
+                                                            <td>
+                                                                {adminRoles.has(u.role)
+                                                                    ? <span className="badge badge-light-primary text-uppercase">{u.role}</span>
+                                                                    : <span className="badge badge-light text-uppercase">{u.role}</span>}
+                                                            </td>
+                                                            <td className="text-end">
+                                                                <button
+                                                                    className="btn btn-sm btn-light-primary"
+                                                                    onClick={() => setPermUser(u)}
+                                                                    disabled={!enabledModules.length}
+                                                                    title={enabledModules.length ? 'Permissões por módulo' : 'Ative ao menos um módulo'}
+                                                                >
+                                                                    <i className="bi bi-shield-check me-2"></i>
+                                                                    Permissões
+                                                                </button>
+                                                            </td>
                                                         </tr>
                                                     ))}
-                                                    {!users.length && (
-                                                        <tr><td colSpan={3} className="text-center text-muted py-8">Nenhum usuário.</td></tr>
+                                                    {!filteredUsers.length && (
+                                                        <tr><td colSpan={4} className="text-center text-muted py-8">Nenhum usuário.</td></tr>
                                                     )}
                                                 </tbody>
                                             </table>
@@ -534,6 +604,19 @@ const CompanySettingsPage: React.FC = () => {
                     </div>
                 </Content>
             </div>
+
+            {/* Modal de permissões (abre quando permUser !== null) */}
+            {permUser && (
+                <UserPermissionsModal
+                    show={!!permUser}
+                    onClose={() => setPermUser(null)}
+                    companyId={companyId}
+                    user={permUser}
+                    enabledModules={enabledModules}
+                    spaces={spaces}
+                    moduleLabels={MODULE_LABELS}
+                />
+            )}
         </div>
     )
 }
