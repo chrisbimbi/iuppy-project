@@ -1,4 +1,4 @@
-// frontend/src/app/modules/company/controllers/CompanySettingsPage.tsx
+// (arquivo completo, só com as mudanças principais marcadas nos comentários)
 import React, { useEffect, useMemo, useState } from 'react'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
@@ -69,19 +69,12 @@ const CompanySettingsPage: React.FC = () => {
     const [channelsCount, setChannelsCount] = useState<number>(0)
     const { groups } = useGroups({ companyId })
 
-    // ---- NOVO: filtro e modal de permissões ----
+    // ---- filtro e modal de permissões ----
     const [userFilter, setUserFilter] = useState<'all' | 'admins' | 'collab'>('all')
     const [permUser, setPermUser] = useState<User | null>(null)
 
-    // roles administrativos (ajuste aqui se tiver mais perfis admin)
     const adminRoles = useMemo(
-        () => new Set<Role | string>([
-            'super_admin',
-            'company_admin',
-            'content_admin',
-            'hr_admin',
-            // Role.SuperAdmin, Role.CompanyAdmin, Role.ContentAdmin, Role.HrAdmin // se preferir via enum
-        ]),
+        () => new Set<Role | string>(['super_admin', 'company_admin', 'content_admin', 'hr_admin']),
         []
     )
 
@@ -91,17 +84,15 @@ const CompanySettingsPage: React.FC = () => {
         return users.filter(u => !adminRoles.has(u.role))
     }, [users, userFilter, adminRoles])
 
-    // somente módulos habilitados (usado pelo modal)
-    const enabledModules = useMemo(
-        () => modules.filter(m => !!m.enabled),
-        [modules]
-    )
-    // --------------------------------------------
+    const enabledModules = useMemo(() => modules.filter(m => !!m.enabled), [modules])
 
     const canToggleModules = useMemo(
         () => !!currentUser && [Role.SuperAdmin, Role.CompanyAdmin].includes(currentUser.role),
         [currentUser?.role]
     )
+
+    // ✅ chave única para “pode editar” em Company Settings
+    const canEditCompanySettings = canToggleModules
 
     useEffect(() => {
         if (!companyId) return
@@ -126,7 +117,7 @@ const CompanySettingsPage: React.FC = () => {
     }
 
     const saveBranding = async () => {
-        if (!settings) return
+        if (!settings || !canEditCompanySettings) return
         setSavingSettings(true)
         setSaveError(null)
         setSavedSettings(false)
@@ -157,7 +148,6 @@ const CompanySettingsPage: React.FC = () => {
         }
     }
 
-    // ---------- preview styles (escopado!) ----------
     const previewStyles = useMemo(() => {
         const b = settings?.branding || {}
         return {
@@ -216,128 +206,129 @@ const CompanySettingsPage: React.FC = () => {
                                             Esta personalização afeta apenas o <strong>app mobile</strong>. À direita, você vê um preview.
                                         </div>
 
-                                        <div className="row g-6">
-                                            {/* Logo com upload + crop */}
-                                            <div className="col-12">
-                                                <label className="form-label mb-2">Logo da empresa</label>
-                                                <LogoUploader
-                                                    value={settings.branding?.logoUrl}
-                                                    onUploaded={(url) => handleBrandingChange({ logoUrl: url })}
-                                                />
-                                                <div className="form-text mt-2">
-                                                    Dica: você também pode informar uma URL manualmente se preferir.
+                                        {/* ✅ Trava de edição para quem não é org admin */}
+                                        <fieldset disabled={!canEditCompanySettings}>
+                                            <div className="row g-6">
+                                                <div className="col-12">
+                                                    <label className="form-label mb-2">Logo da empresa</label>
+                                                    <LogoUploader
+                                                        value={settings.branding?.logoUrl}
+                                                        onUploaded={(url) => handleBrandingChange({ logoUrl: url })}
+                                                    />
+                                                    <div className="form-text mt-2">
+                                                        Dica: você também pode informar uma URL manualmente se preferir.
+                                                    </div>
+                                                    <input
+                                                        className="form-control mt-3"
+                                                        placeholder="https://…/logo.png"
+                                                        value={settings.branding?.logoUrl ?? ''}
+                                                        onChange={e => handleBrandingChange({ logoUrl: e.target.value })}
+                                                    />
                                                 </div>
-                                                <input
-                                                    className="form-control mt-3"
-                                                    placeholder="https://…/logo.png"
-                                                    value={settings.branding?.logoUrl ?? ''}
-                                                    onChange={e => handleBrandingChange({ logoUrl: e.target.value })}
-                                                />
-                                            </div>
 
-                                            <div className="col-md-6">
-                                                <label className="form-label">Título no App</label>
-                                                <input
-                                                    className="form-control"
-                                                    placeholder="ex.: Portal Iuppy"
-                                                    value={(settings.branding as any)?.appTitle ?? ''}
-                                                    onChange={e => handleBrandingChange({ ...(settings.branding || {}), appTitle: e.target.value } as any)}
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Subtítulo</label>
-                                                <input
-                                                    className="form-control"
-                                                    placeholder="ex.: Comunicação interna"
-                                                    value={(settings.branding as any)?.appSubtitle ?? ''}
-                                                    onChange={e => handleBrandingChange({ ...(settings.branding || {}), appSubtitle: e.target.value } as any)}
-                                                />
-                                            </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Título no App</label>
+                                                    <input
+                                                        className="form-control"
+                                                        placeholder="ex.: Portal Iuppy"
+                                                        value={(settings.branding as any)?.appTitle ?? ''}
+                                                        onChange={e => handleBrandingChange({ ...(settings.branding || {}), appTitle: e.target.value } as any)}
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Subtítulo</label>
+                                                    <input
+                                                        className="form-control"
+                                                        placeholder="ex.: Comunicação interna"
+                                                        value={(settings.branding as any)?.appSubtitle ?? ''}
+                                                        onChange={e => handleBrandingChange({ ...(settings.branding || {}), appSubtitle: e.target.value } as any)}
+                                                    />
+                                                </div>
 
-                                            <div className="col-md-6">
-                                                <label className="form-label">Cor Primária</label>
-                                                <input
-                                                    type="color"
-                                                    className="form-control form-control-color w-100"
-                                                    value={settings.branding?.primary ?? '#0665d0'}
-                                                    onChange={e => handleBrandingChange({ primary: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Fundo (App)</label>
-                                                <input
-                                                    type="color"
-                                                    className="form-control form-control-color w-100"
-                                                    value={(settings.branding as any)?.background ?? '#ffffff'}
-                                                    onChange={e => handleBrandingChange({ ...(settings.branding || {}), background: e.target.value } as any)}
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Texto no Fundo</label>
-                                                <input
-                                                    type="color"
-                                                    className="form-control form-control-color w-100"
-                                                    value={(settings.branding as any)?.textOnBackground ?? '#1e1e2d'}
-                                                    onChange={e => handleBrandingChange({ ...(settings.branding || {}), textOnBackground: e.target.value } as any)}
-                                                />
-                                            </div>
-
-                                            {(['success', 'info', 'warning', 'danger', 'gray900', 'gray600'] as const).map(k => (
-                                                <div className="col-md-6" key={k}>
-                                                    <label className="form-label text-capitalize">{k}</label>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Cor Primária</label>
                                                     <input
                                                         type="color"
                                                         className="form-control form-control-color w-100"
-                                                        value={settings.branding?.[k] ?? '#ffffff'}
-                                                        onChange={e => handleBrandingChange({ [k]: e.target.value } as any)}
+                                                        value={settings.branding?.primary ?? '#0665d0'}
+                                                        onChange={e => handleBrandingChange({ primary: e.target.value })}
                                                     />
                                                 </div>
-                                            ))}
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Fundo (App)</label>
+                                                    <input
+                                                        type="color"
+                                                        className="form-control form-control-color w-100"
+                                                        value={(settings.branding as any)?.background ?? '#ffffff'}
+                                                        onChange={e => handleBrandingChange({ ...(settings.branding || {}), background: e.target.value } as any)}
+                                                    />
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Texto no Fundo</label>
+                                                    <input
+                                                        type="color"
+                                                        className="form-control form-control-color w-100"
+                                                        value={(settings.branding as any)?.textOnBackground ?? '#1e1e2d'}
+                                                        onChange={e => handleBrandingChange({ ...(settings.branding || {}), textOnBackground: e.target.value } as any)}
+                                                    />
+                                                </div>
 
-                                            {/* Locales */}
-                                            <div className="col-md-6">
-                                                <label className="form-label">Idioma padrão</label>
-                                                <select
-                                                    className="form-select"
-                                                    value={settings.defaultLocale}
-                                                    onChange={e => {
-                                                        handleBrandingChange({});
-                                                        handleLocaleChange('defaultLocale', e.target.value);
-                                                    }}
-                                                >
-                                                    {['pt', 'en', 'es', 'de'].map(l => (
-                                                        <option key={l} value={l}>{l.toUpperCase()}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Idiomas suportados</label>
-                                                <select
-                                                    className="form-select"
-                                                    multiple
-                                                    value={settings.supportedLocales as any}
-                                                    onChange={e =>
-                                                        handleLocaleChange(
-                                                            'supportedLocales',
-                                                            Array.from(e.target.selectedOptions).map(o => o.value)
-                                                        )
-                                                    }
-                                                >
-                                                    {['pt', 'en', 'es', 'de'].map(l => (
-                                                        <option key={l} value={l}>{l.toUpperCase()}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="form-text">Ctrl/Cmd para multisseleção.</div>
-                                            </div>
+                                                {(['success', 'info', 'warning', 'danger', 'gray900', 'gray600'] as const).map(k => (
+                                                    <div className="col-md-6" key={k}>
+                                                        <label className="form-label text-capitalize">{k}</label>
+                                                        <input
+                                                            type="color"
+                                                            className="form-control form-control-color w-100"
+                                                            value={settings.branding?.[k] ?? '#ffffff'}
+                                                            onChange={e => handleBrandingChange({ [k]: e.target.value } as any)}
+                                                        />
+                                                    </div>
+                                                ))}
 
-                                            <div className="col-12 d-flex justify-content-end">
-                                                <button className="btn btn-light me-2" onClick={() => window.location.reload()}>
-                                                    Cancelar
-                                                </button>
-                                                <button className="btn btn-primary" onClick={saveBranding} disabled={savingSettings}>
-                                                    {savingSettings ? 'Salvando…' : 'Salvar alterações'}
-                                                </button>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Idioma padrão</label>
+                                                    <select
+                                                        className="form-select"
+                                                        value={settings.defaultLocale}
+                                                        onChange={e => {
+                                                            handleBrandingChange({});
+                                                            handleLocaleChange('defaultLocale', e.target.value);
+                                                        }}
+                                                    >
+                                                        {['pt', 'en', 'es', 'de'].map(l => (
+                                                            <option key={l} value={l}>{l.toUpperCase()}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <label className="form-label">Idiomas suportados</label>
+                                                    <select
+                                                        className="form-select"
+                                                        multiple
+                                                        value={settings.supportedLocales as any}
+                                                        onChange={e =>
+                                                            handleLocaleChange(
+                                                                'supportedLocales',
+                                                                Array.from(e.target.selectedOptions).map(o => o.value)
+                                                            )
+                                                        }
+                                                    >
+                                                        {['pt', 'en', 'es', 'de'].map(l => (
+                                                            <option key={l} value={l}>{l.toUpperCase()}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="form-text">Ctrl/Cmd para multisseleção.</div>
+                                                </div>
                                             </div>
+                                        </fieldset>
+
+                                        <div className="col-12 d-flex justify-content-end mt-6">
+                                            <button className="btn btn-light me-2" onClick={() => window.location.reload()}>
+                                                Cancelar
+                                            </button>
+                                            <button className="btn btn-primary" onClick={saveBranding} disabled={savingSettings || !canEditCompanySettings}>
+                                                {savingSettings ? 'Salvando…' : 'Salvar alterações'}
+                                            </button>
                                         </div>
                                     </div>
 
@@ -348,10 +339,7 @@ const CompanySettingsPage: React.FC = () => {
                                             <div className="screen" style={previewStyles}>
                                                 <div
                                                     className="screen-header"
-                                                    style={{
-                                                        background: (settings.branding?.primary || '#0665d0'),
-                                                        color: '#fff',
-                                                    }}
+                                                    style={{ background: (settings.branding?.primary || '#0665d0'), color: '#fff' }}
                                                 >
                                                     <div className="small text-uppercase fw-bold opacity-75">Iuppy App</div>
                                                 </div>
@@ -359,36 +347,20 @@ const CompanySettingsPage: React.FC = () => {
                                                     {settings.branding?.logoUrl ? (
                                                         <img className="logo" src={settings.branding.logoUrl} alt="logo" />
                                                     ) : (
-                                                        <div
-                                                            className="logo d-flex align-items-center justify-content-center"
-                                                            style={{ background: '#fff', border: '1px dashed rgba(0,0,0,.15)' }}
-                                                        >
+                                                        <div className="logo d-flex align-items-center justify-content-center" style={{ background: '#fff', border: '1px dashed rgba(0,0,0,.15)' }}>
                                                             <span className="text-muted">Logo</span>
                                                         </div>
                                                     )}
 
-                                                    <div
-                                                        className="title"
-                                                        style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d', fontSize: 22 }}
-                                                    >
+                                                    <div className="title" style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d', fontSize: 22 }}>
                                                         {(settings.branding as any)?.appTitle || 'Portal da Empresa'}
                                                     </div>
-                                                    <div
-                                                        className="subtitle mb-4"
-                                                        style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d' }}
-                                                    >
+                                                    <div className="subtitle mb-4" style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d' }}>
                                                         {(settings.branding as any)?.appSubtitle || 'Comunicação interna e novidades'}
                                                     </div>
 
                                                     <div className="d-grid gap-2">
-                                                        <button
-                                                            className="btn"
-                                                            style={{
-                                                                background: (settings.branding?.primary || '#0665d0'),
-                                                                borderColor: 'transparent',
-                                                                color: '#fff',
-                                                            }}
-                                                        >
+                                                        <button className="btn" style={{ background: (settings.branding?.primary || '#0665d0'), borderColor: 'transparent', color: '#fff' }}>
                                                             Botão Primário
                                                         </button>
                                                         <div className="card card-bordered p-3" style={{ borderColor: 'rgba(0,0,0,.08)' }}>
@@ -419,24 +391,9 @@ const CompanySettingsPage: React.FC = () => {
 
                                         <div className="d-flex align-items-center gap-2">
                                             <div className="btn-group" role="group" aria-label="Filtro de usuários">
-                                                <button
-                                                    className={`btn btn-sm ${userFilter === 'all' ? 'btn-primary' : 'btn-light-primary'}`}
-                                                    onClick={() => setUserFilter('all')}
-                                                >
-                                                    Todos
-                                                </button>
-                                                <button
-                                                    className={`btn btn-sm ${userFilter === 'admins' ? 'btn-primary' : 'btn-light-primary'}`}
-                                                    onClick={() => setUserFilter('admins')}
-                                                >
-                                                    Admins
-                                                </button>
-                                                <button
-                                                    className={`btn btn-sm ${userFilter === 'collab' ? 'btn-primary' : 'btn-light-primary'}`}
-                                                    onClick={() => setUserFilter('collab')}
-                                                >
-                                                    Colaboradores
-                                                </button>
+                                                <button className={`btn btn-sm ${userFilter === 'all' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('all')}>Todos</button>
+                                                <button className={`btn btn-sm ${userFilter === 'admins' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('admins')}>Admins</button>
+                                                <button className={`btn btn-sm ${userFilter === 'collab' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('collab')}>Colaboradores</button>
                                             </div>
 
                                             <button className="btn btn-light-primary" onClick={() => navigate('/groups')}>
@@ -615,6 +572,7 @@ const CompanySettingsPage: React.FC = () => {
                     enabledModules={enabledModules}
                     spaces={spaces}
                     moduleLabels={MODULE_LABELS}
+                    readOnly={!canEditCompanySettings}  // ✅ somente org admins editam
                 />
             )}
         </div>

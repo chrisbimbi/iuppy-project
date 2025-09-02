@@ -9,6 +9,9 @@ import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
 
+// ⬇️ capabilities
+import { useAccess } from 'src/app/modules/company/providers/AccessProvider'
+
 const SurveyEditPage = () => {
     const { currentUser } = useAuth()
     const companyId = currentUser!.companyId
@@ -17,9 +20,12 @@ const SurveyEditPage = () => {
     const { surveyId } = useParams<{ surveyId: string }>()
     const [searchParams] = useSearchParams()
     const stepParam = Number(searchParams.get('step') || '1')
+    const ctxSpace = searchParams.get('spaceId') || undefined
     const initialStep = stepParam >= 1 && stepParam <= 3 ? stepParam : 1
     const [survey, setSurvey] = useState<Survey | null>(null)
     const [loading, setLoading] = useState(!!surveyId)
+
+    const { can } = useAccess()
 
     useEffect(() => {
         if (!surveyId) return
@@ -29,8 +35,29 @@ const SurveyEditPage = () => {
             .finally(() => setLoading(false))
     }, [companyId, surveyId])
 
+    // 🔐 gate da página
+    const isCreate = !surveyId
+    const canEditHere = useMemo(() => {
+        if (isCreate) {
+            // criar: pode se tiver ALL_SPACES; ou se veio com spaceId permitido via query
+            if (can('edit', 'surveys')) return true
+            if (ctxSpace) return can('edit', 'surveys', ctxSpace)
+            return false
+        }
+        // editar existente: precisa permissão em pelo menos um dos spaces da survey (ou ALL_SPACES)
+        if (!survey) return false
+        return can('edit', 'surveys') || (survey.spaceIds || []).some(id => can('edit', 'surveys', id))
+    }, [isCreate, survey, can, ctxSpace])
+
     const formInitialValues = useMemo(() => {
-        if (!surveyId) return initialSurveyValues(companyId, userId)
+        if (!surveyId) {
+            const base = initialSurveyValues(companyId, userId)
+            // se veio com spaceId no contexto e tem permissão nele, pré-seleciona
+            if (ctxSpace && can('edit', 'surveys', ctxSpace)) {
+                (base as any).spaceIds = [ctxSpace]
+            }
+            return base
+        }
         if (!survey) return initialSurveyValues(companyId, userId)
         // mapear entity -> dto básico (sem campos proibidos)
         return {
@@ -56,10 +83,28 @@ const SurveyEditPage = () => {
             endsAt: survey.endsAt ?? '',
             status: survey.status,
         }
-    }, [companyId, userId, survey, surveyId])
+    }, [companyId, userId, survey, surveyId, ctxSpace, can])
 
     const handleDone = () => {
         navigate('/modules/surveys')
+    }
+
+    if (!canEditHere) {
+        return (
+            <div className="app-container container-xxl">
+                <div className="app-page" id="kt_app_page">
+                    <AsideDefault />
+                    <Content>
+                        <div className="alert alert-warning">
+                            Você não tem permissão para {isCreate ? 'criar' : 'editar'} enquetes neste contexto.
+                        </div>
+                        <button className="btn btn-light mt-4" onClick={() => navigate('/modules/surveys')}>
+                            ← Voltar para a lista
+                        </button>
+                    </Content>
+                </div>
+            </div>
+        )
     }
 
     return (

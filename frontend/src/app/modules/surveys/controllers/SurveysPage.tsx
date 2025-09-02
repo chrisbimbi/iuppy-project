@@ -25,8 +25,11 @@ const SurveysPage: React.FC = () => {
     const { groups = [] } = useGroups({ companyId }) // mantido se for usar depois
     const { data: surveys = [], loading } = useSurveys(companyId)
 
-    const sortedData = surveys
-        ?.slice()
+    // garante array "plano" tipado como Survey para o resto da página
+    const list: Survey[] = (surveys ?? []) as unknown as Survey[]
+
+    const sortedData = list
+        .slice()
         .sort(
             (a, b) =>
                 new Date(b.createdAt as any).getTime() -
@@ -136,10 +139,9 @@ const SurveysPage: React.FC = () => {
         return created.id
     }
 
-    const filteredData = sortedData?.filter(survey => {
-        if (!spaceFilter) return true
-        return survey.spaceIds.includes(spaceFilter)
-    })
+    const filteredData = !spaceFilter
+        ? sortedData
+        : sortedData.filter(survey => survey.spaceIds.includes(spaceFilter))
 
     return (
         <div className="app-container container-xxl">
@@ -177,7 +179,7 @@ const SurveysPage: React.FC = () => {
                                 }
                                 // Duplicação em massa: executa em SÉRIE e só depois atualiza
                                 for (const id of selectedIds) {
-                                    const survey = surveys.find(s => s.id === id)
+                                    const survey = list.find(s => s.id === id)
                                     if (survey) {
                                         try { await handleDuplicate(survey) } catch (e) { console.error(e) }
                                     }
@@ -197,7 +199,7 @@ const SurveysPage: React.FC = () => {
                         onDelete={openDelete}
                         // Duplicação de UMA linha: espera concluir e só então refaz o fetch
                         onDuplicate={async (survey) => {
-                            try { await handleDuplicate(survey) } finally { setShouldRefetch(true) }
+                            try { await handleDuplicate(survey as Survey) } finally { setShouldRefetch(true) }
                         }}
                     />
                 </Content>

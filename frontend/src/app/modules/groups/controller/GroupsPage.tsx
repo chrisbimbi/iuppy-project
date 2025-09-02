@@ -1,5 +1,4 @@
-// frontend/src/app/modules/groups/pages/GroupsPage.tsx
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useAuth } from 'src/app/modules/auth'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
@@ -22,9 +21,14 @@ import { useGroups } from '../provider/useGroups'
 import { useGroupActions } from '../provider/useGroupActions'
 import { useGroupMembers } from '../provider/useGroupMembers'
 
+// ⬇️ capabilities
+import { useAccess } from 'src/app/modules/company/providers/AccessProvider'
+import { WithCapability } from 'src/app/modules/company/components/WithCapability'
+
 const GroupsPage: React.FC = () => {
   const { currentUser } = useAuth()
   const companyId = currentUser!.companyId
+  const { can } = useAccess()
 
   // hooks de dados
   const { users: allUsers } = useUsers(companyId)
@@ -91,6 +95,10 @@ const GroupsPage: React.FC = () => {
 
   // abre modal de criação
   const openCreate = () => {
+    if (!can('edit', 'groups')) {
+      alert('Você não tem permissão para criar grupos.')
+      return
+    }
     setEditing(null)
     setInitialValues({
       companyId,
@@ -106,6 +114,10 @@ const GroupsPage: React.FC = () => {
 
   // abre modal de edição
   const openEdit = async (g: UserGroup) => {
+    if (!can('edit', 'groups')) {
+      alert('Você não tem permissão para editar grupos.')
+      return
+    }
     setEditing(g)
     setInitialValues({
       companyId: g.companyId,
@@ -122,7 +134,11 @@ const GroupsPage: React.FC = () => {
   const handleSave = async (
     dto: CreateGroupDto | UpdateGroupDto
   ): Promise<void> => {
-    // mescla os adminIds selecionados no DTO antes de enviar
+    if (!can('edit', 'groups')) {
+      alert('Você não tem permissão para salvar alterações em grupos.')
+      return
+    }
+
     const dtoWithAdmins = {
       ...dto,
       adminIds: initialValues.adminIds,
@@ -144,6 +160,10 @@ const GroupsPage: React.FC = () => {
 
   // abre modal de delete
   const openDelete = (ids: string[]) => {
+    if (!can('edit', 'groups')) {
+      alert('Você não tem permissão para excluir grupos.')
+      return
+    }
     setToDelete(ids)
     Modal.getOrCreateInstance(deleteRef.current!).show()
   }
@@ -182,9 +202,14 @@ const GroupsPage: React.FC = () => {
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-6">
             <h2 className="fw-bold">Grupos de Usuário</h2>
-            <button className="btn btn-primary" onClick={openCreate}>
-              Criar Grupo
-            </button>
+
+            <WithCapability action="edit" moduleKey="groups">
+              {(enabled) => (
+                <button className="btn btn-primary" onClick={openCreate} disabled={!enabled}>
+                  Criar Grupo
+                </button>
+              )}
+            </WithCapability>
           </div>
 
           {/* Bulk Actions */}
@@ -292,7 +317,7 @@ const GroupsPage: React.FC = () => {
           <UserPickerModal
             title="Selecione Administradores"
             show={showAdminPicker}
-            allUsers={allUsers.filter(u => u.role === Role.ADMIN)}
+            allUsers={allUsers.filter(u => u.role === Role.HRAdmin)}
             selected={initialValues.adminIds}
             onClose={() => setShowAdminPicker(false)}
             onConfirm={ids => {

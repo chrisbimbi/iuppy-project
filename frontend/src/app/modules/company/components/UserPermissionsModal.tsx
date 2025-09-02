@@ -1,4 +1,3 @@
-// frontend/src/app/modules/company/components/UserPermissionsModal.tsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CompanyModule, ModuleKey, User } from '@shared/types'
@@ -15,6 +14,7 @@ type Props = {
   enabledModules: CompanyModule[]
   spaces: SpaceLite[]
   moduleLabels: Record<ModuleKey, string>
+  readOnly?: boolean                      // ✅ NOVO
 }
 
 type Draft = {
@@ -25,62 +25,71 @@ type Draft = {
   canManage: boolean
 }
 
-function baseDraft(): Draft {
-  return { scopeType: 'ALL_SPACES', spaceIds: [], canView: false, canEdit: false, canManage: false }
-}
+const baseDraft = (): Draft => ({
+  scopeType: 'ALL_SPACES',
+  spaceIds: [],
+  canView: false,
+  canEdit: false,
+  canManage: false,
+})
 
-export const UserPermissionsModal: React.FC<Props> = ({
-  show, onClose, companyId, user, enabledModules, spaces, moduleLabels
+const UserPermissionsModal: React.FC<Props> = ({
+  show, onClose, companyId, user, enabledModules, spaces, moduleLabels, readOnly = false
 }) => {
   const [loading, setLoading] = useState(false)
   const [savingKey, setSavingKey] = useState<ModuleKey | null>(null)
-  const [grants, setGrants] = useState<Record<ModuleKey, AccessGrant | undefined>>({} as Record<ModuleKey, AccessGrant | undefined>)
-  const [drafts, setDrafts] = useState<Record<ModuleKey, Draft>>({} as Record<ModuleKey, Draft>)
+  const isReadOnly = !!readOnly
 
   const moduleKeys = useMemo<ModuleKey[]>(
-    () => enabledModules.map(m => m.key) as ModuleKey[],
+    () => (enabledModules || []).map(m => m.key) as ModuleKey[],
     [enabledModules]
   )
 
+  const emptyGrants = useMemo(() => {
+    const obj = {} as Record<ModuleKey, AccessGrant | undefined>
+    moduleKeys.forEach(k => { obj[k] = undefined })
+    return obj
+  }, [moduleKeys])
+
+  const emptyDrafts = useMemo(() => {
+    const obj = {} as Record<ModuleKey, Draft>
+    moduleKeys.forEach(k => { obj[k] = baseDraft() })
+    return obj
+  }, [moduleKeys])
+
+  const [grants, setGrants] = useState<Record<ModuleKey, AccessGrant | undefined>>(emptyGrants)
+  const [drafts, setDrafts] = useState<Record<ModuleKey, Draft>>(emptyDrafts)
+
   useEffect(() => {
     if (!show) return
-    ;(async () => {
-      setLoading(true)
-      try {
-        const list = await AccessService.list(companyId, user.id)
+      ; (async () => {
+        setLoading(true)
+        try {
+          const list = await AccessService.list(companyId, user.id)
+          const byKey = { ...emptyGrants }
+          const ds = { ...emptyDrafts }
 
-        const byKey: Record<ModuleKey, AccessGrant | undefined> = {
-          news: undefined, channels: undefined, groups: undefined, surveys: undefined, forms: undefined,
-          onboarding: undefined, training: undefined, jobs: undefined, birthdays: undefined, recognition: undefined,
-          quicklinks: undefined, benefits: undefined, vacations: undefined, podcasts: undefined, analytics: undefined, chat: undefined,
+          moduleKeys.forEach(k => {
+            const g = list.find(x => x.moduleKey === k)
+            byKey[k] = g
+            ds[k] = {
+              scopeType: g?.scopeType ?? 'ALL_SPACES',
+              spaceIds: g?.spaceIds ?? [],
+              canView: !!g?.canView,
+              canEdit: !!g?.canEdit,
+              canManage: !!g?.canManage,
+            }
+          })
+
+          setGrants(byKey)
+          setDrafts(ds)
+        } finally {
+          setLoading(false)
         }
-        const ds: Record<ModuleKey, Draft> = {
-          news: baseDraft(), channels: baseDraft(), groups: baseDraft(), surveys: baseDraft(), forms: baseDraft(),
-          onboarding: baseDraft(), training: baseDraft(), jobs: baseDraft(), birthdays: baseDraft(), recognition: baseDraft(),
-          quicklinks: baseDraft(), benefits: baseDraft(), vacations: baseDraft(), podcasts: baseDraft(), analytics: baseDraft(), chat: baseDraft(),
-        }
+      })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, companyId, user.id, moduleKeys.join('|')])
 
-        moduleKeys.forEach(k => {
-          const g = list.find(x => x.moduleKey === k)
-          byKey[k] = g
-          ds[k] = {
-            scopeType: g?.scopeType ?? 'ALL_SPACES',
-            spaceIds: g?.spaceIds ?? [],
-            canView: !!g?.canView,
-            canEdit: !!g?.canEdit,
-            canManage: !!g?.canManage,
-          }
-        })
-
-        setGrants(byKey)
-        setDrafts(ds)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [show, companyId, user.id, moduleKeys])
-
-  // bloqueia scroll quando o modal está aberto (como o Bootstrap faz)
   useEffect(() => {
     if (!show) return
     document.body.classList.add('modal-open')
@@ -88,11 +97,12 @@ export const UserPermissionsModal: React.FC<Props> = ({
   }, [show])
 
   const setDraft = (k: ModuleKey, patch: Partial<Draft>) => {
+    if (isReadOnly) return                                 // ✅ trava alterações
     setDrafts(prev => {
       const next: Draft = { ...(prev[k] ?? baseDraft()), ...patch }
       if (next.canManage) { next.canEdit = true; next.canView = true }
-      if (next.canEdit)   { next.canView = true }
-      if (!next.canView)  { next.canEdit = false; next.canManage = false }
+      if (next.canEdit) { next.canView = true }
+      if (!next.canView) { next.canEdit = false; next.canManage = false }
       if (!next.canView && !next.canEdit && !next.canManage) {
         next.scopeType = 'ALL_SPACES'; next.spaceIds = []
       }
@@ -102,6 +112,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
   }
 
   const toggleSpace = (k: ModuleKey, id: string) => {
+    if (isReadOnly) return                                 // ✅ trava alterações
     const cur = drafts[k]?.spaceIds ?? []
     const exists = cur.includes(id)
     const next = exists ? cur.filter(x => x !== id) : [...cur, id]
@@ -114,6 +125,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
   }
 
   const handleSave = async (k: ModuleKey) => {
+    if (isReadOnly) return                                 // ✅ trava ação
     const d = drafts[k]
     setSavingKey(k)
     try {
@@ -135,6 +147,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
   }
 
   const handleClear = async (k: ModuleKey) => {
+    if (isReadOnly) return                                 // ✅ trava ação
     const g = grants[k]
     if (!g?.id) {
       setDraft(k, baseDraft())
@@ -171,6 +184,10 @@ export const UserPermissionsModal: React.FC<Props> = ({
                 <div className="d-flex justify-content-center py-10">
                   <span className="spinner-border" />
                 </div>
+              ) : moduleKeys.length === 0 ? (
+                <div className="alert alert-warning">
+                  Nenhum módulo habilitado para esta empresa. Ative módulos na aba <strong>Módulos</strong> para configurar permissões.
+                </div>
               ) : (
                 <div className="row g-6">
                   {moduleKeys.map((k) => {
@@ -188,7 +205,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                               <button
                                 className="btn btn-sm btn-light-danger"
                                 onClick={() => handleClear(k)}
-                                disabled={savingKey === k}
+                                disabled={savingKey === k || isReadOnly}
                                 title="Remover todas as permissões deste módulo"
                               >
                                 Limpar
@@ -208,6 +225,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                     id={`${k}-view`}
                                     checked={!!d?.canView}
                                     onChange={e => setDraft(k, { canView: e.target.checked })}
+                                    disabled={isReadOnly}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-view`}>
                                     Pode visualizar
@@ -220,7 +238,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                     type="checkbox"
                                     id={`${k}-edit`}
                                     checked={!!d?.canEdit}
-                                    disabled={!d?.canView}
+                                    disabled={!d?.canView || isReadOnly}
                                     onChange={e => setDraft(k, { canEdit: e.target.checked })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-edit`}>
@@ -234,7 +252,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                     type="checkbox"
                                     id={`${k}-manage`}
                                     checked={!!d?.canManage}
-                                    disabled={!d?.canEdit}
+                                    disabled={!d?.canEdit || isReadOnly}
                                     onChange={e => setDraft(k, { canManage: e.target.checked })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-manage`}>
@@ -252,7 +270,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                     type="radio"
                                     name={`${k}-scope`}
                                     id={`${k}-all`}
-                                    disabled={!hasAny}
+                                    disabled={!hasAny || isReadOnly}
                                     checked={d?.scopeType === 'ALL_SPACES'}
                                     onChange={() => setDraft(k, { scopeType: 'ALL_SPACES' })}
                                   />
@@ -267,7 +285,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                     type="radio"
                                     name={`${k}-scope`}
                                     id={`${k}-byspaces`}
-                                    disabled={!hasAny}
+                                    disabled={!hasAny || isReadOnly}
                                     checked={d?.scopeType === 'SPACE_IDS'}
                                     onChange={() => setDraft(k, { scopeType: 'SPACE_IDS' })}
                                   />
@@ -294,6 +312,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                                               id={`${k}-space-${s.id}`}
                                               checked={!!d?.spaceIds?.includes(s.id)}
                                               onChange={() => toggleSpace(k, s.id)}
+                                              disabled={isReadOnly}
                                             />
                                             <label className="form-check-label" htmlFor={`${k}-space-${s.id}`}>
                                               {s.name}
@@ -312,7 +331,7 @@ export const UserPermissionsModal: React.FC<Props> = ({
                             <button
                               className="btn btn-primary"
                               onClick={() => handleSave(k)}
-                              disabled={savingKey === k}
+                              disabled={savingKey === k || isReadOnly}
                             >
                               {savingKey === k ? 'Salvando…' : 'Salvar'}
                             </button>
@@ -332,7 +351,6 @@ export const UserPermissionsModal: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* backdrop */}
       <div className="modal-backdrop iuppy-backdrop fade show"></div>
     </>
   )

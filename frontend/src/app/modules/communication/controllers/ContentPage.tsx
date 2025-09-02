@@ -1,5 +1,4 @@
-// src/app/modules/communication/controllers/ContentPage.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault';
 import { Content } from 'src/layout/components/Content';
@@ -18,10 +17,16 @@ import { DrawerComponent, MenuComponent } from 'src/assets/ts/components';
 import { initialNewValues } from '../views/ContentForm/helpers/initialValues';
 import ContentForm from '../views/ContentForm/views/ContentForm';
 
+// ⬇️ capabilities
+import { useAccess } from 'src/app/modules/company/providers/AccessProvider'
+import { WithCapability } from 'src/app/modules/company/components/WithCapability'
+
 const ContentPage: React.FC = () => {
   const { currentUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { can, loading: aclLoading } = useAccess();
 
   const [spaces, setSpaces] = useState<any[]>([]);
   const [spaceId, setSpaceId] = useState<string | null>(null);
@@ -44,6 +49,8 @@ const ContentPage: React.FC = () => {
   const [wizardInitialValues, setWizardInitialValues] =
     useState<CreateContentDto>({ ...initialNewValues, channelId: '' });
   const [toDeleteIds, setToDeleteIds] = useState<string[]>([]);
+  const noop = () => { }
+  const noopAsync = async () => { }
 
   const { items, loading, error, refetch } = useContent({ channelId });
   const {
@@ -72,23 +79,37 @@ const ContentPage: React.FC = () => {
     if (ch && ch !== channelId) setChannelId(ch);
   }, [location.search]);
 
-  // carregar spaces
+  // carregar spaces (preferindo um espaço que o usuário PODE VER 'news')
   useEffect(() => {
     if (!currentUser) return;
     spacesService.list(currentUser.companyId).then(data => {
       setSpaces(data);
-      if (!spaceId && data.length) setSpaceId(data[0].id);
+      // se ainda não há espaço escolhido, tente o primeiro permitido para 'news'
+      if (!spaceId && data.length) {
+        const firstAllowed = data.find(s => can('view', 'news', s.id));
+        setSpaceId(firstAllowed?.id ?? data[0].id);
+      }
     });
-  }, [currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, can]);
 
-  // carregar canais
+  // se o espaço selecionado não é permitido para 'news', tente corrigir
+  useEffect(() => {
+    if (!spaceId || !spaces.length || aclLoading) return;
+    if (!can('view', 'news', spaceId)) {
+      const fallback = spaces.find(s => can('view', 'news', s.id));
+      setSpaceId(fallback?.id ?? null);
+    }
+  }, [spaceId, spaces, can, aclLoading]);
+
+  // carregar canais do espaço (sempre que espaço mudar)
   useEffect(() => {
     if (!spaceId || !currentUser) return;
     ChannelsService.list(currentUser.companyId, spaceId).then(data => {
       setChannels(data);
       if (!channelId && data.length) setChannelId(data[0].id);
     });
-  }, [spaceId, currentUser]);
+  }, [spaceId, currentUser]); // eslint-disable-line
 
   // manter URL em sincronia
   useEffect(() => {
@@ -96,7 +117,7 @@ const ContentPage: React.FC = () => {
     if (spaceId) qs.set('spaceId', spaceId);
     if (channelId) qs.set('channelId', channelId);
     navigate({ pathname: '/contents', search: qs.toString() }, { replace: true });
-  }, [spaceId, channelId]);
+  }, [spaceId, channelId]); // eslint-disable-line
 
   // conteúdo: sucesso
   const handleSaved = () => {
@@ -171,14 +192,22 @@ const ContentPage: React.FC = () => {
     setSelectedIds([]);
   };
 
-  // modal de canal
+  // 🔐 gates no espaço atual para o módulo **news** (conteúdos)
+  const canViewNewsHere = useMemo(() => spaceId ? can('view', 'news', spaceId) : can('view', 'news'), [can, spaceId]);
+  const canEditNewsHere = useMemo(() => spaceId ? can('edit', 'news', spaceId) : can('edit', 'news'), [can, spaceId]);
+  const canManageNewsHere = useMemo(() => spaceId ? can('manage', 'news', spaceId) : can('manage', 'news'), [can, spaceId]);
+
+  // modal de canal — atrelar a "gerenciar conteúdos"
   const openChannelModal = (id?: string) => {
+    if (!canManageNewsHere) {
+      alert('Você não tem permissão para criar/editar canais neste espaço.');
+      return;
+    }
     setEditingChannelId(id);
     setShowChannelModal(true);
   };
   const closeChannelModal = () => setShowChannelModal(false);
   const handleChannelSaved = async () => {
-    // recarrega lista de canais
     if (currentUser && spaceId) {
       const data = await ChannelsService.list(currentUser.companyId, spaceId);
       setChannels(data);
@@ -188,6 +217,22 @@ const ContentPage: React.FC = () => {
   };
 
   const currentSpaceName = spaces.find(s => s.id === spaceId)?.name ?? 'Conteúdos';
+
+  // 🚧 bloqueio de visualização
+  if (!aclLoading && spaceId && !canViewNewsHere) {
+    return (
+      <div className="app-container container-xxl">
+        <div className="app-page" id="kt_app_page">
+          <AsideDefault />
+          <Content>
+            <div className="alert alert-warning">
+              Você não tem permissão para visualizar Conteúdos neste espaço.
+            </div>
+          </Content>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container container-xxl">
@@ -200,6 +245,15 @@ const ContentPage: React.FC = () => {
                 <h2 className="fw-bold text-dark m-0">
                   Espaço: <span className="text-primary">{currentSpaceName}</span>
                 </h2>
+
+                {/* Botão extra de criação de canal (opcional) */}
+                <WithCapability action="manage" moduleKey="news" spaceId={spaceId ?? undefined}>
+                  {(enabled) => (
+                    <button className="btn btn-light-primary" disabled={!enabled} onClick={() => openChannelModal()}>
+                      + Canal
+                    </button>
+                  )}
+                </WithCapability>
               </div>
 
               {success && (
@@ -215,7 +269,8 @@ const ContentPage: React.FC = () => {
                     channels={channels}
                     selectedChannelId={channelId}
                     onChannelSelect={setChannelId}
-                    onCreateChannel={() => openChannelModal()}
+                    // só exibe o botão de criar se pudermos gerenciar Conteúdos aqui
+                    onCreateChannel={canManageNewsHere ? () => openChannelModal() : () => { }}
                   />
                 </div>
 
@@ -223,19 +278,21 @@ const ContentPage: React.FC = () => {
                 <div className="col-lg-8">
                   <ContentList
                     channelName={channels.find(c => c.id === channelId)?.name ?? null}
-                    onEditChannel={() => openChannelModal(channelId ?? undefined)}
-                    onCreatePost={() => channelId && handleCreatePost(channelId)}
                     items={items}
                     loading={loading}
                     error={error}
                     selectedIds={selectedIds}
                     onSelect={handleSelect}
-                    onEdit={handleEditContent}
-                    onDuplicate={duplicateItem}
-                    onDelete={handleDeleteContent}
-                    onDeleteMultiple={handleDeleteMultiple}
-                    onDuplicateMultiple={handleDuplicateMultiple}
-                    onTogglePublishMultiple={handleTogglePublishMultiple}
+
+                    // Handlers SEMPRE definidos:
+                    onEditChannel={canManageNewsHere ? () => openChannelModal(channelId ?? undefined) : noop}
+                    onCreatePost={canEditNewsHere && channelId ? () => handleCreatePost(channelId) : noop}
+                    onEdit={canEditNewsHere ? handleEditContent : noop}
+                    onDuplicate={canEditNewsHere ? duplicateItem : noopAsync}
+                    onDelete={canEditNewsHere ? handleDeleteContent : noop}
+                    onDeleteMultiple={canEditNewsHere ? handleDeleteMultiple : noop}
+                    onDuplicateMultiple={canEditNewsHere ? handleDuplicateMultiple : noopAsync}
+                    onTogglePublishMultiple={canEditNewsHere ? handleTogglePublishMultiple : noopAsync}
                   />
                 </div>
               </div>
@@ -296,7 +353,7 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* ***  AQUI ***  modal de criar/editar canal */}
+              {/* modal de criar/editar canal */}
               {showChannelModal && (
                 <ChannelModal
                   show={showChannelModal}

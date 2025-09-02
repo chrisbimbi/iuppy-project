@@ -7,6 +7,7 @@ import { CompanyModule, ModuleKey } from '@shared/types'
 
 // Somente módulos "reais" (não incluir news/channels/groups)
 const REAL_MODULE_KEYS: ModuleKey[] = [
+  'news',
   'surveys',
   'forms',
   'onboarding',

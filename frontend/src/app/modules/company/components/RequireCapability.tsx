@@ -1,10 +1,11 @@
 import React from 'react'
 import { useAccess } from '../providers/AccessProvider'
-import { ModuleAction } from '@shared/types/AccessControl'
-import { ModuleKey } from '@shared/types'
+import type { ModuleKey } from '@shared/types'
+
+type CapabilityAction = 'view' | 'edit' | 'manage'
 
 export const RequireCapability: React.FC<{
-    action: ModuleAction
+    action: CapabilityAction
     moduleKey: ModuleKey
     spaceId?: string
     fallback?: React.ReactNode
@@ -15,3 +16,5 @@ export const RequireCapability: React.FC<{
     if (!can(action, moduleKey, spaceId)) return <>{fallback ?? null}</>
     return <>{children}</>
 }
+
+export default RequireCapability

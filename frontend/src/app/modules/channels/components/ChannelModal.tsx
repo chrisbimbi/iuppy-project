@@ -1,5 +1,4 @@
-// src/app/modules/channels/components/ChannelModal.tsx
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Modal } from 'bootstrap'
 import { ChannelsService } from '../services/channels.service'
 import { spacesService } from 'src/app/modules/spaces/services/spaces.service'
@@ -8,6 +7,10 @@ import { useUsers } from 'src/app/modules/groups/provider/useUsers'
 import { ChannelType } from '@shared/types/Channel'
 import type { AxiosError } from 'axios'
 import './ChannelModal.css'
+
+// ⬇️ capabilities
+import { useAccess } from 'src/app/modules/company/providers/AccessProvider'
+import { canActOnAnySpace, useAllowedSpaces } from '../../company/components/utils/capability-helpers'
 
 interface Props {
   show: boolean
@@ -53,6 +56,13 @@ const ChannelModal: React.FC<Props> = ({
   const [contribModal, setContribModal] = useState<Modal | null>(null)
   const [adminModal, setAdminModal] = useState<Modal | null>(null)
 
+  // ⬇️ capabilities (channels/edit)
+  const { can } = useAccess()
+  const allowedSpaces = useAllowedSpaces('channels', 'edit', spaces)
+
+  // se não puder editar em lugar nenhum, bloquear o salvar
+  const canSave = useMemo(() => canActOnAnySpace(can, 'edit', 'channels', selectedSpaces), [can, selectedSpaces])
+
   useEffect(() => {
     if (groupsRef.current) setGroupsModal(new Modal(groupsRef.current))
     if (contribRef.current) setContribModal(new Modal(contribRef.current))
@@ -73,7 +83,6 @@ const ChannelModal: React.FC<Props> = ({
         if (!ch) return
         setName(ch.name)
         setDescription(ch.description || '')
-        // ✅ valor compatível com backend
         setType((ch.type as ChannelType) || ChannelType.ARTICLES)
         setSelectedSpaces(ch.spaceIds || [])
         setSelectedGroups(ch.groupIds || [])
@@ -92,15 +101,15 @@ const ChannelModal: React.FC<Props> = ({
         })
       })
     } else if (spaces.length) {
-      // criar
-      const allIds = spaces.map(s => s.id)
-      setSelectedSpaces(allIds)
+      // criar → pré-seleciona SOMENTE spaces permitidos
+      const defaults = (allowedSpaces.length ? allowedSpaces : []).map(s => s.id)
+      setSelectedSpaces(defaults)
       setSelectedGroups([])
       setSelectedContrib([])
       setSelectedAdmins([])
       setIsPublished(false)
       setInitial({
-        spaces: allIds,
+        spaces: defaults,
         groups: [],
         contrib: [],
         admins: [],
@@ -110,7 +119,7 @@ const ChannelModal: React.FC<Props> = ({
       setDescription('')
       setType(ChannelType.ARTICLES)
     }
-  }, [show, channelId, spaces, companyId])
+  }, [show, channelId, spaces, companyId, allowedSpaces])
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -121,10 +130,16 @@ const ChannelModal: React.FC<Props> = ({
       setFeedback({ type: 'error', message: 'Selecione ao menos um espaço.' })
       return
     }
+    // ⬇️ verificação final de permissão
+    if (!canSave) {
+      setFeedback({ type: 'error', message: 'Você não tem permissão para salvar canais nos espaços selecionados.' })
+      return
+    }
+
     const payload = {
       name,
       description,
-      type, // ✅ enum correto
+      type,
       companyId,
       spaceIds: selectedSpaces,
       groupIds: selectedGroups,
@@ -150,6 +165,15 @@ const ChannelModal: React.FC<Props> = ({
       setFeedback({ type: 'error', message: String(msg) })
     }
   }
+
+  // options visíveis (somente espaços permitidos; admins org veem todos)
+  const optionsSpaces = useMemo(() => {
+    // se o usuário tem ALL_SPACES (can('edit','channels')), exibe todos
+    if (can('edit', 'channels')) return spaces
+    return allowedSpaces
+  }, [spaces, allowedSpaces, can])
+
+  const readOnlyNoPerm = !can('edit', 'channels') && allowedSpaces.length === 0
 
   return (
     <>
@@ -178,6 +202,12 @@ const ChannelModal: React.FC<Props> = ({
                 </div>
               )}
 
+              {readOnlyNoPerm && (
+                <div className="alert alert-warning">
+                  Você não tem permissão para criar/editar canais em nenhum espaço.
+                </div>
+              )}
+
               {/* Nome */}
               <div className="mb-3">
                 <label className="form-label">Nome*</label>
@@ -186,6 +216,7 @@ const ChannelModal: React.FC<Props> = ({
                   placeholder="Digite o nome do canal..."
                   value={name}
                   onChange={e => setName(e.target.value)}
+                  disabled={readOnlyNoPerm}
                 />
               </div>
 
@@ -198,6 +229,7 @@ const ChannelModal: React.FC<Props> = ({
                   placeholder="Breve descrição..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
+                  disabled={readOnlyNoPerm}
                 />
               </div>
 
@@ -208,8 +240,8 @@ const ChannelModal: React.FC<Props> = ({
                   {TYPES.map(t => (
                     <div
                       key={t.key}
-                      className={`type-card${type === t.key ? ' selected' : ''}`}
-                      onClick={() => setType(t.key)}
+                      className={`type-card${type === t.key ? ' selected' : ''} ${readOnlyNoPerm ? ' disabled' : ''}`}
+                      onClick={() => !readOnlyNoPerm && setType(t.key)}
                     >
                       <img src={t.img} alt={t.label} />
                       <div className="mt-2">{t.label}</div>
@@ -230,8 +262,9 @@ const ChannelModal: React.FC<Props> = ({
                     const opts = Array.from(e.target.selectedOptions).map(o => o.value)
                     setSelectedSpaces(opts)
                   }}
+                  disabled={readOnlyNoPerm}
                 >
-                  {spaces.map(s => (
+                  {optionsSpaces.map(s => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
@@ -248,6 +281,7 @@ const ChannelModal: React.FC<Props> = ({
                   id="isPublished"
                   checked={isPublished}
                   onChange={e => setIsPublished(e.target.checked)}
+                  disabled={readOnlyNoPerm}
                 />
                 <label htmlFor="isPublished" className="form-check-label">Publicado</label>
               </div>
@@ -257,7 +291,8 @@ const ChannelModal: React.FC<Props> = ({
                 <label className="form-label">Contribuidores</label>
                 <button
                   className="btn btn-outline-primary btn-sm ms-2"
-                  onClick={() => contribModal?.show()}
+                  onClick={() => !readOnlyNoPerm && contribModal?.show()}
+                  disabled={readOnlyNoPerm}
                 >
                   {selectedContrib.length ? 'Editar contrib.' : 'Selecionar contrib.'}
                 </button>
@@ -273,7 +308,8 @@ const ChannelModal: React.FC<Props> = ({
                 <label className="form-label">Administradores</label>
                 <button
                   className="btn btn-outline-primary btn-sm ms-2"
-                  onClick={() => adminModal?.show()}
+                  onClick={() => !readOnlyNoPerm && adminModal?.show()}
+                  disabled={readOnlyNoPerm}
                 >
                   {selectedAdmins.length ? 'Editar admins' : 'Selecionar admins'}
                 </button>
@@ -287,7 +323,9 @@ const ChannelModal: React.FC<Props> = ({
 
             <div className="modal-footer">
               <button className="btn btn-light" onClick={onHide}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSubmit}>Salvar</button>
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSave}>
+                Salvar
+              </button>
             </div>
           </div>
         </div>

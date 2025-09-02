@@ -2,13 +2,11 @@ import { FC } from 'react'
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
 import { PrivateRoutes } from './PrivateRoutes'
 import { ErrorsPage } from '../modules/errors/ErrorsPage'
+import ForbiddenPage from 'src/app/pages/ForbiddenPage'
 import { Logout, AuthPage, useAuth } from '../modules/auth'
 import { App } from '../App'
 import { MasterLayout } from '../../layout/MasterLayout'
-
-// provider de módulos da empresa
-import { CompanyModulesProvider } from '../modules/company/providers/CompanyModulesProvider'
-import { AccessProvider } from '../modules/company/providers/AccessProvider'
+import { CMSGuard } from './CMSGuard'
 
 const { BASE_URL } = import.meta.env
 
@@ -19,27 +17,28 @@ const AppRoutes: FC = () => {
     <BrowserRouter basename={BASE_URL}>
       <Routes>
         <Route element={<App />}>
-          <Route path="error/*" element={<ErrorsPage />} />
+          {/* Auth SEM guarda – sempre disponível */}
+          <Route path="auth/*" element={<AuthPage />} />
+
+          {/* Auxiliares */}
           <Route path="logout" element={<Logout />} />
+          <Route path="error/*" element={<ErrorsPage />} />
+          <Route path="forbidden" element={<ForbiddenPage />} />
 
           {currentUser ? (
             <Route
               element={
-                <AccessProvider>
-                  <CompanyModulesProvider>
-                    <MasterLayout />
-                  </CompanyModulesProvider>
-                </AccessProvider>
+                <CMSGuard>
+                  <MasterLayout />
+                </CMSGuard>
               }
             >
               <Route path="/*" element={<PrivateRoutes />} />
-              <Route index element={<Navigate to="/dashboard" />} />
+              <Route index element={<Navigate to="/dashboard" replace />} />
             </Route>
           ) : (
-            <>
-              <Route path="auth/*" element={<AuthPage />} />
-              <Route path="*" element={<Navigate to="/auth" />} />
-            </>
+            // Sem login → manda para /auth/login
+            <Route path="*" element={<Navigate to="/auth/login" replace />} />
           )}
         </Route>
       </Routes>
