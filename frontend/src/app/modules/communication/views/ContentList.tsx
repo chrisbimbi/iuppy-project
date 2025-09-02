@@ -1,212 +1,270 @@
-// src/app/modules/communication/views/ContentList.tsx
-import React, { useEffect, useRef } from 'react'
-import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
-import { News as Content } from '@shared/types'
-import { toAbsoluteUrl } from 'src/helpers'
+import React, { useMemo, useState } from 'react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { News as Content, NewsType } from '@shared/types'
+import { Spinner } from 'react-bootstrap'
 
-interface Props {
+type Item = Content
+
+type Props = {
     channelName: string | null
-    onEditChannel(): void
-    onCreatePost(): void
-    items?: Content[]
-    loading: boolean
-    error: any
-    selectedIds?: string[]
-    onSelect(id: string, checked: boolean): void
-    onEdit(id: string): void
-    onDuplicate(id: string): void
-    onDelete(id: string): void
-    onDeleteMultiple(): void
-    onDuplicateMultiple(): void
-    onTogglePublishMultiple(): void
+    items: Item[]
+    loading?: boolean
+    error?: string | null
+    selectedIds: string[]
+    onSelect: (id: string, checked: boolean) => void
+
+    // Handlers opcionais
+    onEditChannel?: () => void
+    onCreatePost?: () => void
+
+    onEdit?: (id: string) => void
+    onDuplicate?: (id: string) => void
+    onDelete?: (id: string) => void
+
+    onDeleteMultiple?: () => void
+    onDuplicateMultiple?: () => void
+    onTogglePublishMultiple?: () => Promise<void>
 }
 
-const DEFAULT_THUMB = '../media/stock/1600x800/img-1.jpg'
+// Labels corretos para o enum atual
+const TYPE_LABELS: Record<NewsType, string> = {
+    [NewsType.ANNOUNCEMENT]: 'Aviso',
+    [NewsType.UPDATE]: 'Atualização',
+    [NewsType.ALERT]: 'Alerta',
+}
 
-const Spinner: React.FC = () => (
-    <div className="d-flex justify-content-center align-items-center" style={{ height: 300 }}>
-        <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Carregando...</span>
-        </div>
-    </div>
-)
+function renderTypeLabel(t: Item['type']): string {
+    // se vier exatamente o enum, mapeia
+    if (t && TYPE_LABELS[t as NewsType]) return TYPE_LABELS[t as NewsType]
+    // fallback seguro
+    const s = String(t ?? '').trim()
+    return s || '-'
+}
+
+function formatDate(d?: string | Date | null) {
+    if (!d) return '-'
+    try {
+        const dt = typeof d === 'string' ? new Date(d) : d
+        return format(dt, "dd/MM/yy 'às' HH:mm", { locale: ptBR })
+    } catch {
+        return '-'
+    }
+}
 
 const ContentList: React.FC<Props> = ({
     channelName,
-    onEditChannel,
-    onCreatePost,
-    items: itemsProp = [],           // fallback para array vazio
+    items,
     loading,
     error,
-    selectedIds: selectedIdsProp = [], // fallback para array vazio
+    selectedIds,
     onSelect,
+
+    onEditChannel,
+    onCreatePost,
+
     onEdit,
     onDuplicate,
     onDelete,
+
     onDeleteMultiple,
     onDuplicateMultiple,
     onTogglePublishMultiple,
 }) => {
-    const headerRef = useRef<HTMLInputElement>(null)
+    const [search, setSearch] = useState('')
 
-    // re-renderiza menus sempre que items mudam
-    useEffect(() => {
-        MenuComponent.reinitialization()
-    }, [itemsProp])
+    const filtered = useMemo(() => {
+        const term = search.trim().toLowerCase()
+        if (!term) return items
+        return items.filter((i) => {
+            const typePt = renderTypeLabel(i.type).toLowerCase()
+            return [i.title, i.subtitle, String(i.type), typePt].some((v) =>
+                String(v ?? '').toLowerCase().includes(term)
+            )
+        })
+    }, [items, search])
 
-    const items = Array.isArray(itemsProp) ? itemsProp : []
-    const selectedIds = Array.isArray(selectedIdsProp) ? selectedIdsProp : []
+    const allChecked = filtered.length > 0 && filtered.every((i) => selectedIds.includes(i.id))
+    const someChecked = !allChecked && filtered.some((i) => selectedIds.includes(i.id))
 
-    const sorted = [...items].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
-
-    const selectedItems = sorted.filter(i => selectedIds.includes(i.id))
-    const allPublished = selectedItems.length > 0 && selectedItems.every(i => i.isPublished)
-    const allDraft = selectedItems.length > 0 && selectedItems.every(i => !i.isPublished)
-
-    const openStats = (item: Content) => {
-        const drawerEl = document.getElementById('kt_stats_drawer')
-        if (!drawerEl) return
-        const dr = (DrawerComponent as any).getOrCreateInstance(drawerEl)
-        const titleEl = dr.element.querySelector('.drawer-title') as HTMLElement
-        if (titleEl) titleEl.innerText = `Estatísticas: ${item.title}`
-        dr.show()
+    const toggleAll = () => {
+        const next = !allChecked
+        filtered.forEach((i) => onSelect(i.id, next))
     }
 
-    if (loading) return <Spinner />
-    if (error) return <div className="text-danger p-5">Erro ao carregar conteúdos.</div>
-
     return (
-        <div className="card card-flush h-lg-100">
-            <div className="card-header py-5 d-flex justify-content-between align-items-center">
-                <h3>{channelName ?? 'Canais'} &nbsp;
-                    <button className="btn btn-sm btn-light me-2" onClick={onEditChannel}>
-                        <i className="bi bi-gear"></i>
-                    </button>
-                </h3>
+        <div className="card">
+            <div className="card-header align-items-center">
+                <div className="card-title">
+                    <div className="fw-bold">{channelName || 'Conteúdos'}</div>
+                    <div className="text-muted fs-7">
+                        {items.length} item{items.length === 1 ? '' : 's'}
+                    </div>
+                </div>
 
-                <div className="d-flex align-items-center">
-                    {selectedIds.length > 0 && (
-                        <div className="me-3">
-                            <button className="btn btn-sm btn-light me-2" onClick={onDuplicateMultiple}>
-                                <i className="bi bi-files"></i>
-                            </button>
-                            {(allPublished || allDraft) && (
-                                <button className="btn btn-sm btn-light me-2" onClick={onTogglePublishMultiple}>
-                                    <i className={`bi ${allPublished ? 'bi-toggle-off' : 'bi-toggle-on'}`}></i>
-                                </button>
-                            )}
-                            <button className="btn btn-sm btn-danger me-2" onClick={onDeleteMultiple}>
-                                <i className="bi bi-trash"></i>
-                            </button>
-                        </div>
+                <div className="card-toolbar d-flex gap-2">
+                    <input
+                        className="form-control form-control-sm w-250px"
+                        placeholder="Buscar por título, subtítulo, tipo…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+
+                    {onEditChannel && (
+                        <button className="btn btn-light" onClick={onEditChannel}>
+                            <i className="bi bi-pencil-square me-2" />
+                            Editar canal
+                        </button>
                     )}
-                    {channelName && (
-                        <>
-
-                            <button className="btn btn-primary btn-sm" onClick={onCreatePost}>
-                                Criar post
-                            </button>
-                        </>
+                    {onCreatePost && (
+                        <button className="btn btn-primary" onClick={onCreatePost}>
+                            <i className="bi bi-plus-lg me-2" />
+                            Nova postagem
+                        </button>
                     )}
                 </div>
             </div>
 
-            <div className="card-body py-3">
-                {sorted.length === 0 ? (
-                    <div className="text-center">
-                        <img
-                            src={toAbsoluteUrl('../media/illustrations/sigma-1/20-dark.png')}
-                            alt="Sem conteúdos"
-                            className="mw-100 mb-4"
-                            style={{ maxHeight: 200 }}
-                        />
-                        <div className="text-muted">Nenhum conteúdo encontrado neste canal.</div>
+            <div className="card-body p-0">
+                {(onDeleteMultiple || onDuplicateMultiple || onTogglePublishMultiple) && selectedIds.length > 0 && (
+                    <div className="border-bottom p-3 d-flex align-items-center justify-content-between bg-light">
+                        <div>
+                            <strong>{selectedIds.length}</strong> selecionado(s)
+                        </div>
+                        <div className="d-flex gap-2">
+                            {onTogglePublishMultiple && (
+                                <button className="btn btn-sm btn-light-primary" onClick={() => onTogglePublishMultiple()}>
+                                    Publicar / Despublicar
+                                </button>
+                            )}
+                            {onDuplicateMultiple && (
+                                <button className="btn btn-sm btn-light" onClick={onDuplicateMultiple}>
+                                    Duplicar selecionados
+                                </button>
+                            )}
+                            {onDeleteMultiple && (
+                                <button className="btn btn-sm btn-light-danger" onClick={onDeleteMultiple}>
+                                    Excluir selecionados
+                                </button>
+                            )}
+                        </div>
                     </div>
-                ) : (
-                    <table className="table table-row-dashed gy-5 align-middle fw-semibold">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <input
-                                        ref={headerRef}
-                                        type="checkbox"
-                                        checked={sorted.length > 0 && sorted.every(i => selectedIds.includes(i.id))}
-                                        onChange={e => sorted.forEach(i => onSelect(i.id, e.target.checked))}
-                                    />
-                                </th>
-                                <th>Thumb</th>
-                                <th>Título</th>
-                                <th>Status</th>
-                                <th>Stats</th>
-                                <th>Atualizado em</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sorted.map(item => {
-                                const isChecked = selectedIds.includes(item.id)
-                                const thumb = item.highlightImages?.[0] || DEFAULT_THUMB
-                                return (
-                                    <tr key={item.id}>
-                                        <td>
+                )}
+
+                {loading && (
+                    <div className="d-flex align-items-center justify-content-center py-10">
+                        <Spinner animation="border" />
+                    </div>
+                )}
+                {!loading && error && (
+                    <div className="alert alert-danger m-3">{error}</div>
+                )}
+
+                {!loading && !error && (
+                    <div className="table-responsive">
+                        <table className="table align-middle table-row-dashed">
+                            <thead>
+                                <tr className="text-muted fw-bold">
+                                    <th className="w-10px">
+                                        <div className="form-check form-check-sm">
                                             <input
+                                                className="form-check-input"
                                                 type="checkbox"
-                                                checked={isChecked}
-                                                onChange={e => onSelect(item.id, e.target.checked)}
+                                                checked={allChecked}
+                                                ref={(el) => {
+                                                    if (el) el.indeterminate = someChecked
+                                                }}
+                                                onChange={toggleAll}
                                             />
-                                        </td>
-                                        <td>
-                                            <img
-                                                src={thumb}
-                                                alt="thumb"
-                                                className="rounded"
-                                                style={{ width: 120, height: 80, objectFit: 'cover' }}
-                                            />
-                                        </td>
-                                        <td>{item.title}</td>
-                                        <td>{item.isPublished ? 'Publicado' : 'Rascunho'}</td>
-                                        <td>
-                                            <button className="btn btn-icon btn-sm" onClick={() => openStats(item)}>
-                                                <i className="bi bi-bar-chart-line"></i>
-                                            </button>
-                                        </td>
-                                        <td>{new Date(item.updatedAt).toLocaleString()}</td>
-                                        <td>
-                                            <div className="dropdown">
-                                                <button
-                                                    className="btn btn-icon"
-                                                    type="button"
-                                                    id={`dropdown-${item.id}`}
-                                                    data-bs-toggle="dropdown"
-                                                >
-                                                    <i className="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`dropdown-${item.id}`}>
-                                                    <li>
-                                                        <button className="dropdown-item" onClick={() => onEdit(item.id)}>
-                                                            <i className="bi bi-pencil me-2" /> Editar
+                                        </div>
+                                    </th>
+                                    <th>Título</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Criado</th>
+                                    <th>Atualizado</th>
+                                    <th className="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((i) => {
+                                    const checked = selectedIds.includes(i.id)
+                                    return (
+                                        <tr key={i.id}>
+                                            <td>
+                                                <div className="form-check form-check-sm">
+                                                    <input
+                                                        className="form-check-input"
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={(e) => onSelect(i.id, e.target.checked)}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="fw-semibold">{i.title}</div>
+                                                {i.subtitle && <div className="text-muted fs-7">{i.subtitle}</div>}
+                                            </td>
+                                            <td>{renderTypeLabel(i.type)}</td>
+                                            <td>
+                                                {i.isPublished ? (
+                                                    <span className="badge badge-light-success">Publicado</span>
+                                                ) : (
+                                                    <span className="badge badge-light">Rascunho</span>
+                                                )}
+                                            </td>
+                                            <td>{formatDate(i.createdAt)}</td>
+                                            <td>{formatDate(i.updatedAt)}</td>
+                                            <td className="text-end">
+                                                <div className="btn-group">
+                                                    {onEdit && (
+                                                        <button
+                                                            className="btn btn-sm btn-light-primary"
+                                                            onClick={() => onEdit?.(i.id)}
+                                                        >
+                                                            Editar
                                                         </button>
-                                                    </li>
-                                                    <li>
-                                                        <button className="dropdown-item" onClick={() => onDuplicate(item.id)}>
-                                                            <i className="bi bi-files me-2" /> Duplicar
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button className="dropdown-item text-danger" onClick={() => onDelete(item.id)}>
-                                                            <i className="bi bi-trash me-2" /> Apagar
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                                    )}
+                                                    {(onDuplicate || onDelete) && (
+                                                        <button
+                                                            className="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split"
+                                                            data-bs-toggle="dropdown"
+                                                            aria-expanded="false"
+                                                        />
+                                                    )}
+                                                    {(onDuplicate || onDelete) && (
+                                                        <ul className="dropdown-menu">
+                                                            {onDuplicate && (
+                                                                <li>
+                                                                    <button className="dropdown-item" onClick={() => onDuplicate?.(i.id)}>
+                                                                        Duplicar
+                                                                    </button>
+                                                                </li>
+                                                            )}
+                                                            {onDelete && (
+                                                                <li>
+                                                                    <button className="dropdown-item text-danger" onClick={() => onDelete?.(i.id)}>
+                                                                        Deletar
+                                                                    </button>
+                                                                </li>
+                                                            )}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                                {!filtered.length && (
+                                    <tr>
+                                        <td colSpan={7} className="text-center text-muted py-10">
+                                            Nenhum conteúdo encontrado.
                                         </td>
                                     </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>
