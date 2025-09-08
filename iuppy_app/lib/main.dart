@@ -1,18 +1,13 @@
-import 'dart:async';
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'core/env/app_env.dart';
+
 import 'core/providers.dart';
 import 'app/router.dart';
-import 'app/theme/theme.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final container = ProviderContainer();
-  runApp(UncontrolledProviderScope(
-    container: container,
-    child: const IuppyApp(),
-  ));
+  runApp(const ProviderScope(child: IuppyApp()));
 }
 
 class IuppyApp extends ConsumerWidget {
@@ -20,14 +15,17 @@ class IuppyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = ref.watch(appThemeProvider);
+    final env = ref.watch(envProvider);
+    final themePair = ref.watch(appThemeProvider);
     final router = ref.watch(appRouterProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: ref.watch(envProvider).appName,
-      theme: theme.light,
-      darkTheme: theme.dark,
-      routerConfig: router,
+      title: env.appName,
+      theme: themePair.light,
+      darkTheme: themePair.dark,
+      themeMode: ThemeMode.system,
+      routerConfig: router, // 👈 usa o GoRouter direto
     );
   }
 }

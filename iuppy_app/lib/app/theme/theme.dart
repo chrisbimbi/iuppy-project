@@ -42,7 +42,7 @@ ThemeData _base(BrandingColors bc, {Brightness brightness = Brightness.light}) {
       foregroundColor: bc.textOnBackground,
       surfaceTintColor: Colors.transparent,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       surfaceTintColor: Colors.transparent,
@@ -78,8 +78,12 @@ class FrostedGlass extends StatelessWidget {
           Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(overlayOpacity),
-              border: Border.all(color: Colors.white.withOpacity(borderOpacity), width: 1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surface
+                  .withOpacity(overlayOpacity),
+              border: Border.all(
+                  color: Colors.white.withOpacity(borderOpacity), width: 1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: child,

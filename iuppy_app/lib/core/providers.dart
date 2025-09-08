@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../app/theme/theme.dart';
 import '../core/env/app_env.dart';
 import '../data/remote/api_client.dart';
 import '../data/local/app_database.dart';
 
-// ENV
+// ========== ENV ==========
 final envProvider = Provider<EnvConfig>((ref) {
   return const EnvConfig(
     apiBaseUrl: AppEnv.apiBaseUrl,
@@ -19,21 +20,22 @@ final envProvider = Provider<EnvConfig>((ref) {
   );
 });
 
-// DB
+// ========== DB ==========
 final dbProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(() => db.close());
   return db;
 });
 
-// AUTH
+// ========== AUTH ==========
 class AuthState {
   final String? accessToken;
   final String? userName;
   const AuthState({this.accessToken, this.userName});
   AuthState copyWith({String? accessToken, String? userName}) => AuthState(
-      accessToken: accessToken ?? this.accessToken,
-      userName: userName ?? this.userName);
+        accessToken: accessToken ?? this.accessToken,
+        userName: userName ?? this.userName,
+      );
 }
 
 class AuthController extends StateNotifier<AuthState> {
@@ -56,25 +58,35 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState();
     _ctrl.add(state);
   }
+
+  @override
+  void dispose() {
+    _ctrl.close();
+    super.dispose();
+  }
 }
 
 // Dio com interceptor de Authorization (lê o token do auth state)
 final dioProvider = Provider<Dio>((ref) {
   final env = ref.watch(envProvider);
   final auth = ref.watch(authControllerProvider);
-  final dio = Dio(BaseOptions(
-    baseUrl: env.apiBaseUrl,
-    headers: {'Accept': 'application/json'},
-  ));
-  dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (o, h) {
-      final token = auth.accessToken;
-      if (token != null && token.isNotEmpty) {
-        o.headers['Authorization'] = 'Bearer $token';
-      }
-      h.next(o);
-    },
-  ));
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: env.apiBaseUrl,
+      headers: {'Accept': 'application/json'},
+    ),
+  );
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (o, h) {
+        final token = auth.accessToken;
+        if (token != null && token.isNotEmpty) {
+          o.headers['Authorization'] = 'Bearer $token';
+        }
+        h.next(o);
+      },
+    ),
+  );
   return dio;
 });
 
@@ -82,21 +94,23 @@ final dioProvider = Provider<Dio>((ref) {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final env = ref.watch(envProvider);
-  final dio = Dio(BaseOptions(
-    baseUrl: env.apiBaseUrl,
-    headers: {'Accept': 'application/json'},
-  ));
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: env.apiBaseUrl,
+      headers: {'Accept': 'application/json'},
+    ),
+  );
   return AuthController(dio);
 });
 
-// API CLIENT
+// ========== API CLIENT ==========
 final apiClientProvider = Provider<ApiClient>((ref) {
   final dio = ref.watch(dioProvider);
   final env = ref.watch(envProvider);
   return ApiClient(dio, env.companyId);
 });
 
-// SETTINGS + MODULES
+// ========== SETTINGS + MODULES ==========
 class CompanyBranding {
   final String? logoUrl;
   final String appTitle;
@@ -126,7 +140,7 @@ class CompanyBranding {
     if (v is String) {
       String s = v;
       if (s.startsWith('#')) s = s.substring(1);
-      return int.tryParse('FF' + s.toUpperCase(), radix: 16);
+      return int.tryParse('FF${s.toUpperCase()}', radix: 16);
     }
     return null;
   }
@@ -148,26 +162,32 @@ final companySettingsProvider =
       .where((m) => (m['enabled'] ?? false) == true)
       .map((m) => m['key'].toString())
       .toSet();
+
   // aplica tema
-  final theme = buildThemes(BrandingColors(
-    primary: Color(branding.primary),
-    background: Color(branding.background),
-    textOnBackground: Color(branding.textOnBackground),
-  ));
+  final theme = buildThemes(
+    BrandingColors(
+      primary: Color(branding.primary),
+      background: Color(branding.background),
+      textOnBackground: Color(branding.textOnBackground),
+    ),
+  );
   ref.read(appThemeProvider.notifier).state = theme;
+
   return CompanySettingsState(branding, enabled);
 });
 
-// Theme provider
+// ========== THEME ==========
 final appThemeProvider = StateProvider<AppThemePair>((ref) {
-  return buildThemes(BrandingColors(
-    primary: const Color(0xFF22B4FF),
-    background: const Color(0xFFF5F7FB),
-    textOnBackground: const Color(0xFF090E48),
-  ));
+  return buildThemes(
+    BrandingColors(
+      primary: const Color(0xFF22B4FF),
+      background: const Color(0xFFF5F7FB),
+      textOnBackground: const Color(0xFF090E48),
+    ),
+  );
 });
 
-// REPOSITORIES (usando Ref diretamente)
+// ========== REPOSITORIES ==========
 final spacesRepoProvider = Provider((ref) => SpacesRepo(ref));
 final channelsRepoProvider = Provider((ref) => ChannelsRepo(ref));
 final newsRepoProvider = Provider((ref) => NewsRepo(ref));
@@ -176,6 +196,7 @@ final surveysRepoProvider = Provider((ref) => SurveysRepo(ref));
 class SpacesRepo {
   final Ref ref;
   SpacesRepo(this.ref);
+
   Future<List<Map<String, dynamic>>> fetchAndCache() async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
@@ -191,6 +212,7 @@ class SpacesRepo {
 class ChannelsRepo {
   final Ref ref;
   ChannelsRepo(this.ref);
+
   Future<List<Map<String, dynamic>>> fetchAndCache({String? spaceId}) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
@@ -206,6 +228,7 @@ class ChannelsRepo {
 class NewsRepo {
   final Ref ref;
   NewsRepo(this.ref);
+
   Future<List<Map<String, dynamic>>> listByChannel(String channelId) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
@@ -219,21 +242,20 @@ class NewsRepo {
 
   Future<List<Map<String, dynamic>>> latest({int limit = 3}) async {
     final db = ref.read(dbProvider);
-    final items = await db.getNews(limit: limit);
-    return items;
+    return db.getNews(limit: limit);
   }
 }
 
 class SurveysRepo {
   final Ref ref;
   SurveysRepo(this.ref);
+
   Future<List<Map<String, dynamic>>> list({int limit = 3}) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final list = await api.getSurveys();
     await db.cacheSurveys(list);
-    final cached = await db.getSurveys(limit: limit);
-    return cached;
+    return db.getSurveys(limit: limit);
   }
 
   Future<Map<String, dynamic>> getById(String id) =>

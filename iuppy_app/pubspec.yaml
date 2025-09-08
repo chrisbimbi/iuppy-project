@@ -15,14 +15,13 @@ dependencies:
   dio: ^5.7.0
   go_router: ^14.2.0
   google_fonts: ^6.2.1
-  # Drift stack
   drift: ^2.18.0
   drift_flutter: ^0.2.2
   sqlite3_flutter_libs: ^0.5.24
   path: ^1.9.0
   path_provider: ^2.1.4
-  # Utils
   intl: ^0.19.0
+  flutter_widget_from_html_core: ^0.16.1
 
 dev_dependencies:
   flutter_test:
@@ -30,76 +29,40 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   build_runner: ^2.4.11
   drift_dev: ^2.18.0
-  flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.3.14
+  flutter_launcher_icons: ^0.14.4
+  # fix de compatibilidade com path 1.9.0 do flutter_test
+  flutter_native_splash: 2.4.4
 
 flutter:
   uses-material-design: true
 
-# Per-flavor launcher icons
+# Ícones por flavor (OK — este plugin usa flavors no pubspec)
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icon_default.png
   remove_alpha_ios: true
   min_sdk_android: 21
+  image_path: assets/icons/prod.png # default quando rodar sem --flavor
+  flavors:
+    dev:
+      image_path: assets/icons/dev.png
+    prod:
+      image_path: assets/icons/prod.png
+    acme:
+      image_path: assets/icons/acme.png
 
-# Flavor-specific (rodar com --flavor <flavor>)
-flutter_launcher_icons-dev:
-  android: true
-  ios: true
-  image_path: assets/icons/dev.png
-
-flutter_launcher_icons-prod:
-  android: true
-  ios: true
-  image_path: assets/icons/prod.png
-
-flutter_launcher_icons-acme:
-  android: true
-  ios: true
-  image_path: assets/icons/acme.png
-
-# Native splash — **apenas um bloco**, com flavors
+# Splash global (fallback). Para flavors, usaremos YAMLs separados abaixo.
 flutter_native_splash:
-  color: "#FFFFFF"
-  color_dark: "#0B0F1A"
   android: true
   ios: true
   web: false
+  color: "#FFFFFF"
+  color_dark: "#0B0F1A"
   android_gravity: center
   ios_content_mode: center
-  image: assets/splash/default.png
+  image: assets/splash/prod.png
   branding: assets/splash/branding.png
   android_12:
-    image: assets/splash/default.png
+    image: assets/splash/prod.png
     icon_background_color: "#FFFFFF"
     icon_background_color_dark: "#0B0F1A"
-  flavors:
-    dev:
-      color: "#FFFFFF"
-      color_dark: "#0B0F1A"
-      image: assets/splash/dev.png
-      branding: assets/splash/branding.png
-      android_12:
-        image: assets/splash/dev.png
-        icon_background_color: "#FFFFFF"
-        icon_background_color_dark: "#0B0F1A"
-    prod:
-      color: "#FFFFFF"
-      color_dark: "#0B0F1A"
-      image: assets/splash/prod.png
-      branding: assets/splash/branding.png
-      android_12:
-        image: assets/splash/prod.png
-        icon_background_color: "#FFFFFF"
-        icon_background_color_dark: "#0B0F1A"
-    acme:
-      color: "#FFFFFF"
-      color_dark: "#0B0F1A"
-      image: assets/splash/acme.png
-      branding: assets/splash/branding.png
-      android_12:
-        image: assets/splash/acme.png
-        icon_background_color: "#FFFFFF"
-        icon_background_color_dark: "#0B0F1A"

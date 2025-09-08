@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.iuppy.app">
 
@@ -6,8 +7,8 @@
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
-        android:enableOnBackInvokedCallback="true"
+        android:enableOnBackInvokedCallback="true">
+        <!-- usesCleartextTraffic fica APENAS no overlay do DEV (src/dev/AndroidManifest.xml) -->
 
         <activity
             android:name=".MainActivity"
@@ -18,17 +19,40 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- Launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep links (opcional; deixe comentado até definirmos o scheme via manifestPlaceholders)
+            <!-- 🔗 Deep links por flavor via ${appAuthRedirectScheme} (definido no build.gradle) -->
+            <!-- NEWS: iuppydev://news/article/<id>  → host=news, path=/article/<id> -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="${appAuthRedirectScheme}"
+                    android:host="news"
+                    android:pathPrefix="/article" />
+            </intent-filter>
+
+            <!-- SURVEYS: iuppydev://surveys/<id>  → host=surveys, path=/ <id> -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="${appAuthRedirectScheme}"
+                    android:host="surveys" />
+            </intent-filter>
+
+            <!-- Se quiser capturar QUALQUER rota do seu esquema (opcional):
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="iuppy" />
+                <data android:scheme="${appAuthRedirectScheme}" />
             </intent-filter>
             -->
         </activity>
@@ -39,6 +63,5 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-            
     </application>
 </manifest>

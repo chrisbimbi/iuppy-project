@@ -1,10 +1,15 @@
+// lib/features/auth/login_page.dart
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../core/providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.from});
+  final String? from; // <- receber /surveys/ID etc. vindo do router
+
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
@@ -12,12 +17,59 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController(text: 'viewer+000c0911@iuppy.com.br');
-  final _password = TextEditingController(text: 'P@ssw0rd!');
+  final _password = TextFormFieldController('P@ssw0rd!');
   bool _loading = false;
   String? _error;
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(_email.text.trim(), _password.text);
+
+      if (!mounted) return;
+
+      // Se veio de deep link: navega para o destino
+      final from = widget.from;
+      if (from != null && from.isNotEmpty) {
+        context.go(from);
+      } else {
+        context.go('/home');
+      }
+    } on DioException catch (e) {
+      String msg = 'Falha ao entrar.';
+      final data = e.response?.data;
+      if (data is Map && data['message'] != null) {
+        msg = data['message'].toString();
+      } else if (e.message != null) {
+        msg = e.message!;
+      }
+      setState(() => _error = msg);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
       body: SingleChildScrollView(
@@ -27,60 +79,61 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Form(
               key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _email,
-                    decoration: const InputDecoration(labelText: 'E-mail'),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Informe o e-mail' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Senha'),
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Informe a senha' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  if (_error != null)
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: _loading
-                        ? null
-                        : () async {
-                            if (!_formKey.currentState!.validate()) return;
-                            setState(() {
-                              _loading = true;
-                              _error = null;
-                            });
-                            try {
-                              await ref
-                                  .read(authControllerProvider.notifier)
-                                  .login(_email.text.trim(), _password.text);
-                              if (mounted) context.push('/home');
-                            } catch (e) {
-                              setState(() {
-                                _error = e.toString();
-                              });
-                            } finally {
-                              if (mounted)
-                                setState(() {
-                                  _loading = false;
-                                });
-                            }
-                          },
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Entrar'),
-                  ),
-                ],
+              child: AutofillGroup(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _email,
+                      enabled: !_loading,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: const InputDecoration(labelText: 'E-mail'),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Informe o e-mail' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _password,
+                      enabled: !_loading,
+                      obscureText: _obscure,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.password],
+                      decoration: InputDecoration(
+                        labelText: 'Senha',
+                        suffixIcon: IconButton(
+                          onPressed: _loading
+                              ? null
+                              : () => setState(() => _obscure = !_obscure),
+                          icon: Icon(_obscure
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Informe a senha' : null,
+                      onFieldSubmitted: (_) => _loading ? null : _doLogin(),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_error != null) ...[
+                      Text(_error!,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: Colors.red)),
+                      const SizedBox(height: 8),
+                    ],
+                    FilledButton(
+                      onPressed: _loading ? null : _doLogin,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Entrar'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -88,4 +141,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ),
     );
   }
+}
+
+/// Pequena helper pra iniciar TextFormField com valor sem warning do linter
+class TextFormFieldController extends TextEditingController {
+  TextFormFieldController(String text) : super(text: text);
 }
