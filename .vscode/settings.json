@@ -1,20 +1,21 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "sqltools.connections": [
-        {
-            "mysqlOptions": {
-                "authProtocol": "default",
-                "enableSsl": "Disabled"
-            },
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 30003000,
-            "driver": "MySQL",
-            "name": "iuppy-local",
-            "database": "iuppy_dev",
-            "username": "iuppy_user"
-        }
-    ]
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "sqltools.connections": [
+    {
+      "mysqlOptions": {
+        "authProtocol": "default",
+        "enableSsl": "Disabled"
+      },
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 30003000,
+      "driver": "MySQL",
+      "name": "iuppy-local",
+      "database": "iuppy_dev",
+      "username": "iuppy_user"
+    }
+  ],
+  "dart.flutterSdkPath": ".fvm/versions/stable"
 }
