@@ -1,4 +1,3 @@
-// lib/features/news/news_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +19,8 @@ class NewsDetailPage extends ConsumerWidget {
         final hasData =
             snap.connectionState == ConnectionState.done && snap.hasData;
         final data = (hasData ? snap.data : null);
-        final title = (data?['title'] as String?)?.trim();
+        final title =
+            ((data?['title'] ?? data?['headline']) as String?)?.trim();
         final content = (data?['content'] as String?)?.trim();
 
         return Scaffold(
@@ -36,7 +36,14 @@ class NewsDetailPage extends ConsumerWidget {
                 }
               },
             ),
-            title: Text(title?.isNotEmpty == true ? title! : 'Notícia'),
+            title: Tooltip(
+              message: (title?.isNotEmpty == true) ? title! : 'Notícia',
+              child: Text(
+                (title?.isNotEmpty == true) ? title! : 'Notícia',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
           body: Builder(
             builder: (_) {
@@ -72,13 +79,12 @@ class NewsDetailPage extends ConsumerWidget {
                           case 'p':
                             return {
                               'margin': '0 0 12px 0',
-                              'line-height': '1.5'
+                              'line-height': '1.5',
                             };
                           case 'ul':
                           case 'ol':
                             return {'margin': '0 0 12px 24px'};
                           case 'img':
-                            // deixe o package cuidar do sizing; podemos setar max-width via CSS inline se necessário
                             return {'margin': '8px 0'};
                         }
                         return null;

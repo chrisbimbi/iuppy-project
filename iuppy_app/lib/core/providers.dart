@@ -255,12 +255,23 @@ class SurveysRepo {
     final db = ref.read(dbProvider);
     final list = await api.getSurveys();
     await db.cacheSurveys(list);
-    return db.getSurveys(limit: limit);
+    final cached = await db.getSurveys(limit: limit);
+    return cached;
   }
 
   Future<Map<String, dynamic>> getById(String id) =>
       ref.read(apiClientProvider).getSurveyDetail(id);
 
-  Future<void> sendResponse(String id, Map<String, dynamic> body) =>
-      ref.read(apiClientProvider).postSurveyResponse(id, body);
+  /// Envia respostas usando o endpoint oficial
+  Future<void> sendResponse({
+    required String surveyId,
+    required List<Map<String, dynamic>> answers,
+    String? userId, // ainda não temos no AuthState; pode ficar null
+  }) async {
+    await ref.read(apiClientProvider).postSurveyResponse(
+          surveyId: surveyId,
+          answers: answers,
+          userId: userId,
+        );
+  }
 }
