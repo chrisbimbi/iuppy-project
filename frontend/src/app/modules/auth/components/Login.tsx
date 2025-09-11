@@ -1,4 +1,4 @@
-// frontend/src/app/modules/auth/components/Login.tsx
+// src/app/modules/auth/components/Login.tsx
 import { useState } from 'react'
 import * as Yup from 'yup'
 import clsx from 'clsx'
@@ -48,18 +48,19 @@ export function Login() {
     onSubmit: async (values, { setStatus, setSubmitting }) => {
       setLoading(true)
       try {
+        // 1) Login → recebe accessToken + refreshToken
         const { data: auth } = await login(values.email, values.password)
-        // salva token para chamadas subsequentes
+
+        // 2) Persiste tokens
         saveAuth(auth)
 
-        // busca o usuário com o access token
+        // 3) Busca usuário autenticado com o access token
         const { data: user } = await getUserByToken(auth.api_token)
         const role = (user as any)?.role as Role | string
 
-        // bloqueia perfis não-admin no CMS
+        // 4) Bloqueio de perfis não-admin no CMS
         if (!ALLOWED_CMS_ROLES.includes(role)) {
           try { await logout() } catch { }
-          // limpa estado local do app
           saveAuth(undefined)
           setCurrentUser(undefined)
           setStatus('Seu perfil não tem acesso ao painel administrativo.')
@@ -67,6 +68,7 @@ export function Login() {
           return
         }
 
+        // 5) OK → segue para o destino
         setCurrentUser(user)
         const qs = new URLSearchParams(location.search)
         const to = qs.get('to') || '/dashboard'
@@ -85,50 +87,50 @@ export function Login() {
 
   return (
     <form
-      className="form w-100"
+      className='form w-100'
       onSubmit={formik.handleSubmit}
       noValidate
-      id="kt_login_signin_form"
+      id='kt_login_signin_form'
     >
-      <div className="text-center mb-11">
-        <h1 className="text-gray-900 fw-bolder mb-3">
+      <div className='text-center mb-11'>
+        <h1 className='text-gray-900 fw-bolder mb-3'>
           {intl.formatMessage({ id: 'AUTH.LOGIN.TITLE' })}
         </h1>
-        <div className="text-gray-500 fw-semibold fs-6">
+        <div className='text-gray-500 fw-semibold fs-6'>
           {intl.formatMessage({ id: 'AUTH.LOGIN.DESCRIPTION' })}
         </div>
       </div>
 
-      <div className="row g-3 mb-9">
-        <div className="col-md-6">
+      <div className='row g-3 mb-9'>
+        <div className='col-md-6'>
           <a
-            href="#"
-            className="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100"
+            href='#'
+            className='btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100'
           >
             <img
-              alt="Logo"
+              alt='Logo'
               src={toAbsoluteUrl('../media/svg/brand-logos/google-icon.svg')}
-              className="h-15px me-3"
+              className='h-15px me-3'
             />
-            <span className="d-flex flex-column align-items-start ms-2">
-              <span className="fs-6 fw-bolder">
+            <span className='d-flex flex-column align-items-start ms-2'>
+              <span className='fs-6 fw-bolder'>
                 {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.GOOGLE' })}
               </span>
             </span>
           </a>
         </div>
-        <div className="col-md-6">
+        <div className='col-md-6'>
           <a
-            href="#"
-            className="btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100"
+            href='#'
+            className='btn btn-flex btn-outline btn-text-gray-700 btn-active-color-primary bg-state-light flex-center text-nowrap w-100'
           >
             <img
-              alt="Logo"
+              alt='Logo'
               src={toAbsoluteUrl('../media/svg/brand-logos/microsoft-5.svg')}
-              className="h-15px me-3"
+              className='h-15px me-3'
             />
-            <span className="d-flex flex-column align-items-start ms-2">
-              <span className="fs-6 fw-bolder">
+            <span className='d-flex flex-column align-items-start ms-2'>
+              <span className='fs-6 fw-bolder'>
                 {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON.MICROSOFT' })}
               </span>
             </span>
@@ -136,14 +138,14 @@ export function Login() {
         </div>
       </div>
 
-      <div className="separator separator-content my-14">
-        <span className="w-125px text-gray-500 fw-semibold fs-7">
+      <div className='separator separator-content my-14'>
+        <span className='w-125px text-gray-500 fw-semibold fs-7'>
           {intl.formatMessage({ id: 'AUTH.LOGIN.CONTINUE_WITH_EMAIL' })}
         </span>
       </div>
 
-      <div className="fv-row mb-8">
-        <label className="form-label fs-6 fw-bolder text-gray-900">
+      <div className='fv-row mb-8'>
+        <label className='form-label fs-6 fw-bolder text-gray-900'>
           {intl.formatMessage({ id: 'AUTH.INPUT.EMAIL' })}
         </label>
         <input
@@ -154,26 +156,26 @@ export function Login() {
             { 'is-invalid': formik.touched.email && formik.errors.email },
             { 'is-valid': formik.touched.email && !formik.errors.email }
           )}
-          type="email"
-          name="email"
-          autoComplete="off"
+          type='email'
+          name='email'
+          autoComplete='off'
         />
         {formik.touched.email && formik.errors.email && (
-          <div className="fv-plugins-message-container">
-            <span role="alert">
+          <div className='fv-plugins-message-container'>
+            <span role='alert'>
               {intl.formatMessage({ id: formik.errors.email })}
             </span>
           </div>
         )}
       </div>
 
-      <div className="fv-row mb-3">
-        <label className="form-label fw-bolder text-gray-900 fs-6 mb-0">
+      <div className='fv-row mb-3'>
+        <label className='form-label fw-bolder text-gray-900 fs-6 mb-0'>
           {intl.formatMessage({ id: 'AUTH.INPUT.PASSWORD' })}
         </label>
         <input
-          type="password"
-          autoComplete="off"
+          type='password'
+          autoComplete='off'
           {...formik.getFieldProps('password')}
           className={clsx(
             'form-control bg-transparent',
@@ -182,9 +184,9 @@ export function Login() {
           )}
         />
         {formik.touched.password && formik.errors.password && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">
-              <span role="alert">
+          <div className='fv-plugins-message-container'>
+            <div className='fv-help-block'>
+              <span role='alert'>
                 {intl.formatMessage({ id: formik.errors.password })}
               </span>
             </div>
@@ -192,41 +194,41 @@ export function Login() {
         )}
       </div>
 
-      <div className="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
+      <div className='d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8'>
         <div />
-        <Link to="/auth/forgot-password" className="link-primary">
+        <Link to='/auth/forgot-password' className='link-primary'>
           {intl.formatMessage({ id: 'AUTH.GENERAL.FORGOT_BUTTON' })}
         </Link>
       </div>
 
       {formik.status && (
-        <div className="alert alert-danger py-2 mb-6">{formik.status}</div>
+        <div className='alert alert-danger py-2 mb-6'>{formik.status}</div>
       )}
 
-      <div className="d-grid mb-10">
+      <div className='d-grid mb-10'>
         <button
-          type="submit"
-          id="kt_sign_in_submit"
-          className="btn btn-primary"
+          type='submit'
+          id='kt_sign_in_submit'
+          className='btn btn-primary'
           disabled={formik.isSubmitting || !formik.isValid || loading}
         >
           {!loading && (
-            <span className="indicator-label">
+            <span className='indicator-label'>
               {intl.formatMessage({ id: 'AUTH.LOGIN.BUTTON' })}
             </span>
           )}
           {loading && (
-            <span className="indicator-progress" style={{ display: 'block' }}>
+            <span className='indicator-progress' style={{ display: 'block' }}>
               {intl.formatMessage({ id: 'AUTH.GENERAL.LOADING' })}
-              <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
+              <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
             </span>
           )}
         </button>
       </div>
 
-      <div className="text-gray-500 text-center fw-semibold fs-6">
+      <div className='text-gray-500 text-center fw-semibold fs-6'>
         {intl.formatMessage({ id: 'AUTH.GENERAL.NO_ACCOUNT' })}{' '}
-        <Link to="/auth/registration" className="link-primary">
+        <Link to='/auth/registration' className='link-primary'>
           {intl.formatMessage({ id: 'AUTH.GENERAL.SIGNUP_BUTTON' })}
         </Link>
       </div>

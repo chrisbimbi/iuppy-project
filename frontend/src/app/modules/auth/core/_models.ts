@@ -1,7 +1,10 @@
 import { Role } from '@shared/types'
 
-export interface AuthModel {
+export type AuthModel = {
+  /** access token (JWT) */
   api_token: string
+  /** refresh token retornado pelo backend (modelo A: no body) */
+  refreshToken?: string
 }
 
 export interface UserModel {

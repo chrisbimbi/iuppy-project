@@ -5,13 +5,22 @@ import '../../core/providers.dart';
 
 class SurveysListPage extends ConsumerWidget {
   const SurveysListPage({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    void _handleBack() {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/');
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: _handleBack,
           tooltip: 'Voltar',
         ),
         title: const Text('Enquetes'),

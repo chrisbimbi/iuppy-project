@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:iuppy_app/features/home/widgets/glass_search_and_spaces.dart';
+
 import '../../core/providers.dart';
 import '../menu/menu_drawer.dart';
-import '../../app/theme/theme.dart';
+
+// widgets existentes
+import 'widgets/header_oval.dart';
+import 'widgets/quick_access_row.dart';
+import 'widgets/news_carousel.dart';
+import 'widgets/modules_grid.dart';
+import 'widgets/curved_navbar.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -12,91 +20,164 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  String? _selectedSpace;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _navIndex = 0;
+  String? _selectedSpaceId;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    // warm caches
+    // pré-carrega (visível para o usuário) e badges
     Future.microtask(() async {
       await ref.read(spacesRepoProvider).fetchAndCache();
       await ref.read(channelsRepoProvider).fetchAndCache();
-      await ref.read(surveysRepoProvider).list(limit: 3);
+      await _refreshLatestNewsAndBadges();
+      setState(() {});
     });
+  }
+
+  Future<void> _refreshLatestNewsAndBadges() async {
+    // atualiza feed (remote-first) e cache (já filtrado por canais permitidos)
+    await ref.read(newsRepoProvider).homeFeedRemoteFirst(maxItems: 24);
+
+    // calcula não lidas a partir do cache + store
+    final cached = await ref.read(dbProvider).getNews(limit: 500);
+    final published =
+        cached.where((n) => (n['isPublished'] ?? true) == true).toList();
+    final ids = published.map((e) => (e['id'] ?? '').toString());
+    final unread = await ref.read(localNewsStoreProvider).countUnread(ids);
+
+    ref.read(homeBadgesProvider.notifier).state =
+        HomeBadges(newsNew: unread, surveysPending: 0);
+
+    // atualiza contadores do Drawer
+    ref.invalidate(unreadCountersProvider);
   }
 
   @override
   Widget build(BuildContext context) {
-    final userName = ref.watch(authControllerProvider).userName ?? 'usuário';
-    final settings = ref.watch(companySettingsProvider).maybeWhen(
-          data: (d) => d,
+    final branding = ref.watch(companySettingsProvider).maybeWhen(
+          data: (d) => d.branding,
           orElse: () => null,
         );
+    final name = ref.watch(authControllerProvider).userName ?? 'usuário';
+    final badges = ref.watch(homeBadgesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Olá, $userName'),
-        actions: [
-          IconButton(
-              onPressed: () => context.push('/favorites'),
-              icon: const Icon(Icons.star)),
-          IconButton(
-              onPressed: () => context.push('/groups'),
-              icon: const Icon(Icons.group)),
-          IconButton(
-              onPressed: () => context.push('/settings'),
-              icon: const Icon(Icons.settings)),
-          IconButton(
-              onPressed: () => context.push('/notifications'),
-              icon: const Icon(Icons.notifications)),
-        ],
-      ),
+      key: _scaffoldKey,
       drawer: const MenuDrawer(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FrostedGlass(
-              child: Row(
-                children: [
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(settings?.branding.appTitle ?? 'Iuppy',
-                            style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(settings?.branding.appSubtitle ??
-                            'Comunicação Inteligente™'),
-                      ],
+      bottomNavigationBar: CurvedNavBar(
+        selectedIndex: _navIndex,
+        onSelected: (i) {
+          setState(() => _navIndex = i);
+          switch (i) {
+            case 0:
+              break; // Início
+            case 1:
+              GoRouter.of(context).push('/favorites');
+              break;
+            case 2:
+              GoRouter.of(context).push('/notifications');
+              break;
+            case 3:
+              GoRouter.of(context).push('/settings');
+              break;
+            case 4:
+              _scaffoldKey.currentState?.openDrawer();
+              break;
+          }
+        },
+        // badge só em "Alertas"
+        badges: {2: badges.newsNew},
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _refreshLatestNewsAndBadges();
+          setState(() {});
+        },
+        child: CustomScrollView(
+          slivers: [
+            // Header com curva + quick access por cima
+            SliverToBoxAdapter(
+              child: _HeaderWithQuickAccess(
+                color: Color(branding?.primary ?? 0xFF22B4FF),
+                title: _greeting(name),
+              ),
+            ),
+
+            // Busca + filtros de spaces
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  children: [
+                    GlassSearchAndSpaces(
+                      selectedSpaceId: _selectedSpaceId,
+                      onSpaceChanged: (id) =>
+                          setState(() => _selectedSpaceId = id),
+                      onQueryChanged: (q) => setState(() => _query = q),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Buscar (em cache)',
-                prefixIcon: Icon(Icons.search),
+
+            // Últimas notícias
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Últimas notícias',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    TextButton(
+                      onPressed: () => GoRouter.of(context).push('/news'),
+                      child: const Text('Ver todas'),
+                    ),
+                  ],
+                ),
               ),
-              onChanged: (v) => setState(() => _query = v.toLowerCase()),
             ),
-            const SizedBox(height: 12),
-            _SpacesChips(
-              selected: _selectedSpace,
-              onSelect: (id) => setState(() => _selectedSpace = id),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 308,
+                child: NewsCarousel(spaceId: _selectedSpaceId),
+              ),
             ),
-            const SizedBox(height: 16),
-            _SectionTitle(title: 'Últimas notícias', onTap: null),
-            _LatestNews(spaceId: _selectedSpace, query: _query),
-            const SizedBox(height: 16),
-            _SectionTitle(
-                title: 'Enquetes', onTap: () => context.push('/surveys')),
-            _LatestSurveys(query: _query),
+
+            // Módulos
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Comece agora!',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    TextButton(
+                      onPressed: () => GoRouter.of(context).push('/modules'),
+                      child: const Text('Ver todos'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const ModulesGrid(),
+
+            // respiro p/ a TabBar curva
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: MediaQuery.of(context).padding.bottom + 16,
+              ),
+            ),
           ],
         ),
       ),
@@ -104,122 +185,50 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+/// Header com a curva + QuickAccess por cima (sem padding negativo)
+class _HeaderWithQuickAccess extends StatelessWidget {
+  const _HeaderWithQuickAccess({
+    required this.color,
+    required this.title,
+  });
+
+  final Color color;
   final String title;
-  final VoidCallback? onTap;
-  const _SectionTitle({required this.title, this.onTap});
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        if (onTap != null)
-          TextButton(onPressed: onTap, child: const Text('Ver todas')),
-      ],
-    );
-  }
-}
+    const headerH = 232.0; // altura maior p/ ficar longe do QuickAccess
+    const rowH = 112.0;
 
-class _SpacesChips extends ConsumerWidget {
-  final String? selected;
-  final ValueChanged<String?> onSelect;
-  const _SpacesChips({required this.selected, required this.onSelect});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: () async {
-        final cached = await ref.read(spacesRepoProvider).getCached();
-        if (cached.isNotEmpty) return cached;
-        return ref.read(spacesRepoProvider).fetchAndCache();
-      }(),
-      builder: (ctx, snap) {
-        final list = snap.data ?? const <Map<String, dynamic>>[];
-        return Wrap(
-          spacing: 8,
-          children: [
-            ChoiceChip(
-              label: const Text('Todos'),
-              selected: selected == null,
-              onSelected: (v) => onSelect(null),
+    return SizedBox(
+      height: headerH + rowH / 2 + 8,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: HeaderOval(
+              color: color,
+              title: title,
+              trailing: IconButton(
+                onPressed: () => GoRouter.of(context).push('/settings'),
+                icon: const Icon(Icons.settings, color: Colors.white),
+              ),
             ),
-            ...list.map((s) => ChoiceChip(
-                  label: Text(s['name'] as String? ?? 'Space'),
-                  selected: selected == s['id'],
-                  onSelected: (_) => onSelect(s['id'] as String),
-                )),
-          ],
-        );
-      },
+          ),
+          const Positioned(
+            left: 16,
+            right: 16,
+            top: headerH - rowH / 2,
+            child: QuickAccessRow(),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _LatestNews extends ConsumerWidget {
-  final String? spaceId;
-  final String query;
-  const _LatestNews({this.spaceId, required this.query});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: () async {
-        final channels =
-            await ref.read(channelsRepoProvider).getCached(spaceId: spaceId);
-        final chan = channels.take(4).toList();
-        final repo = ref.read(newsRepoProvider);
-        for (final c in chan) {
-          await repo.listByChannel(c['id'] as String);
-        }
-        return ref.read(dbProvider).getNews(limit: 50);
-      }(),
-      builder: (ctx, snap) {
-        final list = (snap.data ?? const <Map<String, dynamic>>[])
-            .where((e) =>
-                (e['title'] as String? ?? '').toLowerCase().contains(query))
-            .take(3)
-            .toList();
-        if (list.isEmpty) return const Text('Sem notícias por aqui.');
-        return Column(
-          children: list
-              .map((n) => ListTile(
-                    title: Text(n['title'] as String? ?? ''),
-                    subtitle: Text((n['createdAt'] as String? ?? '')
-                        .replaceAll('T', ' ')
-                        .split('.')
-                        .first),
-                    onTap: () => context.push('/news/article/${n['id']}'),
-                  ))
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-class _LatestSurveys extends ConsumerWidget {
-  final String query;
-  const _LatestSurveys({required this.query});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: ref.read(surveysRepoProvider).list(limit: 3),
-      builder: (ctx, snap) {
-        final list = (snap.data ?? const <Map<String, dynamic>>[])
-            .where((e) =>
-                (e['title'] as String? ?? '').toLowerCase().contains(query))
-            .take(3)
-            .toList();
-        if (list.isEmpty) return const Text('Sem enquetes no momento.');
-        return Column(
-          children: list
-              .map((s) => ListTile(
-                    leading: const Icon(Icons.poll),
-                    title: Text(s['title'] as String? ?? ''),
-                    onTap: () => context.push('/surveys/${s['id']}'),
-                  ))
-              .toList(),
-        );
-      },
-    );
-  }
+String _greeting(String name) {
+  final h = DateTime.now().hour;
+  final hi = h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
+  return '$hi, $name';
 }

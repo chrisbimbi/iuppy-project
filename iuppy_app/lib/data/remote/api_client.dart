@@ -4,7 +4,43 @@ import 'package:flutter/foundation.dart';
 class ApiClient {
   final Dio _dio;
   final String companyId;
-  ApiClient(this._dio, this.companyId);
+
+  ApiClient(this._dio, this.companyId) {
+    if (kDebugMode) {
+      _dio.interceptors.removeWhere((i) => i is LogInterceptor);
+      _dio.interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestHeader: false,
+          requestBody: true,
+          responseHeader: false,
+          responseBody: false,
+          error: true,
+          logPrint: (o) => debugPrint('[DIO] $o'),
+        ),
+      );
+      debugPrint('[ApiClient] companyId=$companyId');
+    }
+  }
+
+  // ---------------------------
+  // AUTH / USER
+  // ---------------------------
+
+  /// Traz o usuário logado (precisa do Authorization já no Dio).
+  /// Caso a rota não exista, retorna {} (app usa fallback).
+  Future<Map<String, dynamic>> getMe() async {
+    try {
+      final resp = await _dio.get('/auth/me');
+      return Map<String, dynamic>.from(resp.data as Map);
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  // ---------------------------
+  // COMPANY (branding / módulos)
+  // ---------------------------
 
   Future<Map<String, dynamic>> getCompanySettings() async {
     final resp = await _dio.get('/modules/$companyId/company-settings');
@@ -18,6 +54,10 @@ class ApiClient {
     );
   }
 
+  // -------------
+  // SPACES / CHANNELS
+  // -------------
+
   Future<List<Map<String, dynamic>>> getSpaces() async {
     final resp =
         await _dio.get('/spaces', queryParameters: {'companyId': companyId});
@@ -29,7 +69,7 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> getChannels({String? spaceId}) async {
     final qp = {
       'companyId': companyId,
-      if (spaceId != null) 'spaceId': spaceId
+      if (spaceId != null) 'spaceId': spaceId,
     };
     final resp = await _dio.get('/channels', queryParameters: qp);
     return List<Map<String, dynamic>>.from(
@@ -37,18 +77,62 @@ class ApiClient {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getNewsByChannel(String channelId) async {
-    final resp =
-        await _dio.get('/news', queryParameters: {'channelId': channelId});
+  // -----
+  // NEWS
+  // -----
+
+  Future<List<Map<String, dynamic>>> getNews({String? channelId}) async {
+    final resp = await _dio.get(
+      '/news',
+      queryParameters: {
+        if (channelId != null && channelId.isNotEmpty) 'channelId': channelId,
+      },
+    );
     return List<Map<String, dynamic>>.from(
       (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getNewsByChannel(String channelId) async {
+    return getNews(channelId: channelId);
   }
 
   Future<Map<String, dynamic>> getNewsDetail(String id) async {
     final resp = await _dio.get('/news/$id');
     return Map<String, dynamic>.from(resp.data as Map);
   }
+
+  Future<void> ackNews(String newsId) async {
+    await _dio.post('/news/$newsId/acknowledge');
+  }
+
+  Future<void> reactToNews(String newsId, String reaction) async {
+    await _dio.post('/news/$newsId/reactions', data: {'reaction': reaction});
+  }
+
+  Future<Map<String, int>> getNewsReactionsCount(String newsId) async {
+    try {
+      final resp = await _dio.get('/news/$newsId/reactions/count');
+      final raw = Map<String, dynamic>.from(resp.data as Map);
+      return raw.map((k, v) => MapEntry(k, int.tryParse('$v') ?? 0));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<bool> hasAcknowledgedNews(String newsId) async {
+    try {
+      final resp = await _dio.get('/news/$newsId/acknowledgement');
+      final data = Map<String, dynamic>.from(resp.data as Map);
+      return (data['acknowledged'] ?? false) == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // -------
+  // SURVEYS
+  // -------
 
   Future<List<Map<String, dynamic>>> getSurveys() async {
     final resp = await _dio.get('/modules/$companyId/surveys');
@@ -62,13 +146,6 @@ class ApiClient {
     return Map<String, dynamic>.from(resp.data as Map);
   }
 
-  /// POST oficial: /modules/{companyId}/surveys/responses
-  /// Body esperado:
-  /// {
-  ///   "surveyId": "...",
-  ///   "answers": [{"questionId":"...", "answer": ...}],
-  ///   "userId": "..." (opcional)
-  /// }
   Future<void> postSurveyResponse({
     required String surveyId,
     required List<Map<String, dynamic>> answers,
@@ -81,8 +158,7 @@ class ApiClient {
     };
 
     if (kDebugMode) {
-      // ignore: avoid_print
-      print('[POST] /modules/$companyId/surveys/responses  body=$body');
+      debugPrint('[POST] /modules/$companyId/surveys/responses  body=$body');
     }
 
     await _dio.post(

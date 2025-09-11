@@ -69,10 +69,11 @@ android {
         }
     }
 
-    kotlinOptions { jvmTarget = "17" }
+    // ✅ Unificado em 11 para compatibilidade com plugins (webview, share_plus, etc.)
+    kotlinOptions { jvmTarget = "11" }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 }
 
