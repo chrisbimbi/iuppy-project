@@ -1,19 +1,18 @@
 # backend/Dockerfile
-FROM node:18-bullseye-slim
+FROM node:20-bookworm-slim
 
-# Dependências de build p/ módulos nativos (argon2)
+# Dependências p/ build nativo
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
 
-# Copia apenas manifestos para cache de deps
+# Instala deps sem rodar scripts (pra não disparar husky)
 COPY package*.json ./
-# (opcional) se o seu package.json referencia "@shared" local, o volume do compose cobre isso em runtime
-RUN npm ci
+RUN npm install --legacy-peer-deps --ignore-scripts
 
-# Copia código (será sobrescrito por volume no dev, mas é bom p/ build inicial)
+# Copia o código
 COPY . .
 
 EXPOSE 3000
