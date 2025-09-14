@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,25 +17,34 @@ import { AuthModule } from './auth/auth.module';
 import { CompanySettingsModule } from './modules/company-settings/company-settings.module';
 import { CompanyModulesModule } from './modules/company-modules/company-modules.module';
 import { CompaniesModule } from './modules/platform/companies/companies.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { UploadsModule } from './uploads/uploads.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { AccessGrantsModule } from './modules/access-grants/access-grants.module';
+import { V2Module } from './v2/common/v2.module';
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    // .env.<NODE_ENV> (global)
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
-    // serve arquivos enviados em http://localhost:4000/uploads/...
+
+    // serve uploads em /uploads
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
 
+    // Rate-limit global (ex.: 60 req por 60s por IP)
+    ThrottlerModule.forRoot([{ ttl: 60, limit: 60 }]),
+
+    // módulos base
     UploadsModule,
+    V2Module,
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -62,16 +73,18 @@ import { AccessGrantsModule } from './modules/access-grants/access-grants.module
     GroupsModule,
     SurveysModule,
 
-    // ⬇️ novos
+    // novos
     CompanySettingsModule,
     CompanyModulesModule,
     CompaniesModule,
     AccessControlModule,
     AccessGrantsModule,
-
-
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // aplica o throttler globalmente
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
-export class AppModule { }
+export class AppModule {}

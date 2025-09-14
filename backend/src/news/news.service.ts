@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NewEntity } from './news.entity';
+import { NewsEntity } from './news.entity';
 import { CreateNewDto } from './dto/create-news.dto';
 import { UpdateNewDto } from './dto/update-news.dto';
 import { News } from '@shared/types';
@@ -9,8 +9,8 @@ import { News } from '@shared/types';
 @Injectable()
 export class NewsService {
   constructor(
-    @InjectRepository(NewEntity)
-    private readonly repo: Repository<NewEntity>,
+    @InjectRepository(NewsEntity)
+    private readonly repo: Repository<NewsEntity>,
   ) {}
 
   async create(dto: CreateNewDto): Promise<News> {

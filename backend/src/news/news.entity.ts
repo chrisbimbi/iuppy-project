@@ -10,7 +10,7 @@ import { News, NewsSettings } from '@shared/types';   // ← import settings typ
 import { NewsType } from '@shared/types/NewsType';
 
 @Entity()
-export class NewEntity implements News {
+export class NewsEntity implements News {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 

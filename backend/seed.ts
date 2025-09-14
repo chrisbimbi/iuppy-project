@@ -8,7 +8,7 @@ import { AppDataSource } from './src/config/data-source';
 import { SpaceEntity } from './src/spaces/space.entity';
 import { Channel } from './src/channels/channel.entity';
 import { UserEntity } from './src/users/user.entity';
-import { NewEntity } from './src/news/news.entity';
+import { NewsEntity } from './src/news/news.entity';
 import { Role } from '../shared/src/types/Role';
 
 //
@@ -87,7 +87,7 @@ async function seed() {
         await AppDataSource.initialize();
         console.log('🗄️ DataSource initialized');
 
-        const newsRepo = AppDataSource.getRepository(NewEntity);
+        const newsRepo = AppDataSource.getRepository(NewsEntity);
         const userRepo = AppDataSource.getRepository(UserEntity);
         const channelRepo = AppDataSource.getRepository(Channel);
         const spaceRepo = AppDataSource.getRepository(SpaceEntity);
@@ -230,7 +230,7 @@ async function seed() {
         const newsResponses = await Promise.all(
             newsToCreate.map(n => axios.post(`${API}/news`, n))
         );
-        const news = newsResponses.map(r => r.data as NewEntity);
+        const news = newsResponses.map(r => r.data as NewsEntity);
         console.log('Created News:', news.map(n => n.id));
 
         console.log('✅ Seeding completed successfully');
