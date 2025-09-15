@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:iuppy_app/features/news/models/feed_models.dart';
 
 class ApiClient {
   final Dio _dio;
@@ -22,6 +23,9 @@ class ApiClient {
       debugPrint('[ApiClient] companyId=$companyId');
     }
   }
+
+  Map<String, dynamic> _etagHeader(String? etag) =>
+      (etag != null && etag.isNotEmpty) ? {'If-None-Match': etag} : const {};
 
   // ---------------------------
   // AUTH / USER
@@ -58,27 +62,92 @@ class ApiClient {
   // SPACES / CHANNELS
   // -------------
 
+  /// Preferência: v2. Fallback para legado (/spaces?companyId=...)
   Future<List<Map<String, dynamic>>> getSpaces() async {
-    final resp =
-        await _dio.get('/spaces', queryParameters: {'companyId': companyId});
-    return List<Map<String, dynamic>>.from(
-      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
-    );
+    try {
+      final resp = await _dio.get('/v2/spaces');
+      return List<Map<String, dynamic>>.from(
+        (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // legado
+        final resp = await _dio
+            .get('/spaces', queryParameters: {'companyId': companyId});
+        return List<Map<String, dynamic>>.from(
+          (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+      rethrow;
+    }
   }
 
+  /// Preferência: v2 (/v2/channels?companyId&spaceId).
+  /// Fallback: legado (/channels?companyId&spaceId).
   Future<List<Map<String, dynamic>>> getChannels({String? spaceId}) async {
     final qp = {
       'companyId': companyId,
       if (spaceId != null) 'spaceId': spaceId,
     };
-    final resp = await _dio.get('/channels', queryParameters: qp);
-    return List<Map<String, dynamic>>.from(
-      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
-    );
+    try {
+      final resp = await _dio.get('/v2/channels', queryParameters: qp);
+      return List<Map<String, dynamic>>.from(
+        (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        final resp = await _dio.get('/channels', queryParameters: qp);
+        return List<Map<String, dynamic>>.from(
+          (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+        );
+      }
+      rethrow;
+    }
   }
 
   // -----
-  // NEWS
+  // FEED v2 (home + badges em 1 chamada)
+  // -----
+
+  /// GET /v2/me/feed
+  /// Retorna itens + counters. Se o servidor responder 304, devolvemos
+  /// uma resposta "vazia" com o mesmo etag para o chamador decidir.
+  Future<MeFeedResponse> getMeFeed({
+    String? spaceId,
+    String? channelId,
+    int? limit,
+    String? cursor,
+    String? sinceEtag,
+  }) async {
+    final qp = <String, dynamic>{
+      if (spaceId != null) 'spaceId': spaceId,
+      if (channelId != null) 'channelId': channelId,
+      if (limit != null) 'limit': limit,
+      if (cursor != null) 'cursor': cursor,
+    };
+    final resp = await _dio.get(
+      '/v2/me/feed',
+      queryParameters: qp,
+      options: Options(headers: _etagHeader(sinceEtag)),
+    );
+
+    if (resp.statusCode == 304) {
+      return MeFeedResponse(
+        items: const [],
+        counters: FeedCounters(
+            totalUnread: 0, bySpace: const {}, byChannel: const {}),
+        nextCursor: null,
+        etag: sinceEtag ?? '',
+        serverTime: DateTime.now().toIso8601String(),
+      );
+    }
+
+    final data = Map<String, dynamic>.from(resp.data as Map);
+    return MeFeedResponse.fromJson(data);
+  }
+
+  // -----
+  // NEWS (legado ainda disponível em algumas telas)
   // -----
 
   Future<List<Map<String, dynamic>>> getNews({String? channelId}) async {
@@ -97,19 +166,72 @@ class ApiClient {
     return getNews(channelId: channelId);
   }
 
+  /// Preferência: v2. Fallback: legado (/news/:id)
   Future<Map<String, dynamic>> getNewsDetail(String id) async {
-    final resp = await _dio.get('/news/$id');
-    return Map<String, dynamic>.from(resp.data as Map);
+    try {
+      final resp = await _dio.get('/v2/news/$id');
+      return Map<String, dynamic>.from(resp.data as Map);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        final resp2 = await _dio.get('/news/$id');
+        return Map<String, dynamic>.from(resp2.data as Map);
+      }
+      rethrow;
+    }
   }
 
+  // -----
+  // INTERAÇÕES v2 (com fallback para legadas quando fizer sentido)
+  // -----
+
+  /// Marca OPEN (idempotente no backend).
+  Future<void> openNews(String newsId) async {
+    try {
+      await _dio.post('/v2/news/$newsId/open');
+    } on DioException catch (e) {
+      // sem fallback: rota não existia no legado
+      rethrow;
+    }
+  }
+
+  /// ACK (v2). Fallback para /news/:id/acknowledge (legado).
   Future<void> ackNews(String newsId) async {
-    await _dio.post('/news/$newsId/acknowledge');
+    try {
+      await _dio.post('/v2/news/$newsId/ack');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        await _dio.post('/news/$newsId/acknowledge');
+        return;
+      }
+      rethrow;
+    }
   }
 
+  /// REACT (v2). Fallback para /news/:id/reactions (legado).
   Future<void> reactToNews(String newsId, String reaction) async {
-    await _dio.post('/news/$newsId/reactions', data: {'reaction': reaction});
+    try {
+      await _dio.post('/v2/news/$newsId/react', data: {'reaction': reaction});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        await _dio
+            .post('/news/$newsId/reactions', data: {'reaction': reaction});
+        return;
+      }
+      rethrow;
+    }
   }
 
+  /// Comentário (v2). Se commentsRequireModeration=true, backend cria como pending.
+  Future<void> commentNews(String newsId, String text) async {
+    await _dio.post('/v2/news/$newsId/comments', data: {'text': text});
+  }
+
+  /// Share (v2). target opcional: copy_link | system_share
+  Future<void> shareNews(String newsId, {String? target}) async {
+    await _dio.post('/v2/news/$newsId/share', data: {'target': target});
+  }
+
+  /// Contagem de reações (LEGADO). Mantido para telas antigas; use os counts do feed v2 quando possível.
   Future<Map<String, int>> getNewsReactionsCount(String newsId) async {
     try {
       final resp = await _dio.get('/news/$newsId/reactions/count');
@@ -120,6 +242,7 @@ class ApiClient {
     }
   }
 
+  /// Status de ACK (LEGADO). Em v2, derive de userState.isRead + ack específico via métricas.
   Future<bool> hasAcknowledgedNews(String newsId) async {
     try {
       final resp = await _dio.get('/news/$newsId/acknowledgement');
@@ -131,7 +254,7 @@ class ApiClient {
   }
 
   // -------
-  // SURVEYS
+  // SURVEYS (mantém igual)
   // -------
 
   Future<List<Map<String, dynamic>>> getSurveys() async {
@@ -166,5 +289,14 @@ class ApiClient {
       data: body,
       options: Options(contentType: Headers.jsonContentType),
     );
+  }
+
+  // -------
+  // SEARCH TRACK
+  // -------
+
+  Future<void> trackSearch(String query) async {
+    if (query.trim().length < 2) return;
+    await _dio.post('/v2/track/search', data: {'query': query});
   }
 }

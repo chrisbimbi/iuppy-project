@@ -9,12 +9,13 @@ class QuickAccessRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = const [
-      (_Quick(Icons.language, 'Nosso site', 'https://iuppy.com.br')),
-      (_Quick(Icons.camera_alt_outlined, 'Instagram', 'https://instagram.com')),
-      (_Quick(
+    final items = [
+      (const _Quick(Icons.language, 'Nosso site', 'https://iuppy.com.br')),
+      (const _Quick(
+          Icons.camera_alt_outlined, 'Instagram', 'https://instagram.com')),
+      (const _Quick(
           Icons.class_outlined, 'Classroom', 'https://classroom.google.com')),
-      (_Quick(Icons.map_outlined, 'Mapa', 'https://maps.google.com')),
+      (const _Quick(Icons.map_outlined, 'Mapa', 'https://maps.google.com')),
     ];
 
     return SizedBox(

@@ -16,17 +16,10 @@ export class PushV2Service {
         return n[0];
     }
 
-    /**
-     * Enfileira push de lembrete por notícia.
-     * - Se existir "news_audience": usa snapshot de audiência.
-     * - Remove quem já tem OPEN em news_interaction_event.
-     * - Insere registros em push_queue (se existir). Caso não exista, retorna apenas o total calculado.
-     */
     async enqueueRemind(companyId: string, newsId: string, actorUserId: string, onlyNotOpened: boolean) {
         await this.ensureNews(companyId, newsId);
 
         try {
-            // destinatários-base: audience snapshot se existir; senão: todos users da company
             const audienceSql = `
         WITH has_audience AS (
           SELECT to_regclass('public.news_audience') IS NOT NULL AS exists
@@ -51,8 +44,8 @@ export class PushV2Service {
                     `SELECT DISTINCT e."userId"
              FROM "news_interaction_event" e
             WHERE e."companyId" = $1
-              AND e."newsId" = $2
-              AND e."type" = 'OPEN'`,
+              AND e."newsId"    = $2
+              AND e."type" IN ('OPEN','ACK')`,
                     [companyId, newsId],
                 );
                 const openedSet = new Set(openedRows.map((r: any) => String(r.userId)));
@@ -60,13 +53,13 @@ export class PushV2Service {
             }
 
             if (!targets.length) {
-                return { ok: true, accepted: 0, reason: 'no targets after OPEN filter' };
+                return { ok: true, accepted: 0, reason: 'no targets after OPEN/ACK filter' };
             }
 
-            // tenta inserir em push_queue; se não existir, retorna contagem (no-op)
             try {
-                // evita duplicidade ingênua: on conflict se tiver unique (companyId, newsId, userId, kind='NEWS_REMIND')
-                const values = targets.map((_, idx) => `($1,$2,$${idx + 3},'NEWS_REMIND', jsonb_build_object('by', $${targets.length + 3}), now())`).join(',');
+                const values = targets
+                    .map((_, idx) => `($1,$2,$${idx + 3},'NEWS_REMIND', jsonb_build_object('by', $${targets.length + 3}), now())`)
+                    .join(',');
                 const params = [companyId, newsId, ...targets, actorUserId];
 
                 await this.ds.query(
@@ -81,7 +74,6 @@ export class PushV2Service {
                 return { ok: true, accepted: targets.length, queued: false, note: 'table push_queue missing (no-op)' };
             }
         } catch (e) {
-            // qualquer falha estrutural não deve derrubar o app
             return { ok: false, error: (e as Error).message };
         }
     }

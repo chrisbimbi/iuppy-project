@@ -27,25 +27,21 @@ import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
-    // .env.<NODE_ENV> (global)
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
 
-    // serve uploads em /uploads
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
 
-    // Rate-limit global (ex.: 60 req por 60s por IP)
     ThrottlerModule.forRoot([{ ttl: 60, limit: 60 }]),
 
-    // módulos base
     UploadsModule,
-    V2Module,
 
+    // TypeORM primeiro, depois Auth e V2
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (cs: ConfigService) => {
@@ -65,15 +61,16 @@ import { APP_GUARD } from '@nestjs/core';
       inject: [ConfigService],
     }),
 
-    AuthModule,
+    AuthModule,   // JWT guard disponível pros controllers v2
+    V2Module,     // agrega os controllers/services v2
+
+    // legado / demais módulos
     UsersModule,
     NewsModule,
     ChannelsModule,
     SpacesModule,
     GroupsModule,
     SurveysModule,
-
-    // novos
     CompanySettingsModule,
     CompanyModulesModule,
     CompaniesModule,
@@ -83,7 +80,6 @@ import { APP_GUARD } from '@nestjs/core';
   controllers: [AppController],
   providers: [
     AppService,
-    // aplica o throttler globalmente
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
