@@ -1,0 +1,30 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "iuppy-app",
+                    "appId": "1:643342034012:android:e70c7c244b5058c8d9f299",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "ios": {
+                "default": {
+                    "projectId": "iuppy-app",
+                    "appId": "1:643342034012:ios:b539b0f604232abdd9f299",
+                    "uploadDebugSymbols": false,
+                    "fileOutput": "ios/Runner/GoogleService-Info.plist"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "iuppy-app",
+                    "configurations": {
+                        "android": "1:643342034012:android:e70c7c244b5058c8d9f299",
+                        "ios": "1:643342034012:ios:b539b0f604232abdd9f299"
+                    }
+                }
+            }
+        }
+    }
+}

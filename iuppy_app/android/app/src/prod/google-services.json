@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "643342034012",
+    "project_id": "iuppy-app",
+    "storage_bucket": "iuppy-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:643342034012:android:e70c7c244b5058c8d9f299",
+        "android_client_info": {
+          "package_name": "com.iuppy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-DU-6Mj6dHw16M9zyjearMLKrVVyrz4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

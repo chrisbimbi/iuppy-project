@@ -3,12 +3,16 @@
     package="com.iuppy.app">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ (permite pedir runtime permission de notificação) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- (Legacy p/ alguns plugins) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
-        <!-- usesCleartextTraffic fica APENAS no overlay do DEV (src/dev/AndroidManifest.xml) -->
 
         <activity
             android:name=".MainActivity"
@@ -25,8 +29,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- 🔗 Deep links por flavor via ${appAuthRedirectScheme} (definido no build.gradle) -->
-            <!-- NEWS: iuppydev://news/article/<id>  → host=news, path=/article/<id> -->
+            <!-- Deep links específicos -->
+            <!-- NEWS: iuppydev://news/article/<id> -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -37,7 +41,7 @@
                     android:pathPrefix="/article" />
             </intent-filter>
 
-            <!-- SURVEYS: iuppydev://surveys/<id>  → host=surveys, path=/ <id> -->
+            <!-- SURVEYS: iuppydev://surveys/<id> -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -47,7 +51,7 @@
                     android:host="surveys" />
             </intent-filter>
 
-            <!-- Se quiser capturar QUALQUER rota do seu esquema (opcional):
+            <!-- (Opcional) Capturar qualquer rota do seu esquema:
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -57,6 +61,13 @@
             -->
         </activity>
 
+        <!-- Canal padrão de ícone de notificação -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notification" />
+        <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="@string/default_notification_channel_id" />
         <meta-data
             android:name="io.flutter.embedding.android.NormalTheme"
             android:resource="@style/NormalTheme" />
@@ -64,5 +75,4 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 </manifest>

@@ -63,7 +63,6 @@ export const Step1: React.FC<StepProps> = ({
     ],
   }
 
-  // quando o usuário adiciona novas imagens
   const handleHighlightImagesAdded = (files: File[]) => {
     const newImgs: HighlightImage[] = files.map((f) => ({
       url: URL.createObjectURL(f),
@@ -77,7 +76,6 @@ export const Step1: React.FC<StepProps> = ({
     )
   }
 
-  // quando o usuário adiciona novos anexos
   const handleAttachmentsAdded = (files: File[]) => {
     const newAtts: Attachment[] = files.map((f) => ({
       url: URL.createObjectURL(f),
@@ -91,21 +89,18 @@ export const Step1: React.FC<StepProps> = ({
     )
   }
 
-  // remove imagem de destaque por índice
   const removeImage = (idx: number) => {
     const imgs = [...(data.highlightImages as HighlightImage[] || [])]
     imgs.splice(idx, 1)
     setFieldValue('highlightImages', imgs, true)
   }
 
-  // remove anexo por índice
   const removeAttachment = (idx: number) => {
     const atts = [...(data.attachments as Attachment[] || [])]
     atts.splice(idx, 1)
     setFieldValue('attachments', atts, true)
   }
 
-  // reordena via drag-and-drop
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return
     const imgs = Array.from(data.highlightImages as HighlightImage[])
@@ -114,50 +109,29 @@ export const Step1: React.FC<StepProps> = ({
     setFieldValue('highlightImages', imgs, true)
   }
 
-  // tradução de tipo
   function traduzirTipoNew(type: NewsType) {
     switch (type) {
       case NewsType.ANNOUNCEMENT:
-        return intl.formatMessage({
-          id: 'ANNOUNCEMENT',
-          defaultMessage: 'Notificação',
-        })
+        return intl.formatMessage({ id: 'ANNOUNCEMENT', defaultMessage: 'Notificação' })
       case NewsType.ALERT:
-        return intl.formatMessage({
-          id: 'COMUNICADO_TYPE_ALERT',
-          defaultMessage: 'Alerta',
-        })
+        return intl.formatMessage({ id: 'COMUNICADO_TYPE_ALERT', defaultMessage: 'Alerta' })
       case NewsType.UPDATE:
-        return intl.formatMessage({
-          id: 'COMUNICADO_TYPE_UPDATE',
-          defaultMessage: 'Lembrete',
-        })
+        return intl.formatMessage({ id: 'COMUNICADO_TYPE_UPDATE', defaultMessage: 'Lembrete' })
       default:
-        return intl.formatMessage({
-          id: 'COMUNICADO_TYPE_UNKNOWN',
-          defaultMessage: 'Desconhecido',
-        })
+        return intl.formatMessage({ id: 'COMUNICADO_TYPE_UNKNOWN', defaultMessage: 'Desconhecido' })
     }
   }
 
   return (
     <div className="w-100">
-      {/* Cabeçalho */}
       <div className="pb-10 pb-lg-15">
         <h2 className="fw-bolder text-dark d-flex align-items-center">
           Dados do post
-          <i
-            className="fas fa-exclamation-circle ms-2 fs-7"
-            data-bs-toggle="tooltip"
-            title="Preencha os detalhes do post"
-          />
+          <i className="fas fa-exclamation-circle ms-2 fs-7" data-bs-toggle="tooltip" title="Preencha os detalhes do post" />
         </h2>
-        <div className="text-gray-400 fw-bold fs-6">
-          Preencha os detalhes do post
-        </div>
+        <div className="text-gray-400 fw-bold fs-6">Preencha os detalhes do post</div>
       </div>
 
-      {/* Imagens de Destaque */}
       <div className="fv-row mb-10">
         <label className="form-label required">Imagens de Destaque</label>
         <CustomDropzone
@@ -168,61 +142,42 @@ export const Step1: React.FC<StepProps> = ({
           type="highlightImages"
           multiple
         />
-        <ErrorMessage
-          name="highlightImages"
-          component="div"
-          className="text-danger"
-        />
-        <span className="form-text text-muted">
-          Máximo 10 imagens, até 10MB cada.
-        </span>
+        <ErrorMessage name="highlightImages" component="div" className="text-danger" />
+        <span className="form-text text-muted">Máximo 10 imagens, até 10MB cada.</span>
 
         {data.highlightImages && data.highlightImages.length > 0 && (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="highlightImages">
               {(provided) => (
-                <div
-                  className="d-flex flex-wrap mt-5"
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                >
-                  {(data.highlightImages as HighlightImage[]).map(
-                    (img, idx) => (
-                      <Draggable
-                        key={idx}
-                        draggableId={`img-${idx}`}
-                        index={idx}
-                      >
-                        {(prov) => (
-                          <div
-                            ref={prov.innerRef}
-                            {...prov.draggableProps}
-                            {...prov.dragHandleProps}
-                            className="position-relative me-3 mb-3"
-                            style={{
-                              width: 120,
-                              height: 80,
-                              backgroundImage: `url(${img.url})`,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              borderRadius: 4,
-                            }}
+                <div className="d-flex flex-wrap mt-5" {...provided.droppableProps} ref={provided.innerRef}>
+                  {(data.highlightImages as HighlightImage[]).map((img, idx) => (
+                    <Draggable key={idx} draggableId={`img-${idx}`} index={idx}>
+                      {(prov) => (
+                        <div
+                          ref={prov.innerRef}
+                          {...prov.draggableProps}
+                          {...prov.dragHandleProps}
+                          className="position-relative me-3 mb-3"
+                          style={{
+                            width: 120,
+                            height: 80,
+                            backgroundImage: `url(${img.url})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            borderRadius: 4,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="btn btn-icon btn-sm btn-active-color-primary position-absolute top-0 end-0"
+                            onClick={() => removeImage(idx)}
                           >
-                            <button
-                              type="button"
-                              className="btn btn-icon btn-sm btn-active-color-primary position-absolute top-0 end-0"
-                              onClick={() => removeImage(idx)}
-                            >
-                              <KTSVG
-                                path="../media/icons/duotune/general/gen027.svg"
-                                className="svg-icon-2"
-                              />
-                            </button>
-                          </div>
-                        )}
-                      </Draggable>
-                    )
-                  )}
+                            <KTSVG path="../media/icons/duotune/general/gen027.svg" className="svg-icon-2" />
+                          </button>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
                   {provided.placeholder}
                 </div>
               )}
@@ -231,60 +186,39 @@ export const Step1: React.FC<StepProps> = ({
         )}
       </div>
 
-      {/* Título */}
       <div className="fv-row mb-10">
         <label className="form-label required">Título</label>
         <input
           type="text"
           name="title"
-          className={`form-control form-control-lg form-control-solid ${
-            touched.title && errors.title ? 'is-invalid' : ''
-          }`}
+          className={`form-control form-control-lg form-control-solid ${touched.title && errors.title ? 'is-invalid' : ''}`}
           placeholder="Título do post"
           value={data.title}
           onChange={(e) => setFieldValue('title', e.target.value, true)}
         />
-        <ErrorMessage
-          name="title"
-          component="div"
-          className="invalid-feedback"
-        />
+        <ErrorMessage name="title" component="div" className="invalid-feedback" />
       </div>
 
-      {/* Subtítulo */}
       <div className="fv-row mb-10">
         <label className="form-label">Subtítulo</label>
         <input
           type="text"
           name="subtitle"
-          className={`form-control form-control-lg form-control-solid ${
-            touched.subtitle && errors.subtitle ? 'is-invalid' : ''
-          }`}
+          className={`form-control form-control-lg form-control-solid ${touched.subtitle && errors.subtitle ? 'is-invalid' : ''}`}
           placeholder="Subtítulo opcional"
           value={data.subtitle || ''}
-          onChange={(e) =>
-            setFieldValue('subtitle', e.target.value, true)
-          }
+          onChange={(e) => setFieldValue('subtitle', e.target.value, true)}
         />
-        <ErrorMessage
-          name="subtitle"
-          component="div"
-          className="invalid-feedback"
-        />
+        <ErrorMessage name="subtitle" component="div" className="invalid-feedback" />
       </div>
 
-      {/* Tipo */}
       <div className="fv-row mb-10">
         <label className="form-label required">Tipo</label>
         <select
           name="type"
-          className={`form-select form-select-lg form-select-solid ${
-            touched.type && errors.type ? 'is-invalid' : ''
-          }`}
+          className={`form-select form-select-lg form-select-solid ${touched.type && errors.type ? 'is-invalid' : ''}`}
           value={data.type}
-          onChange={(e) =>
-            setFieldValue('type', e.target.value as NewsType, true)
-          }
+          onChange={(e) => setFieldValue('type', e.target.value as NewsType, true)}
         >
           <option value="">Selecione o tipo</option>
           {Object.values(NewsType).map((t) => (
@@ -293,29 +227,15 @@ export const Step1: React.FC<StepProps> = ({
             </option>
           ))}
         </select>
-        <ErrorMessage
-          name="type"
-          component="div"
-          className="invalid-feedback"
-        />
+        <ErrorMessage name="type" component="div" className="invalid-feedback" />
       </div>
 
-      {/* Conteúdo */}
       <div className="fv-row mb-10">
         <label className="form-label required">Conteúdo</label>
-        <QuillWrapper
-          value={data.content}
-          onChange={(c) => setFieldValue('content', c, true)}
-          height="300px"
-        />
-        {touched.content && errors.content && (
-          <div className="invalid-feedback d-block">
-            {errors.content}
-          </div>
-        )}
+        <QuillWrapper value={data.content} onChange={(c) => setFieldValue('content', c, true)} height="300px" />
+        {touched.content && errors.content && <div className="invalid-feedback d-block">{errors.content}</div>}
       </div>
 
-      {/* Anexos */}
       <div className="fv-row mb-10">
         <label className="form-label">Anexos</label>
         <CustomDropzone
@@ -326,39 +246,16 @@ export const Step1: React.FC<StepProps> = ({
           type="attachments"
           multiple
         />
-        <ErrorMessage
-          name="attachments"
-          component="div"
-          className="text-danger"
-        />
-        <span className="form-text text-muted">
-          Máximo 10 arquivos, até 10MB cada.
-        </span>
+        <ErrorMessage name="attachments" component="div" className="text-danger" />
+        <span className="form-text text-muted">Máximo 10 arquivos, até 10MB cada.</span>
 
-        {/* Previews de anexos */}
         {data.attachments && data.attachments.length > 0 && (
           <ul className="list-group mt-3">
             {(data.attachments as Attachment[]).map((att, idx) => (
-              <li
-                key={idx}
-                className="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <a
-                  href={att.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {att.name}
-                </a>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger"
-                  onClick={() => removeAttachment(idx)}
-                >
-                  <KTSVG
-                    path="../media/icons/duotune/general/gen027.svg"
-                    className="svg-icon-2"
-                  />
+              <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                <a href={att.url} target="_blank" rel="noopener noreferrer">{att.name}</a>
+                <button type="button" className="btn btn-sm btn-danger" onClick={() => removeAttachment(idx)}>
+                  <KTSVG path="../media/icons/duotune/general/gen027.svg" className="svg-icon-2" />
                 </button>
               </li>
             ))}

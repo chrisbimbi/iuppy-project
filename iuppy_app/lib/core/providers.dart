@@ -10,6 +10,7 @@ import '../data/local/app_database.dart';
 import '../data/remote/api_client.dart';
 import '../features/surveys/local_survey_store.dart';
 import '../features/news/local_news_store.dart';
+import '../push_service.dart';
 
 /// ================= ENV =================
 final envProvider = Provider<EnvConfig>((ref) {
@@ -268,6 +269,26 @@ final companySettingsProvider =
   );
   ref.read(appThemeProvider.notifier).state = theme;
 
+  // 🚀 Bootstrap de Push/FCM: quando settings carregaram, tenta registrar token
+  try {
+    final me = await ref.read(userProfileProvider.future);
+    final env = ref.read(envProvider);
+    if (me?.id != null && (env.companyId.isNotEmpty)) {
+      // Inicializa serviço de Push (idempotente) e registra o token no backend
+      await PushService.instance.init();
+      await PushService.instance.askPermissionAndRegister(
+        userId: me!.id!,
+        companyId: env.companyId,
+        apiBaseUrl: env.apiBaseUrl,
+        // opcionalmente: appVersion/locale/extras
+        appVersion: null,
+        locale: null,
+      );
+    }
+  } catch (_) {
+    // silencioso; se falhar aqui, o app pode tentar novamente depois
+  }
+
   return CompanySettingsState(branding, enabled);
 });
 
@@ -341,7 +362,7 @@ class NewsRepo {
   ) {
     final m = Map<String, dynamic>.from(raw);
 
-    // highlightImages
+    // highlightImages (somente http/https)
     final imgsDyn = (m['highlightImages'] as List?) ?? const [];
     final imgs = <String>[];
     for (final e in imgsDyn) {
@@ -351,7 +372,7 @@ class NewsRepo {
     if (imgs.isEmpty) imgs.add(_fallbackThumb);
     m['highlightImages'] = imgs;
 
-    // attachments http(s)
+    // attachments (somente http/https)
     final attsDyn = (m['attachments'] as List?) ?? const [];
     final atts = <String>[];
     for (final e in attsDyn) {
@@ -360,7 +381,7 @@ class NewsRepo {
     }
     m['attachments'] = atts;
 
-    // enrich: channel/space
+    // enrich: channel / space
     final channelId = (m['channelId'] ?? '').toString();
     final ch = channelById[channelId];
     if (ch != null) {
@@ -415,7 +436,6 @@ class NewsRepo {
 
       final filtered = remote
           .where((n) => (n['isPublished'] ?? false) == true)
-          // 🔒 só mantém se o canal for visível (está no cache filtrado)
           .where(
               (n) => channelsMap.containsKey((n['channelId'] ?? '').toString()))
           .map((n) => _normalize(n, base, channelsMap, spacesMap))
@@ -425,7 +445,10 @@ class NewsRepo {
       return filtered;
     } catch (_) {
       final cached = await db.getNews();
-      return cached
+      final List<Map<String, dynamic>> list =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      return list
           .where((n) =>
               (n['channelId']?.toString() ?? '') == channelId &&
               (n['isPublished'] ?? false) == true)
@@ -446,7 +469,6 @@ class NewsRepo {
 
       final visible = remote
           .where((n) => (n['isPublished'] ?? false) == true)
-          // 🔒 ignora notícias de canais não visíveis
           .where(
               (n) => channelsMap.containsKey((n['channelId'] ?? '').toString()))
           .map((n) => _normalize(n, base, channelsMap, spacesMap))
@@ -469,8 +491,25 @@ class NewsRepo {
     } catch (_) {
       final cached =
           (limit > 0) ? await db.getNews(limit: limit) : await db.getNews();
-      // cache já contém só notícias normalizadas; ainda filtramos por published
-      return cached.where((n) => (n['isPublished'] ?? false) == true).toList();
+      final List<Map<String, dynamic>> list =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      final filtered =
+          list.where((n) => (n['isPublished'] ?? false) == true).toList();
+
+      filtered.sort((a, b) {
+        final da = _parseDate(a['updatedAt']) ??
+            _parseDate(a['createdAt']) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final dbb = _parseDate(b['updatedAt']) ??
+            _parseDate(b['createdAt']) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return dbb.compareTo(da);
+      });
+
+      return (limit > 0 && filtered.length > limit)
+          ? filtered.take(limit).toList()
+          : filtered;
     }
   }
 
@@ -481,7 +520,6 @@ class NewsRepo {
     int? maxItems,
   }) async {
     final cap = (maxItems != null && maxItems > 0) ? maxItems : limit;
-
     final all = await listLatest(limit: 0);
     final filtered = (spaceId == null || spaceId.isEmpty)
         ? all
@@ -502,7 +540,11 @@ class NewsRepo {
       final spacesMap = await _spacesNameById();
       return _normalize(n, base, channelsMap, spacesMap);
     } catch (_) {
-      final all = await ref.read(dbProvider).getNews();
+      // ⚠️ Tipagem explícita pra evitar o crash do orElse
+      final cached = await ref.read(dbProvider).getNews();
+      final List<Map<String, dynamic>> all =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
       return all.firstWhere(
         (e) => (e['id'] ?? '').toString() == id,
         orElse: () => <String, dynamic>{},
@@ -522,7 +564,10 @@ class NewsRepo {
 
     // notícias publicadas do cache e pertencentes a canais visíveis
     final all = await db.getNews(limit: 1000);
-    final news = all
+    final List<Map<String, dynamic>> list =
+        all.map((e) => Map<String, dynamic>.from(e)).toList();
+
+    final news = list
         .where((n) => (n['isPublished'] ?? true) == true)
         .where((n) =>
             visibleChannelIds.contains((n['channelId'] ?? '').toString()))

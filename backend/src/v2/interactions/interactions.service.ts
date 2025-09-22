@@ -1,12 +1,12 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { NewsEntity } from 'src/news/news.entity';
 import { InteractionEventEntity } from './entities/interaction-event.entity';
 import { NewsReactionEntity } from './entities/news-reaction.entity';
 import { NewsCommentEntity } from './entities/news-comment.entity';
 import { NewsShareEntity } from './entities/news-share.entity';
-import type { ReactionType } from '@shared/types/v2/interactions';
+import type { ReactionKind } from '@shared/types/v2/interactions';
 
 @Injectable()
 export class InteractionsService {
@@ -20,7 +20,7 @@ export class InteractionsService {
 
   async assertNews(companyId: string, newsId: string) {
     const n = await this.news.findOne({ where: { id: newsId } });
-    if (!n || n.companyId !== companyId) throw new ForbiddenException('Not allowed');
+    if (!n || (n as any).companyId !== companyId) throw new ForbiddenException('Not allowed');
     return n;
   }
 
@@ -36,14 +36,14 @@ export class InteractionsService {
     return this.events.save(ev);
   }
 
-  async react(companyId: string, newsId: string, userId: string | undefined, reaction: ReactionType) {
+  async react(companyId: string, newsId: string, userId: string | undefined, reaction: ReactionKind) {
     await this.assertNews(companyId, newsId);
     const existing = await this.reactions.findOne({ where: { companyId, newsId, userId: userId || null } });
     if (existing) {
-      existing.reaction = reaction;
+      existing.reaction = reaction as any;
       return this.reactions.save(existing);
     }
-    const row = this.reactions.create({ companyId, newsId, userId: userId || null, reaction });
+    const row = this.reactions.create({ companyId, newsId, userId: userId || null, reaction: reaction as any });
     return this.reactions.save(row);
   }
 
@@ -60,7 +60,7 @@ export class InteractionsService {
     const row = await this.comments.findOne({ where: { id: commentId, newsId, companyId } });
     if (!row) throw new ForbiddenException('Comment not found');
     row.approved = approve;
-    row.approvedBy = adminId;
+    (row as any).approvedBy = adminId;
     row.approvedAt = new Date();
     return this.comments.save(row);
   }
@@ -71,7 +71,6 @@ export class InteractionsService {
     return this.shares.save(row);
   }
 
-  // helpers de leitura (para feed e analytics)
   async snapshotForNews(companyId: string, newsId: string) {
     const [opens, acks, reacts, cmts, shrs] = await Promise.all([
       this.events.find({ where: { companyId, newsId, type: 'OPEN' } }),
@@ -82,7 +81,7 @@ export class InteractionsService {
     ]);
     const uniqueOpened = new Set(opens.map(o => o.userId || `anon:${o.id}`)).size;
     const reactionsCount: Record<string, number> = {};
-    reacts.forEach(r => reactionsCount[r.reaction] = (reactionsCount[r.reaction] || 0) + 1);
+    reacts.forEach(r => reactionsCount[(r as any).reaction] = (reactionsCount[(r as any).reaction] || 0) + 1);
 
     return {
       totalOpens: opens.length,
@@ -106,7 +105,7 @@ export class InteractionsService {
 
   async myReaction(companyId: string, newsId: string, userId: string) {
     const r = await this.reactions.findOne({ where: { companyId, newsId, userId } });
-    return r?.reaction;
+    return (r as any)?.reaction as ReactionKind | undefined;
   }
 
   async myCommentsCount(companyId: string, newsId: string, userId: string) {

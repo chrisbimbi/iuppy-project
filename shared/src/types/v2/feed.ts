@@ -1,39 +1,62 @@
-// v2 – Feed “me”
+import { ReactionKind } from './interactions';
 
-export type MeFeedQuery = {
-  spaceId?: string;      // filtro de espaço (opcional)
-  channelId?: string;    // filtro de canal (opcional)
-  limit?: number;        // padrão 20
-  cursor?: string;       // paginação (createdAt DESC)
-};
+export interface MeFeedQuery {
+  limit?: number;          // 1..50 (default 20)
+  cursor?: string | null;  // "<createdAtISO>|<uuid>"
+  spaceId?: string;
+  channelId?: string;
+}
 
-export type MeFeedItem = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  createdAt: string;
-  updatedAt: string;
-  channelId: string;
-  spaceIds: string[];
-  isPublished: boolean;
-  highlightImages?: string[];
-  // estado do usuário
-  userState: {
-    opened: boolean;
-    acknowledged: boolean;
-    myReaction?: string;
-    myComments?: number;
-  };
-};
-
-export type MeFeedCounters = {
+export interface MeFeedCountersDTO {
   totalUnread: number;
   bySpace: Record<string, number>;
   byChannel: Record<string, number>;
-};
+}
 
-export type MeFeedResponse = {
-  items: MeFeedItem[];
-  nextCursor?: string;
-  counters: MeFeedCounters; // incluído para evitar requisições extras
-};
+export interface MeFeedItemDTO {
+  id: string;
+  createdAt: string;
+  updatedAt: string | null;
+
+  title: string;
+  subtitle?: string | null;
+  excerpt?: string | null;
+
+  highlightImages: string[];
+  attachments: { name?: string | null; url: string }[];
+
+  spaceId: string | null;
+  spaceName: string | null;
+  channelId: string | null;
+  channelName: string | null;
+
+  settings: {
+    acknowledgementRequired: boolean;
+    allowReactions: boolean;
+    allowComments: boolean;
+    commentsRequireModeration: boolean;
+    shareEnabled: boolean;
+  };
+
+  userState: {
+    isRead: boolean;
+    readAt?: string | null;
+    myReaction?: ReactionKind | null;
+  };
+
+  counts: {
+    uniqueOpens: number;
+    acks: number;
+    reactionsTotal: number;
+    commentsTotal: number;
+    sharesTotal: number;
+  };
+}
+
+export interface MeFeedResponseDTO {
+  items: MeFeedItemDTO[];
+  counters: MeFeedCountersDTO;
+  nextCursor?: string | null;
+  etag: string;
+  serverTime: string;
+}

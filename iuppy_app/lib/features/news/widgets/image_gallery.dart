@@ -3,24 +3,55 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:share_plus/share_plus.dart';
 
-Future<void> openImageGalleryDialog(BuildContext context, List<String> urls,
-    {int initialIndex = 0}) async {
+Future<void> openImageGalleryDialog(
+  BuildContext context,
+  List<String> urls, {
+  int initialIndex = 0,
+}) async {
   final pageCtrl = PageController(initialPage: initialIndex);
   int index = initialIndex;
 
+  bool _isSaveOk(dynamic result) {
+    // A lib retorna um Map com 'isSuccess' e/ou 'success' dependendo da plataforma
+    if (result is Map) {
+      final v = result['isSuccess'] ?? result['success'];
+      if (v is bool) return v;
+      if (v is String) return v.toLowerCase() == 'true';
+    }
+    return false;
+  }
+
   Future<void> _download(String url) async {
-    final resp = await Dio().get<List<int>>(url,
-        options: Options(responseType: ResponseType.bytes));
-    final result =
-        await ImageGallerySaver.saveImage(Uint8List.fromList(resp.data!));
-    final ok = (result['isSuccess'] ?? false) == true;
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Imagem salva na galeria' : 'Falha ao salvar'),
-      ));
+    try {
+      final resp = await Dio().get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      final name = 'iuppy_${DateTime.now().millisecondsSinceEpoch}';
+      final saveRes = await ImageGallerySaverPlus.saveImage(
+        Uint8List.fromList(resp.data!),
+        name: name,
+        quality: 100,
+      );
+
+      final ok = _isSaveOk(saveRes);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(ok ? 'Imagem salva na galeria' : 'Falha ao salvar')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao baixar: $e')),
+        );
+      }
     }
   }
 
@@ -51,10 +82,12 @@ Future<void> openImageGalleryDialog(BuildContext context, List<String> urls,
           pageController: pageCtrl,
           onPageChanged: (i) => setState(() => index = i),
           pageOptions: urls
-              .map((u) => PhotoViewGalleryPageOptions(
-                    imageProvider: NetworkImage(u),
-                    heroAttributes: PhotoViewHeroAttributes(tag: u),
-                  ))
+              .map(
+                (u) => PhotoViewGalleryPageOptions(
+                  imageProvider: NetworkImage(u),
+                  heroAttributes: PhotoViewHeroAttributes(tag: u),
+                ),
+              )
               .toList(),
           backgroundDecoration: const BoxDecoration(color: Colors.black),
         ),

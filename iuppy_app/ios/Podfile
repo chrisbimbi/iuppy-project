@@ -1,8 +1,24 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '12.0'
-
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+platform :ios, '13.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# 👇 Adicione isto (gera module maps p/ pods que não definem módulos)
+use_modular_headers!
+
+# Descobre FLUTTER_ROOT a partir do Generated.xcconfig
+def flutter_root
+  generated = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  raise "#{generated} not found. Run `flutter pub get`." unless File.exist?(generated)
+  File.foreach(generated) do |line|
+    m = line.match(/FLUTTER_ROOT\=(.*)/)
+    return m[1].strip if m
+  end
+  raise "FLUTTER_ROOT not set. Run `flutter pub get`."
+end
+
+# Helpers do Flutter
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
 
 project 'Runner', {
   'Debug' => :debug,
@@ -10,31 +26,13 @@ project 'Runner', {
   'Release' => :release,
 }
 
-def flutter_root
-  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-  unless File.exist?(generated_xcode_build_settings_path)
-    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-  end
-
-  File.foreach(generated_xcode_build_settings_path) do |line|
-    matches = line.match(/FLUTTER_ROOT\=(.*)/)
-    return matches[1].strip if matches
-  end
-  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
-end
-
-require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-
-flutter_ios_podfile_setup
-
 target 'Runner' do
-  use_frameworks!
-  use_modular_headers!
-
+  # ⚠️ Nada de use_frameworks! aqui
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  target 'RunnerTests' do
-    inherit! :search_paths
-  end
+
+  # (Opcional) Se quiser ser explícito só nesses pods:
+  # pod 'GoogleUtilities', :modular_headers => true
+  # pod 'sqlite3', :modular_headers => true
 end
 
 post_install do |installer|

@@ -1,63 +1,58 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import * as authHelper from '../app/modules/auth/core/AuthHelpers'
-import { refreshAccessToken } from '../app/modules/auth/core/_requests'
-import { getAuth } from '../app/modules/auth/core/AuthHelpers'
+import { getAuth, setAuth, removeAuth } from './modules/auth/core/AuthHelpers'
+import { refreshAccessToken } from './modules/auth/core/_requests'
 
+const BASE =
+    (import.meta.env.VITE_APP_API_URL ||
+        import.meta.env.VITE_API_URL ||
+        'http://localhost:4000') as string
 
 export const api = axios.create({
-    baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, ''),
-    withCredentials: true, // ok manter; não atrapalha o Bearer
+    baseURL: BASE.replace(/\/$/, ''),
+    withCredentials: true,
+    headers: { 'Content-Type': 'application/json' },
 })
 
-
-// injeta o Bearer em cada request
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const auth = getAuth()
     if (auth?.api_token) {
-        config.headers = config.headers ?? {};
-        (config.headers as any).Authorization = `Bearer ${auth.api_token}`;
+        // garante objeto e “relaxa” o tipo para aceitar a prop:
+        config.headers = (config.headers ?? {}) as any
+            ; (config.headers as any).Authorization = `Bearer ${auth.api_token}`
     }
     return config
 })
 
-// tenta 1x o refresh em 401 e repete a request original
 let isRefreshing = false
-let pendingQueue: Array<() => void> = []
+let queue: Array<() => void> = []
 
 api.interceptors.response.use(
     (res) => res,
     async (error: AxiosError) => {
         const original = error.config as any
-        const status = error.response?.status
-
-        if (status === 401 && !original?._retry) {
+        if (error.response?.status === 401 && !original?._retry) {
             original._retry = true
-
-            if (isRefreshing) {
-                await new Promise<void>((resolve) => pendingQueue.push(resolve))
-            } else {
-                try {
+            try {
+                if (isRefreshing) {
+                    await new Promise<void>((resolve) => queue.push(resolve))
+                } else {
                     isRefreshing = true
-                    const newAccess = await refreshAccessToken() // POST /auth/refresh (cookie)
+                    const newAccess = await refreshAccessToken()
                     if (!newAccess) throw new Error('No access token from refresh')
-                    authHelper.setAuth({ api_token: newAccess })
-                    pendingQueue.forEach((fn) => fn())
-                    pendingQueue = []
-                } catch (e) {
-                    authHelper.removeAuth()
-                    pendingQueue = []
-                    throw e
-                } finally {
-                    isRefreshing = false
+                    setAuth({ api_token: newAccess })
+                    queue.forEach((fn) => fn()); queue = []
                 }
+                original.headers = (original.headers ?? {}) as any
+                original.headers.Authorization = `Bearer ${getAuth()?.api_token || ''}`
+                return api(original)
+            } catch (e) {
+                removeAuth()
+                queue = []
+                throw e
+            } finally {
+                isRefreshing = false
             }
-            // reenvia a original com o novo token
-            const auth = authHelper.getAuth()
-            original.headers = original.headers || {}
-            original.headers.Authorization = auth?.api_token ? `Bearer ${auth.api_token}` : ''
-            return api(original)
         }
-
         return Promise.reject(error)
-    },
+    }
 )
