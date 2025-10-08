@@ -13,8 +13,6 @@ import '../features/news/news_detail_page.dart';
 import '../features/surveys/surveys_list_page.dart';
 import '../features/surveys/survey_detail_page.dart';
 
-/// Listenable para o GoRouter reagir a mudanças vindas de um Stream.
-/// (quando AuthState muda, o GoRouter reavalia redirect)
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _sub;
   GoRouterRefreshStream(Stream<dynamic> stream) {
@@ -27,9 +25,6 @@ class GoRouterRefreshStream extends ChangeNotifier {
   }
 }
 
-/// Normaliza deep links com scheme custom para paths internos.
-/// Ex.: iuppydev://surveys/<id>  -> /surveys/<id>
-///      iuppydev://news/article/<id> -> /news/article/<id>
 Uri _normalizeDeepLinkUri(Uri uri) {
   if (uri.hasScheme &&
       uri.scheme.isNotEmpty &&
@@ -37,21 +32,23 @@ Uri _normalizeDeepLinkUri(Uri uri) {
       uri.scheme != 'https') {
     if (uri.host == 'surveys') {
       return Uri(
-          path: '/surveys${uri.path}',
-          query: uri.query.isEmpty ? null : uri.query,
-          fragment: uri.fragment.isEmpty ? null : uri.fragment);
+        path: '/surveys${uri.path}',
+        query: uri.query.isEmpty ? null : uri.query,
+        fragment: uri.fragment.isEmpty ? null : uri.fragment,
+      );
     }
     if (uri.host == 'news') {
       return Uri(
-          path: '/news${uri.path}',
-          query: uri.query.isEmpty ? null : uri.query,
-          fragment: uri.fragment.isEmpty ? null : uri.fragment);
-    }
-    // fallback: remove scheme/host e usa só o path
-    return Uri(
-        path: uri.path.isEmpty ? '/' : uri.path,
+        path: '/news${uri.path}',
         query: uri.query.isEmpty ? null : uri.query,
-        fragment: uri.fragment.isEmpty ? null : uri.fragment);
+        fragment: uri.fragment.isEmpty ? null : uri.fragment,
+      );
+    }
+    return Uri(
+      path: uri.path.isEmpty ? '/' : uri.path,
+      query: uri.query.isEmpty ? null : uri.query,
+      fragment: uri.fragment.isEmpty ? null : uri.fragment,
+    );
   }
   return uri;
 }
@@ -66,58 +63,47 @@ final _routerRefreshListenableProvider = Provider<GoRouterRefreshStream>((ref) {
 final appRouterProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authControllerProvider);
   final refreshListenable = ref.watch(_routerRefreshListenableProvider);
+  final navigatorKey = ref.watch(rootNavigatorKeyProvider);
 
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: '/',
     refreshListenable: refreshListenable,
-
-    /// 1) Preserva deep link durante o login via ?from=
     redirect: (context, state) {
       final isLoggedIn = (auth.accessToken ?? '').isNotEmpty;
 
-      // Normaliza se veio com scheme custom (ex.: iuppydev://...)
       final normalized = _normalizeDeepLinkUri(state.uri);
       final path = normalized.path;
       final loggingIn = path == '/login';
 
       if (!isLoggedIn) {
-        // Usuário anônimo: se tentou ir pra algo diferente de splash ou login, manda pro login com ?from=<destino>
         if (!loggingIn && path != '/') {
           final from = Uri.encodeComponent(normalized.toString());
           return '/login?from=$from';
         }
-        return null; // permanece onde está (/ ou /login)
+        return null;
       }
 
-      // Logado:
       if (loggingIn) {
-        // Se veio do login com ?from=..., redireciona para o destino original
         final fromParam = state.uri.queryParameters['from'];
         if (fromParam != null && fromParam.isNotEmpty) {
           final decoded = Uri.decodeComponent(fromParam);
           final goTo = _normalizeDeepLinkUri(Uri.parse(decoded));
           return goTo.toString();
         }
-        // Sem from -> vai pra Home
         return '/home';
       }
 
-      // Logado e na splash: manda pra Home
       if (path == '/') return '/home';
 
-      return null; // segue normal
+      return null;
     },
-
-    /// 2) Se o deep link chegar com scheme e o parser não reconhecer,
-    ///    usamos o errorBuilder para normalizar e navegar.
     errorBuilder: (context, state) {
       final uri = _normalizeDeepLinkUri(state.uri);
       if (uri.path != state.uri.path) {
-        // Tenta navegação imediata para a rota normalizada
         Future.microtask(() => context.go(uri.toString()));
         return const SizedBox.shrink();
       }
-      // Página 404 simples
       return Scaffold(
         appBar: AppBar(
           title: const Text('Página não encontrada'),
@@ -125,10 +111,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
               final r = GoRouter.of(context);
-              if (r.canPop())
+              if (r.canPop()) {
                 r.pop();
-              else
+              } else {
                 r.go('/home');
+              }
             },
           ),
         ),
@@ -137,7 +124,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       );
     },
-
     routes: [
       GoRoute(path: '/', builder: (_, __) => const SplashPage()),
       GoRoute(
@@ -152,7 +138,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/news/article/:id',
-        builder: (_, s) => NewsDetailPage(id: s.pathParameters['id']!),
+        name: 'news-detail',
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: NewsDetailPage(id: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(path: '/surveys', builder: (_, __) => const SurveysListPage()),
       GoRoute(
@@ -187,10 +177,11 @@ class _Stub extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             final r = GoRouter.of(context);
-            if (r.canPop())
+            if (r.canPop()) {
               r.pop();
-            else
+            } else {
               r.go('/home');
+            }
           },
           tooltip: 'Voltar',
         ),

@@ -16,7 +16,7 @@ class MenuDrawer extends ConsumerWidget {
       orElse: () => <String>{},
     );
 
-    // contadores (total/por space/por canal)
+    // contadores (total/por space/por canal) — sempre vindos do provider corrigido
     final unread = ref.watch(unreadCountersProvider).maybeWhen(
           data: (d) => d,
           orElse: () =>
@@ -64,19 +64,19 @@ class MenuDrawer extends ConsumerWidget {
           //     onTap: () async {
           //       final db = ref.read(dbProvider);
           //       final cached = await db.getNews(limit: 2000);
-
+          //
           //       // só as publicadas
           //       final ids = cached
           //           .where((n) => (n['isPublished'] ?? true) == true)
           //           .map((n) => (n['id'] ?? '').toString());
-
+          //
           //       await ref.read(localNewsStoreProvider).markManyRead(ids);
-
+          //
           //       // Atualiza badges (Home + Drawer)
           //       ref.read(homeBadgesProvider.notifier).state =
           //           const HomeBadges(newsNew: 0, surveysPending: 0);
           //       ref.invalidate(unreadCountersProvider);
-
+          //
           //       if (context.mounted) {
           //         Navigator.of(context).pop(); // fecha o drawer
           //         ScaffoldMessenger.of(context).showSnackBar(
@@ -219,7 +219,9 @@ class _NewsTreeState extends ConsumerState<_NewsTree> {
       child: Text(
         '$n',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: c.onSecondaryContainer, fontWeight: FontWeight.w700),
+              color: c.onSecondaryContainer,
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }

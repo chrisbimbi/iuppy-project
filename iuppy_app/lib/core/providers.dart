@@ -1,16 +1,23 @@
+// lib/core/providers.dart
 import 'dart:async';
+
+import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../app/theme/theme.dart';
-import '../core/env/app_env.dart';
 import '../data/local/app_database.dart';
 import '../data/remote/api_client.dart';
-import '../features/surveys/local_survey_store.dart';
 import '../features/news/local_news_store.dart';
+import '../features/surveys/local_survey_store.dart';
 import '../push_service.dart';
+
+/// =============== NAV KEY (compartilhado) ===============
+final rootNavigatorKeyProvider =
+    Provider<GlobalKey<NavigatorState>>((ref) => GlobalKey<NavigatorState>());
 
 /// ================= ENV =================
 final envProvider = Provider<EnvConfig>((ref) {
@@ -23,7 +30,6 @@ final envProvider = Provider<EnvConfig>((ref) {
   );
 });
 
-/// Útil para normalizações que dependem do host.
 final apiBaseUrlProvider =
     Provider<String>((ref) => ref.watch(envProvider).apiBaseUrl);
 
@@ -47,7 +53,12 @@ class AuthState {
 
 class AuthController extends StateNotifier<AuthState> {
   final Dio _authDio;
-  AuthController(this._authDio) : super(const AuthState());
+  final CookieJar _cookieJar;
+
+  AuthController(this._authDio, this._cookieJar) : super(const AuthState()) {
+    _authDio.interceptors.add(CookieManager(_cookieJar));
+  }
+
   final _ctrl = StreamController<AuthState>.broadcast();
   Stream<AuthState> get stream => _ctrl.stream;
 
@@ -61,8 +72,16 @@ class AuthController extends StateNotifier<AuthState> {
     _ctrl.add(state);
   }
 
+  void setAccessToken(String? token) {
+    state = state.copyWith(accessToken: token ?? '');
+    _ctrl.add(state);
+  }
+
   Future<void> logout() async {
     state = const AuthState();
+    try {
+      await _cookieJar.deleteAll();
+    } catch (_) {}
     _ctrl.add(state);
   }
 
@@ -73,25 +92,135 @@ class AuthController extends StateNotifier<AuthState> {
   }
 }
 
-/// Dio com Authorization automaticamente
+/// CookieJar COMPARTILHADO entre todos os Dio (main, refresh e login)
+final cookieJarProvider = Provider<CookieJar>((ref) {
+  // Sobrescreva no main.dart com uma instância real (ex.: PersistCookieJar).
+  throw StateError('cookieJarProvider deve ser sobrescrito no main.dart');
+});
+
+/// Dio principal com Authorization + CookieJar + refresh automático
 final dioProvider = Provider<Dio>((ref) {
   final env = ref.watch(envProvider);
   final auth = ref.watch(authControllerProvider);
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: env.apiBaseUrl,
-      headers: {'Accept': 'application/json'},
-    ),
-  );
-  dio.interceptors.add(
-    InterceptorsWrapper(onRequest: (o, h) {
-      final token = auth.accessToken;
-      if (token != null && token.isNotEmpty) {
-        o.headers['Authorization'] = 'Bearer $token';
+  final jar = ref.watch(cookieJarProvider);
+  final navKey = ref.watch(rootNavigatorKeyProvider);
+
+  final dio = Dio(BaseOptions(
+    baseUrl: env.apiBaseUrl,
+    headers: {'Accept': 'application/json'},
+  ));
+
+  dio.interceptors.add(CookieManager(jar));
+
+  dio.interceptors.add(InterceptorsWrapper(onRequest: (o, h) {
+    final token = auth.accessToken;
+    if (token != null && token.isNotEmpty) {
+      o.headers['Authorization'] = 'Bearer $token';
+    }
+    h.next(o);
+  }));
+
+  // ===== refresh 401 (fila + retry) =====
+  Completer<String?>? _refreshing;
+
+  final refreshDio = Dio(BaseOptions(
+    baseUrl: env.apiBaseUrl,
+    headers: {'Accept': 'application/json'},
+  ))
+    ..interceptors.add(CookieManager(jar));
+
+  Future<String?> _doRefresh() async {
+    try {
+      final r = await refreshDio.post('/auth/refresh');
+      final newToken = (r.data is Map && r.data['accessToken'] != null)
+          ? '${r.data['accessToken']}'
+          : '';
+      if (newToken.isEmpty) return null;
+      ref.read(authControllerProvider.notifier).setAccessToken(newToken);
+      debugPrint('[AUTH] refresh OK');
+      return newToken;
+    } catch (e) {
+      debugPrint('[AUTH] refresh FAILED: $e');
+      return null;
+    }
+  }
+
+  Future<Response> _retry(Dio client, RequestOptions ro) {
+    return client.request(
+      ro.path,
+      data: ro.data,
+      queryParameters: ro.queryParameters,
+      options: Options(
+        method: ro.method,
+        headers: ro.headers,
+        responseType: ro.responseType,
+        contentType: ro.contentType,
+        followRedirects: ro.followRedirects,
+        listFormat: ro.listFormat,
+        receiveTimeout: ro.receiveTimeout,
+        sendTimeout: ro.sendTimeout,
+        validateStatus: ro.validateStatus,
+      ),
+      cancelToken: ro.cancelToken,
+      onReceiveProgress: ro.onReceiveProgress,
+      onSendProgress: ro.onSendProgress,
+    );
+  }
+
+  dio.interceptors.add(InterceptorsWrapper(onError: (err, handler) async {
+    final status = err.response?.statusCode ?? 0;
+    final path = err.requestOptions.path;
+    final isAuth = path.startsWith('/auth/login') ||
+        path.startsWith('/auth/refresh') ||
+        path.startsWith('/auth/logout');
+    final retried = err.requestOptions.extra['__ret'] == true;
+
+    if (status == 401 && !isAuth && !retried) {
+      if (_refreshing == null) {
+        _refreshing = Completer<String?>();
+        _refreshing!.complete(await _doRefresh());
       }
-      h.next(o);
-    }),
-  );
+      final newTok = await _refreshing!.future;
+      _refreshing = null;
+
+      if (newTok != null && newTok.isNotEmpty) {
+        err.requestOptions.extra['__ret'] = true;
+        try {
+          final resp = await _retry(dio, err.requestOptions);
+          return handler.resolve(resp);
+        } catch (_) {}
+      }
+
+      // refresh falhou → logout + aviso + ir pro login (preservando "from")
+      await ref.read(authControllerProvider.notifier).logout();
+
+      final ctx = navKey.currentContext;
+      if (ctx != null) {
+        ScaffoldMessenger.of(ctx).clearSnackBars();
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+              content: Text('Sessão expirada. Faça login novamente.')),
+        );
+
+        final router = GoRouter.of(ctx);
+// Pega a rota atual de forma compatível com versões antigas do go_router
+        final routeInfo = router.routeInformationProvider.value;
+        final currentLocation = (routeInfo.location ?? '/home');
+
+// Monta o destino preservando ?from=
+        final from = Uri.encodeComponent(currentLocation);
+        final target = currentLocation.startsWith('/login')
+            ? '/login'
+            : '/login?from=$from';
+
+        router.go(target);
+      }
+      return;
+    }
+
+    return handler.next(err);
+  }));
+
   return dio;
 });
 
@@ -103,17 +232,32 @@ final localNewsStoreProvider = Provider<LocalNewsStore>((ref) {
   return LocalNewsStore();
 });
 
-/// Auth controller usa um Dio SEM interceptor para evitar ciclo
+/// Bumps when a news is marked as opened locally.
+final newsSeenVersionProvider = StateProvider<int>((_) => 0);
+
+/// Bumps when the home feed should be refreshed (e.g. after reacting, sharing, commenting).
+final feedVersionProvider = StateProvider<int>((_) => 0);
+
+/// Auth controller usa um Dio SEM interceptor de auth, mas COM CookieJar compartilhado
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final env = ref.watch(envProvider);
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: env.apiBaseUrl,
-      headers: {'Accept': 'application/json'},
-    ),
-  );
-  return AuthController(dio);
+  final jar = ref.watch(cookieJarProvider);
+
+  final dio = Dio(BaseOptions(
+    baseUrl: env.apiBaseUrl,
+    headers: {'Accept': 'application/json'},
+  ))
+    ..interceptors.add(CookieManager(jar))
+    ..interceptors.add(LogInterceptor(
+      request: true,
+      requestBody: true,
+      error: true,
+      responseBody: false,
+      logPrint: (o) => debugPrint('[AUTH DIO] $o'),
+    ));
+
+  return AuthController(dio, jar);
 });
 
 /// ================= API CLIENT =================
@@ -147,7 +291,6 @@ class UserProfile {
       return const [];
     }
 
-    // grupos podem vir em "groups" OU "visibleGroups"
     final g = <String>{
       ..._toStrList(j['groups']),
       ..._toStrList(j['visibleGroups']),
@@ -163,8 +306,11 @@ class UserProfile {
   }
 }
 
-/// Busca o usuário logado (usa /auth/me). Fallback = null.
 final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
+  // Evita chamar /auth/me se não houver token
+  final token = ref.read(authControllerProvider).accessToken;
+  if (token == null || token.isEmpty) return null;
+
   final api = ref.read(apiClientProvider);
   try {
     final raw = await api.getMe();
@@ -175,7 +321,6 @@ final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
   }
 });
 
-/// Atalho: conjunto de grupos do usuário (pode ser vazio).
 final userGroupsProvider = Provider<Set<String>>((ref) {
   final me = ref.watch(userProfileProvider).maybeWhen(
         data: (u) => u?.groups ?? const <String>{},
@@ -184,7 +329,6 @@ final userGroupsProvider = Provider<Set<String>>((ref) {
   return me;
 });
 
-/// Helper p/ checar visibilidade por grupos.
 bool _isVisibleForGroups(Map item, Set<String> userGroups) {
   Iterable<String> _extract(dynamic v) {
     if (v == null) return const <String>[];
@@ -192,17 +336,13 @@ bool _isVisibleForGroups(Map item, Set<String> userGroups) {
     return const <String>[];
   }
 
-  // Procura campos comuns de visibilidade
   final req = <String>{
     ..._extract(item['visibleGroups']),
     ..._extract(item['groups']),
     ..._extract(item['visibleGroupIds']),
   }..removeWhere((e) => e.trim().isEmpty);
 
-  // Sem grupos exigidos -> público
   if (req.isEmpty) return true;
-
-  // Interseção com grupos do usuário
   return req.any(userGroups.contains);
 }
 
@@ -259,7 +399,7 @@ final companySettingsProvider =
       .map((m) => m['key'].toString())
       .toSet();
 
-  // aplica tema
+  // tema
   final theme = buildThemes(
     BrandingColors(
       primary: Color(branding.primary),
@@ -269,25 +409,24 @@ final companySettingsProvider =
   );
   ref.read(appThemeProvider.notifier).state = theme;
 
-  // 🚀 Bootstrap de Push/FCM: quando settings carregaram, tenta registrar token
+  // Bootstrap de Push quando autenticado
   try {
-    final me = await ref.read(userProfileProvider.future);
-    final env = ref.read(envProvider);
-    if (me?.id != null && (env.companyId.isNotEmpty)) {
-      // Inicializa serviço de Push (idempotente) e registra o token no backend
-      await PushService.instance.init();
-      await PushService.instance.askPermissionAndRegister(
-        userId: me!.id!,
-        companyId: env.companyId,
-        apiBaseUrl: env.apiBaseUrl,
-        // opcionalmente: appVersion/locale/extras
-        appVersion: null,
-        locale: null,
-      );
+    final token = ref.read(authControllerProvider).accessToken;
+    if (token != null && token.isNotEmpty) {
+      final me = await ref.read(userProfileProvider.future);
+      final env = ref.read(envProvider);
+      if (me?.id != null && (env.companyId.isNotEmpty)) {
+        await PushService.instance.init();
+        await PushService.instance.askPermissionAndRegister(
+          userId: me!.id!,
+          companyId: env.companyId,
+          apiBaseUrl: env.apiBaseUrl,
+          appVersion: null,
+          locale: null,
+        );
+      }
     }
-  } catch (_) {
-    // silencioso; se falhar aqui, o app pode tentar novamente depois
-  }
+  } catch (_) {}
 
   return CompanySettingsState(branding, enabled);
 });
@@ -335,7 +474,6 @@ class ChannelsRepo {
 
     final list = await api.getChannels(spaceId: spaceId);
 
-    // 🔒 filtro de visibilidade por grupos (client-side)
     final filtered =
         list.where((c) => _isVisibleForGroups(c, userGroups)).toList();
 
@@ -423,7 +561,6 @@ class NewsRepo {
     }
   }
 
-  /// Lista por canal — remote-first + filtro por canal visível
   Future<List<Map<String, dynamic>>> listByChannel(String channelId) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
@@ -456,14 +593,13 @@ class NewsRepo {
     }
   }
 
-  /// HOME FEED — remote-first, normaliza, ordena, cacheia e filtra por canal visível
   Future<List<Map<String, dynamic>>> listLatest({int limit = 10}) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final base = ref.read(apiBaseUrlProvider);
 
     try {
-      final remote = await api.getNews(); // sem filtro de canal
+      final remote = await api.getNews();
       final channelsMap = await _channelsById();
       final spacesMap = await _spacesNameById();
 
@@ -513,7 +649,6 @@ class NewsRepo {
     }
   }
 
-  /// Carrossel da Home (filtro opcional por space)
   Future<List<Map<String, dynamic>>> homeFeedRemoteFirst({
     String? spaceId,
     int limit = 10,
@@ -540,7 +675,6 @@ class NewsRepo {
       final spacesMap = await _spacesNameById();
       return _normalize(n, base, channelsMap, spacesMap);
     } catch (_) {
-      // ⚠️ Tipagem explícita pra evitar o crash do orElse
       final cached = await ref.read(dbProvider).getNews();
       final List<Map<String, dynamic>> all =
           cached.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -552,17 +686,14 @@ class NewsRepo {
     }
   }
 
-  /// Contadores para badges (Home/Drawer) — após filtro de canais visíveis
   Future<UnreadCounters> unreadCounters() async {
     final db = ref.read(dbProvider);
     final store = ref.read(localNewsStoreProvider);
 
-    // conjunto de canais visíveis (já cache filtrado)
     final visibleChannels = await ref.read(channelsRepoProvider).getCached();
     final visibleChannelIds =
         visibleChannels.map((c) => (c['id'] ?? '').toString()).toSet();
 
-    // notícias publicadas do cache e pertencentes a canais visíveis
     final all = await db.getNews(limit: 1000);
     final List<Map<String, dynamic>> list =
         all.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -573,7 +704,6 @@ class NewsRepo {
             visibleChannelIds.contains((n['channelId'] ?? '').toString()))
         .toList();
 
-    // total e agrupamentos
     final total =
         await store.countUnread(news.map((n) => (n['id'] ?? '').toString()));
     final bySpace = await store.countUnreadByKey(news, 'spaceId');
@@ -583,7 +713,6 @@ class NewsRepo {
   }
 }
 
-/// DTO simples para os contadores de não lidas
 class UnreadCounters {
   final int total;
   final Map<String, int> bySpace;
@@ -667,9 +796,61 @@ class HomeBadges {
   const HomeBadges({this.newsNew = 0, this.surveysPending = 0});
 }
 
-final homeBadgesProvider = StateProvider<HomeBadges>((_) => const HomeBadges());
+// Home badges are derived from the unread counters (news) and surveys. By deriving from providers,
+// the badge values automatically update when the underlying counters change.
+final homeBadgesProvider = Provider<HomeBadges>((ref) {
+  final counters = ref.watch(unreadCountersProvider);
+  final newsNew = counters.maybeWhen(
+    data: (d) => d.total,
+    orElse: () => 0,
+  );
+  // TODO: plug surveys pending count when available
+  final surveysPending = 0;
+  return HomeBadges(newsNew: newsNew, surveysPending: surveysPending);
+});
 
 /// Contadores por space/channel (Drawer)
 final unreadCountersProvider = FutureProvider<UnreadCounters>((ref) async {
+  // Recompute when local seen version changes
+  ref.watch(newsSeenVersionProvider);
   return ref.read(newsRepoProvider).unreadCounters();
 });
+
+/// Provides the home feed filtered by [spaceId]. Recomputes whenever [feedVersionProvider] changes.
+final homeFeedProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String?>(
+        (ref, String? spaceId) async {
+  // depend on the feed version so that the feed refreshes when users interact with news
+  ref.watch(feedVersionProvider);
+  return ref.read(newsRepoProvider).homeFeedRemoteFirst(spaceId: spaceId);
+});
+
+/// ========= Utils =========
+class AppEnv {
+  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL',
+      defaultValue: 'http://10.0.2.2:4000');
+  static const appScheme =
+      String.fromEnvironment('APP_SCHEME', defaultValue: 'iuppy');
+  static const companyId =
+      String.fromEnvironment('COMPANY_ID', defaultValue: '');
+  static const companyKey =
+      String.fromEnvironment('COMPANY_KEY', defaultValue: '');
+  static const appName =
+      String.fromEnvironment('APP_NAME', defaultValue: 'Iuppy');
+}
+
+class EnvConfig {
+  final String apiBaseUrl;
+  final String appScheme;
+  final String companyId;
+  final String companyKey;
+  final String appName;
+
+  const EnvConfig({
+    required this.apiBaseUrl,
+    required this.appScheme,
+    required this.companyId,
+    required this.companyKey,
+    required this.appName,
+  });
+}

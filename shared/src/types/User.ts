@@ -1,3 +1,4 @@
+// shared/types/User.ts
 import { Role } from './Role';
 
 export interface User {
@@ -14,7 +15,7 @@ export interface User {
   recoveryToken?: string;
   recoveryTokenExpiration?: Date;
   phone?: string;
-  avatarUrl?: string;
+  avatarUrl?: string;   // ← novo campo opcional
   locale?: string;
   createdAt?: Date;
   updatedAt?: Date;

@@ -2,7 +2,68 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:iuppy_app/features/news/models/feed_models.dart';
 
+/// Tiny cache entry for SWR/ETag handling.
+class _CacheEntry {
+  final dynamic data;
+  final String? etag;
+  final DateTime at;
+  _CacheEntry(this.data, this.etag) : at = DateTime.now();
+}
+
 class ApiClient {
+  // ===== In-flight coalescing and tiny cache (SWR window) =====
+  final Map<String, Future<Response>> _inflight = {};
+  final Map<String, _CacheEntry> _cache = {};
+
+  String _key(String method, String path, [Map<String, dynamic>? qp]) {
+    final buf = StringBuffer()
+      ..write(method)
+      ..write(' ')
+      ..write(path);
+    if (qp != null && qp.isNotEmpty) {
+      final keys = qp.keys.toList()..sort();
+      for (final k in keys) {
+        buf.write('&${k}=${qp[k]}');
+      }
+    }
+    return buf.toString();
+  }
+
+  Future<Response> _coalescedGet(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    String? extraCacheKey,
+  }) {
+    // If a CancelToken is provided, do NOT coalesce to avoid one consumer
+    // cancelling a shared request for others.
+    final Options resolved = options ?? Options();
+    resolved.validateStatus ??=
+        (s) => s != null && (s == 304 || (s >= 200 && s < 300));
+
+    if (cancelToken != null) {
+      return _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: resolved,
+        cancelToken: cancelToken,
+      );
+    }
+
+    final k = '${_key('GET', path, queryParameters)}::${extraCacheKey ?? ''}';
+    final fut = _inflight[k];
+    if (fut != null) return fut;
+
+    final f = _dio.get(
+      path,
+      queryParameters: queryParameters,
+      options: resolved,
+    );
+    _inflight[k] = f;
+    return f.whenComplete(() => _inflight.remove(k));
+  }
+
   final Dio _dio;
   final String companyId;
 
@@ -16,12 +77,21 @@ class ApiClient {
           requestBody: true,
           responseHeader: false,
           responseBody: false,
-          error: true,
+          // Evita despejar exceptions no console quando tratamos 5xx manualmente
+          error: false,
           logPrint: (o) => debugPrint('[DIO] $o'),
         ),
       );
       debugPrint('[ApiClient] companyId=$companyId');
     }
+  }
+
+  /// Exponibiliza o baseUrl para normalização de URLs no app.
+  String get baseUrl => _dio.options.baseUrl;
+
+  // Opcional (com o interceptor nem precisa usar)
+  void setAuthToken(String token) {
+    _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
   Map<String, dynamic> _etagHeader(String? etag) =>
@@ -31,15 +101,10 @@ class ApiClient {
   // AUTH / USER
   // ---------------------------
 
-  /// Traz o usuário logado (precisa do Authorization já no Dio).
-  /// Caso a rota não exista, retorna {} (app usa fallback).
+  /// NÃO engole 401 — deixa o interceptor tratar refresh e/ou logout.
   Future<Map<String, dynamic>> getMe() async {
-    try {
-      final resp = await _dio.get('/auth/me');
-      return Map<String, dynamic>.from(resp.data as Map);
-    } catch (_) {
-      return <String, dynamic>{};
-    }
+    final resp = await _dio.get('/auth/me');
+    return Map<String, dynamic>.from(resp.data as Map);
   }
 
   // ---------------------------
@@ -62,7 +127,6 @@ class ApiClient {
   // SPACES / CHANNELS
   // -------------
 
-  /// Preferência: v2. Fallback para legado (/spaces?companyId=...)
   Future<List<Map<String, dynamic>>> getSpaces() async {
     try {
       final resp = await _dio.get('/v2/spaces');
@@ -71,7 +135,6 @@ class ApiClient {
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
-        // legado
         final resp = await _dio
             .get('/spaces', queryParameters: {'companyId': companyId});
         return List<Map<String, dynamic>>.from(
@@ -82,41 +145,62 @@ class ApiClient {
     }
   }
 
-  /// Preferência: v2 (/v2/channels?companyId&spaceId).
-  /// Fallback: legado (/channels?companyId&spaceId).
+  /// Seguro contra 5xx: não deixa o Dio lançar exceção (validateStatus: true)
+  /// e decide o fallback manualmente.
   Future<List<Map<String, dynamic>>> getChannels({String? spaceId}) async {
-    final qp = {
-      'companyId': companyId,
-      if (spaceId != null) 'spaceId': spaceId,
-    };
-    try {
-      final resp = await _dio.get('/v2/channels', queryParameters: qp);
+    final qp = <String, dynamic>{'companyId': companyId};
+    if (spaceId != null && spaceId.isNotEmpty) {
+      qp['spaceId'] = spaceId;
+    }
+
+    final resp = await _dio.get(
+      '/v2/channels',
+      queryParameters: qp,
+      options: Options(validateStatus: (status) => true),
+    );
+
+    final code = resp.statusCode ?? 0;
+
+    // 2xx: OK
+    if (code >= 200 && code < 300) {
       return List<Map<String, dynamic>>.from(
         (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
       );
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        final resp = await _dio.get('/channels', queryParameters: qp);
+    }
+
+    // 404 -> tenta rota legacy
+    if (code == 404) {
+      final legacy = await _dio.get(
+        '/channels',
+        queryParameters: qp,
+        options: Options(validateStatus: (s) => true),
+      );
+      final lcode = legacy.statusCode ?? 0;
+      if (lcode >= 200 && lcode < 300) {
         return List<Map<String, dynamic>>.from(
-          (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+          (legacy.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
         );
       }
-      rethrow;
+      debugPrint(
+          '[ApiClient] getChannels legacy -> HTTP $lcode, retornando []');
+      return const <Map<String, dynamic>>[];
     }
+
+    // 5xx (ou qualquer outro código fora dos tratáveis) -> retorna vazio
+    debugPrint('[ApiClient] getChannels $qp -> HTTP $code, retornando []');
+    return const <Map<String, dynamic>>[];
   }
 
   // -----
-  // FEED v2 (home + badges em 1 chamada)
+  // FEED v2
   // -----
 
-  /// GET /v2/me/feed
-  /// Retorna itens + counters. Se o servidor responder 304, devolvemos
-  /// uma resposta "vazia" com o mesmo etag para o chamador decidir.
   Future<MeFeedResponse> getMeFeed({
     String? spaceId,
     String? channelId,
     int? limit,
     String? cursor,
+    CancelToken? cancelToken,
     String? sinceEtag,
   }) async {
     final qp = <String, dynamic>{
@@ -128,14 +212,21 @@ class ApiClient {
     final resp = await _dio.get(
       '/v2/me/feed',
       queryParameters: qp,
-      options: Options(headers: _etagHeader(sinceEtag)),
+      options: Options(
+        headers: _etagHeader(sinceEtag),
+        validateStatus: (s) => s != null && (s == 304 || (s >= 200 && s < 300)),
+      ),
+      cancelToken: cancelToken,
     );
 
     if (resp.statusCode == 304) {
       return MeFeedResponse(
         items: const [],
         counters: FeedCounters(
-            totalUnread: 0, bySpace: const {}, byChannel: const {}),
+          totalUnread: 0,
+          bySpace: const {},
+          byChannel: const {},
+        ),
         nextCursor: null,
         etag: sinceEtag ?? '',
         serverTime: DateTime.now().toIso8601String(),
@@ -147,7 +238,7 @@ class ApiClient {
   }
 
   // -----
-  // NEWS (legado ainda disponível em algumas telas)
+  // NEWS (legacy ainda usada em alguns lugares)
   // -----
 
   Future<List<Map<String, dynamic>>> getNews({String? channelId}) async {
@@ -166,106 +257,286 @@ class ApiClient {
     return getNews(channelId: channelId);
   }
 
-  /// Preferência: v2. Fallback: legado (/news/:id)
-  Future<Map<String, dynamic>> getNewsDetail(String id) async {
+  Future<Map<String, dynamic>> getNewsDetail(
+    String id, {
+    String? sinceEtag,
+    CancelToken? cancelToken,
+  }) async {
     try {
-      final resp = await _dio.get('/v2/news/$id');
-      return Map<String, dynamic>.from(resp.data as Map);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        final resp2 = await _dio.get('/news/$id');
-        return Map<String, dynamic>.from(resp2.data as Map);
+      final resp = await _coalescedGet(
+        '/v2/news/$id',
+        options: Options(
+          headers: _etagHeader(sinceEtag),
+          validateStatus: (s) =>
+              s != null && (s == 304 || (s >= 200 && s < 300)),
+        ),
+        cancelToken: cancelToken,
+        extraCacheKey: sinceEtag,
+      );
+
+      if (resp.statusCode == 304) {
+        final k = _key('GET', '/v2/news/$id');
+        final cached = _cache[k];
+        if (cached != null) {
+          return Map<String, dynamic>.from(cached.data as Map);
+        }
       }
-      rethrow;
-    }
-  }
 
-  // -----
-  // INTERAÇÕES v2 (com fallback para legadas quando fizer sentido)
-  // -----
-
-  /// Marca OPEN (idempotente no backend).
-  Future<void> openNews(String newsId) async {
-    try {
-      await _dio.post('/v2/news/$newsId/open');
-    } on DioException catch (e) {
-      // sem fallback: rota não existia no legado
-      rethrow;
-    }
-  }
-
-  /// ACK (v2). Fallback para /news/:id/acknowledge (legado).
-  Future<void> ackNews(String newsId) async {
-    try {
-      await _dio.post('/v2/news/$newsId/ack');
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        await _dio.post('/news/$newsId/acknowledge');
-        return;
-      }
-      rethrow;
-    }
-  }
-
-  /// REACT (v2). Fallback para /news/:id/reactions (legado).
-  Future<void> reactToNews(String newsId, String reaction) async {
-    try {
-      await _dio.post('/v2/news/$newsId/react', data: {'reaction': reaction});
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) {
-        await _dio
-            .post('/news/$newsId/reactions', data: {'reaction': reaction});
-        return;
-      }
-      rethrow;
-    }
-  }
-
-  /// Comentário (v2). Se commentsRequireModeration=true, backend cria como pending.
-  Future<void> commentNews(String newsId, String text) async {
-    await _dio.post('/v2/news/$newsId/comments', data: {'text': text});
-  }
-
-  /// Share (v2). target opcional: copy_link | system_share
-  Future<void> shareNews(String newsId, {String? target}) async {
-    await _dio.post('/v2/news/$newsId/share', data: {'target': target});
-  }
-
-  /// Contagem de reações (LEGADO). Mantido para telas antigas; use os counts do feed v2 quando possível.
-  Future<Map<String, int>> getNewsReactionsCount(String newsId) async {
-    try {
-      final resp = await _dio.get('/news/$newsId/reactions/count');
-      final raw = Map<String, dynamic>.from(resp.data as Map);
-      return raw.map((k, v) => MapEntry(k, int.tryParse('$v') ?? 0));
-    } catch (_) {
-      return {};
-    }
-  }
-
-  /// Status de ACK (LEGADO). Em v2, derive de userState.isRead + ack específico via métricas.
-  Future<bool> hasAcknowledgedNews(String newsId) async {
-    try {
-      final resp = await _dio.get('/news/$newsId/acknowledgement');
       final data = Map<String, dynamic>.from(resp.data as Map);
-      return (data['acknowledged'] ?? false) == true;
-    } catch (_) {
-      return false;
+      final etag = resp.headers.value('etag');
+      _cache[_key('GET', '/v2/news/$id')] = _CacheEntry(data, etag);
+      return data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        final resp2 = await _dio.get('/news/$id', cancelToken: cancelToken);
+        final data = Map<String, dynamic>.from(resp2.data as Map);
+        _cache[_key('GET', '/news/$id')] =
+            _CacheEntry(data, resp2.headers.value('etag'));
+        return data;
+      }
+      rethrow;
     }
   }
 
-  // -------
-  // SURVEYS (mantém igual)
-  // -------
+  // -----
+  // INTERAÇÕES v2
+  // -----
 
-  Future<List<Map<String, dynamic>>> getSurveys() async {
-    final resp = await _dio.get('/modules/$companyId/surveys');
+  Future<void> openNews(
+    String newsId, {
+    Map<String, dynamic>? meta,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final r = await _dio.post(
+        '/v2/news/$newsId/open',
+        data: meta ?? const {'origin': 'app'},
+        options:
+            Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+        cancelToken: cancelToken,
+      );
+      if (kDebugMode) {
+        debugPrint('[API.openNews] id=$newsId status=${r.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '[API.openNews] id=$newsId ERROR status=${e.response?.statusCode}');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> ackNews(
+    String newsId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final r = await _dio.post(
+        '/v2/news/$newsId/ack',
+        options: Options(
+            validateStatus: (s) =>
+                s != null && (s >= 200 && s < 300 || s == 404)),
+        cancelToken: cancelToken,
+      );
+      if (kDebugMode) {
+        debugPrint('[API.ackNews] id=$newsId status=${r.statusCode}');
+      }
+      if (r.statusCode == 404) {
+        // fallback legado
+        final r2 = await _dio.post(
+          '/news/$newsId/acknowledge',
+          options: Options(
+              validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+          cancelToken: cancelToken,
+        );
+        if (kDebugMode) {
+          debugPrint(
+              '[API.ackNews] legacy /news/$newsId/acknowledge status=${r2.statusCode}');
+        }
+      }
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '[API.ackNews] id=$newsId ERROR status=${e.response?.statusCode}');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> reactToNews(
+    String newsId,
+    String reaction, {
+    CancelToken? cancelToken,
+  }) async {
+    final rj = reaction.toLowerCase().trim();
+    try {
+      final r = await _dio.post(
+        '/v2/news/$newsId/react',
+        data: {'reaction': rj},
+        options: Options(
+            validateStatus: (s) =>
+                s != null && (s >= 200 && s < 300 || s == 404)),
+        cancelToken: cancelToken,
+      );
+      if (r.statusCode == 404) {
+        await _dio.post(
+          '/news/$newsId/reactions',
+          data: {'reaction': rj},
+          options: Options(
+              validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+          cancelToken: cancelToken,
+        );
+      }
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<void> unreactToNews(
+    String newsId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final r = await _dio.post(
+        '/v2/news/$newsId/unreact',
+        options: Options(
+            validateStatus: (s) =>
+                s != null && (s >= 200 && s < 300 || s == 404)),
+        cancelToken: cancelToken,
+      );
+      if (r.statusCode == 404) {
+        await _dio.delete(
+          '/news/$newsId/reactions',
+          options: Options(
+              validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+          cancelToken: cancelToken,
+        );
+      }
+    } on DioException {
+      rethrow;
+    }
+  }
+
+  Future<void> commentNews(
+    String newsId,
+    String text, {
+    CancelToken? cancelToken,
+  }) async {
+    await _dio.post(
+      '/v2/news/$newsId/comments',
+      data: {'text': text},
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<void> shareNews(
+    String newsId, {
+    String? target,
+    Map<String, dynamic>? meta,
+    CancelToken? cancelToken,
+  }) async {
+    // no backend, channel undefined => 'external'
+    final body = <String, dynamic>{
+      'channel': target,
+      if (meta != null) ...meta
+    };
+    await _dio.post(
+      '/v2/news/$newsId/share',
+      data: body,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+  }
+
+  // “VER MAIS” LISTAS
+  Future<List<Map<String, dynamic>>> getReactors(
+    String newsId, {
+    int limit = 50,
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/v2/news/$newsId/reactors',
+      queryParameters: {'limit': limit, 'offset': offset},
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
     return List<Map<String, dynamic>>.from(
       (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
     );
   }
 
-  Future<Map<String, dynamic>> getSurveyDetail(String id) async {
-    final resp = await _dio.get('/modules/$companyId/surveys/$id');
+  Future<List<Map<String, dynamic>>> getCommenters(
+    String newsId, {
+    int limit = 50,
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/v2/news/$newsId/commenters',
+      queryParameters: {'limit': limit, 'offset': offset},
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getSharers(
+    String newsId, {
+    int limit = 50,
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/v2/news/$newsId/sharers',
+      queryParameters: {'limit': limit, 'offset': offset},
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  // -------
+  // SURVEYS (restaurados)
+  // -------
+
+  Future<List<Map<String, dynamic>>> getSurveys({
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/modules/$companyId/surveys',
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  Future<Map<String, dynamic>> getSurveyDetail(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/modules/$companyId/surveys/$id',
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
     return Map<String, dynamic>.from(resp.data as Map);
   }
 
@@ -273,30 +544,21 @@ class ApiClient {
     required String surveyId,
     required List<Map<String, dynamic>> answers,
     String? userId,
+    CancelToken? cancelToken,
   }) async {
     final body = <String, dynamic>{
       'surveyId': surveyId,
       'answers': answers,
       if (userId != null && userId.isNotEmpty) 'userId': userId,
     };
-
-    if (kDebugMode) {
-      debugPrint('[POST] /modules/$companyId/surveys/responses  body=$body');
-    }
-
     await _dio.post(
       '/modules/$companyId/surveys/responses',
       data: body,
-      options: Options(contentType: Headers.jsonContentType),
+      options: Options(
+        contentType: Headers.jsonContentType,
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
     );
-  }
-
-  // -------
-  // SEARCH TRACK
-  // -------
-
-  Future<void> trackSearch(String query) async {
-    if (query.trim().length < 2) return;
-    await _dio.post('/v2/track/search', data: {'query': query});
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { NewsEntity } from 'src/news/news.entity';
 import { NewsReactionEntity } from 'src/v2/interactions/entities/news-reaction.entity';
@@ -35,9 +35,8 @@ export class AnalyticsV2Service {
     @InjectRepository(NewsAudienceEntity) private readonly audienceRepo: Repository<NewsAudienceEntity>,
   ) { }
 
-  /**
-   * Auto-detecção da tabela/colunas de eventos (compat variáveis)
-   */
+  // ========= infra =========
+
   private async detectEventMeta(): Promise<{
     table: string;
     typeCol: string;
@@ -69,11 +68,8 @@ export class AnalyticsV2Service {
     return { table, typeCol, newsRef, userIdCol, createdAtCol };
   }
 
-  /**
-   * Gera SQL de filtro por período e params a partir de um índice base
-   */
   private buildBetweenClause(
-    colIdent: string, // e.g. "\"createdAt\"" ou "\"date\""
+    colIdent: string,
     startIndex: number,
     from?: string,
     to?: string,
@@ -98,7 +94,7 @@ export class AnalyticsV2Service {
   }
 
   // =========================
-  //       /news/:id
+  //     /v2/news/:id
   // =========================
   async newsMetrics(companyId: string, newsId: string, from?: string, to?: string) {
     // recebíveis via snapshot
@@ -121,19 +117,14 @@ export class AnalyticsV2Service {
       [newsId, companyId],
     );
     const reactionsByType: Record<ReactionKind, number> = {
-      like: 0,
-      love: 0,
-      clap: 0,
-      smile: 0,
-      neutral: 0,
-      angry: 0,
+      like: 0, love: 0, clap: 0, smile: 0, neutral: 0, angry: 0,
     };
     for (const row of reactionsRows || []) {
       const key = String(row.r) as ReactionKind;
       if (key in reactionsByType) reactionsByType[key] = Number(row.c || 0);
     }
 
-    // comentários (totais/pending/approved/rejected)
+    // comments (totais/pending/approved/rejected)
     const commentsAgg = await this.commentRepo.query(
       `SELECT
          COUNT(*)::int AS total,
@@ -145,21 +136,15 @@ export class AnalyticsV2Service {
       [newsId, companyId],
     );
     const comments = (commentsAgg && commentsAgg[0]) || {
-      total: 0,
-      pending: 0,
-      approved: 0,
-      rejected: 0,
+      total: 0, pending: 0, approved: 0, rejected: 0,
     };
 
-    // opens/unique/acks por eventos (com fallback para daily)
-    let totalOpens = 0;
-    let uniqueOpens = 0;
-    let acks = 0;
-
+    // opens/unique/acks
+    let totalOpens = 0, uniqueOpens = 0, acks = 0;
     const meta = await this.detectEventMeta();
     if (meta) {
       const { table, typeCol, newsRef, userIdCol, createdAtCol } = meta;
-      // total opens
+
       {
         const baseParams = [companyId, newsId];
         const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
@@ -167,11 +152,10 @@ export class AnalyticsV2Service {
           `SELECT COUNT(*)::int AS c
            FROM ${table}
            WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (${typeCol} IN ('OPEN','open'))` + between.sql;
+             AND (UPPER("${typeCol}"::text) = 'OPEN')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
-        totalOpens = rows && rows[0] && rows[0].c ? Number(rows[0].c) : 0;
+        totalOpens = rows?.[0]?.c ?? 0;
       }
-      // unique opens
       {
         const baseParams = [companyId, newsId];
         const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
@@ -179,11 +163,10 @@ export class AnalyticsV2Service {
           `SELECT COUNT(DISTINCT "${userIdCol}")::int AS c
            FROM ${table}
            WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (${typeCol} IN ('OPEN','open'))` + between.sql;
+             AND (UPPER("${typeCol}"::text) = 'OPEN')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
-        uniqueOpens = rows && rows[0] && rows[0].c ? Number(rows[0].c) : 0;
+        uniqueOpens = rows?.[0]?.c ?? 0;
       }
-      // acks (unique por user)
       {
         const baseParams = [companyId, newsId];
         const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
@@ -191,67 +174,50 @@ export class AnalyticsV2Service {
           `SELECT COUNT(DISTINCT "${userIdCol}")::int AS c
            FROM ${table}
            WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (${typeCol} IN ('ACK','ack'))` + between.sql;
+             AND (UPPER("${typeCol}"::text) = 'ACK')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
-        acks = rows && rows[0] && rows[0].c ? Number(rows[0].c) : 0;
+        acks = rows?.[0]?.c ?? 0;
       }
     } else {
-      // fallback por pré-agregações (sem filtro de período)
       const rows = await this.nDailyRepo.find({ where: { newsId } });
-      if (rows && rows.length) {
+      if (rows?.length) {
         totalOpens = rows.reduce((s, r) => s + (r.opens || 0), 0);
         uniqueOpens = rows.reduce((s, r) => s + (r.uniqueOpens || 0), 0);
         acks = rows.reduce((s, r) => s + (r.acks || 0), 0);
       }
     }
 
-    // série diária (news_metrics_daily)
+    // série diária
     const f = toDateISO(from);
     const t = toDateISO(to);
-    {
-      const params: any[] = [newsId];
-      let sql =
-        `SELECT to_char(d."date",'YYYY-MM-DD') AS date,
-                d.opens::int, d."uniqueOpens"::int, d.acks::int,
-                d.reactions::int, d.comments::int, d.shares::int
-         FROM news_metrics_daily d
-         WHERE d."newsId"=$1`;
+    const params: any[] = [newsId];
+    let sql =
+      `SELECT to_char(d."date",'YYYY-MM-DD') AS date,
+              d.opens::int, d."uniqueOpens"::int, d.acks::int,
+              d.reactions::int, d.comments::int, d.shares::int
+       FROM news_metrics_daily d
+       WHERE d."newsId"=$1`;
+    let nextIndex = 2;
+    if (f) { sql += ` AND d."date" >= $${nextIndex}`; params.push(f); nextIndex++; }
+    if (t) { sql += ` AND d."date" < ($${nextIndex}::date + INTERVAL '1 day')`; params.push(t); nextIndex++; }
+    sql += ` ORDER BY d."date" ASC`;
+    const seriesDaily = await this.nDailyRepo.query(sql, params);
 
-      let nextIndex = 2;
-      if (f) {
-        sql += ` AND d."date" >= $${nextIndex}`;
-        params.push(f);
-        nextIndex++;
-      }
-      if (t) {
-        sql += ` AND d."date" < ($${nextIndex}::date + INTERVAL '1 day')`;
-        params.push(t);
-        nextIndex++;
-      }
-      sql += ` ORDER BY d."date" ASC`;
-
-      var seriesDaily = await this.nDailyRepo.query(sql, params);
-    }
-
-    // heatmap por hora/dia (eventos OPEN)
+    // heatmap por hora/dia (OPEN)
     let heatmap: Array<{ hour: number; dow: number; count: number }> = [];
-    {
-      const meta2 = await this.detectEventMeta();
-      if (meta2) {
-        const { table, typeCol, createdAtCol, newsRef } = meta2;
-        const params: any[] = [companyId, newsId];
-        let sql =
-          `SELECT EXTRACT(HOUR FROM "${createdAtCol}")::int AS hour,
-                  EXTRACT(DOW  FROM "${createdAtCol}")::int AS dow,
-                  COUNT(*)::int AS count
-           FROM ${table}
-           WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (${typeCol} IN ('OPEN','open'))`;
-
-        const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
-        sql += between.sql;
-        heatmap = await this.newsRepo.query(sql, params.concat(between.params));
-      }
+    if (meta) {
+      const { table, typeCol, createdAtCol, newsRef } = meta;
+      const p: any[] = [companyId, newsId];
+      let hsql =
+        `SELECT EXTRACT(HOUR FROM "${createdAtCol}")::int AS hour,
+                EXTRACT(DOW  FROM "${createdAtCol}")::int AS dow,
+                COUNT(*)::int AS count
+         FROM ${table}
+         WHERE "companyId"=$1 AND "${newsRef}"=$2
+           AND (UPPER("${typeCol}"::text) = 'OPEN')`;
+      const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+      hsql += between.sql + ` GROUP BY 1,2 ORDER BY 2,1`;
+      heatmap = await this.newsRepo.query(hsql, p.concat(between.params));
     }
 
     // % que abriram em até 24h após push
@@ -264,7 +230,7 @@ export class AnalyticsV2Service {
         [companyId, newsId],
       );
       const meta3 = await this.detectEventMeta();
-      if (pushed && pushed.length && meta3) {
+      if (pushed?.length && meta3) {
         const { table, typeCol, newsRef, userIdCol, createdAtCol } = meta3;
         let matched = 0;
         for (const p of pushed) {
@@ -275,18 +241,20 @@ export class AnalyticsV2Service {
              FROM ${table}
              WHERE "companyId"=$1 AND "${newsRef}"=$2
                AND "${userIdCol}"=$3
-               AND (${typeCol} IN ('OPEN','open'))
+               AND (UPPER("${typeCol}"::text) = 'OPEN')
                AND "${createdAtCol}" >= $4 AND "${createdAtCol}" < $5
              LIMIT 1`,
             [companyId, newsId, p.userId, start.toISOString(), end.toISOString()],
           );
-          if (rows && rows.length) matched++;
+          if (rows?.length) matched++;
         }
         opens24hAposPushPct = pushed.length ? Math.round((matched / pushed.length) * 100) : 0;
       }
     } catch {
-      // silencia caso push_delivery não exista
+      // ignore
     }
+
+    const reactionsTotal = Object.values(reactionsByType).reduce((s, v) => s + (v || 0), 0);
 
     return {
       newsId,
@@ -305,7 +273,174 @@ export class AnalyticsV2Service {
       opens24hAposPushPct,
       seriesDaily,
       heatmap,
+      // extras úteis para o card
+      reactionsTotal,
+      commentsTotal: Number(comments.total || 0),
+      sharesTotal: await this.shareRepo.count({ where: { companyId, newsId } }),
     };
+  }
+
+  // =========================
+  //   NOVO: batch por ids
+  //   /v2/news/metrics?ids=a,b,c
+  // =========================
+  async batchNewsMetrics(
+    companyId: string,
+    ids: string[],
+    from?: string,
+    to?: string,
+  ): Promise<Record<string, any>> {
+    if (!ids.length) return {};
+    // limitar para evitar SQL gigantes
+    const newsIds = ids.slice(0, 200);
+
+    const meta = await this.detectEventMeta();
+
+    // recebível (snapshot)
+    const recebivelRows = await this.audienceRepo.query(
+      `SELECT "newsId", COUNT(*)::int AS c
+         FROM news_audience
+        WHERE "companyId" = $1 AND "newsId" = ANY($2)
+        GROUP BY "newsId"`,
+      [companyId, newsIds],
+    );
+
+    // push enviados
+    let pushRows: any[] = [];
+    try {
+      pushRows = await this.pushRepo.query(
+        `SELECT "newsId", COUNT(*)::int AS c
+           FROM push_delivery
+          WHERE "companyId" = $1 AND "newsId" = ANY($2)
+          GROUP BY "newsId"`,
+        [companyId, newsIds],
+      );
+    } catch { /* ignore */ }
+
+    // reactions por tipo
+    const reactsRows = await this.reactionRepo.query(
+      `SELECT "newsId", reaction, COUNT(*)::int AS c
+         FROM news_reaction
+        WHERE "companyId"=$1 AND "newsId" = ANY($2)
+        GROUP BY "newsId", reaction`,
+      [companyId, newsIds],
+    );
+
+    // comments total
+    const commentsRows = await this.commentRepo.query(
+      `SELECT "newsId", COUNT(*)::int AS c
+         FROM news_comment
+        WHERE "companyId"=$1 AND "newsId" = ANY($2)
+        GROUP BY "newsId"`,
+      [companyId, newsIds],
+    );
+
+    // shares total
+    const sharesRows = await this.shareRepo.query(
+      `SELECT "newsId", COUNT(*)::int AS c
+         FROM news_share
+        WHERE "companyId"=$1 AND "newsId" = ANY($2)
+        GROUP BY "newsId"`,
+      [companyId, newsIds],
+    );
+
+    // opens/unique/acks via eventos (com período)
+    let opensRows: any[] = [];
+    let uniqueRows: any[] = [];
+    let acksRows: any[] = [];
+
+    if (meta) {
+      const { table, typeCol, newsRef, userIdCol, createdAtCol } = meta;
+      const betweenOpen = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+      const betweenAck = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+
+      // total opens
+      {
+        const sql =
+          `SELECT "${newsRef}" AS "newsId", COUNT(*)::int AS c
+             FROM ${table}
+            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
+              AND (UPPER("${typeCol}"::text) = 'OPEN')` + betweenOpen.sql +
+          ` GROUP BY "${newsRef}"`;
+        opensRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenOpen.params));
+      }
+      // unique opens
+      {
+        const sql =
+          `SELECT "${newsRef}" AS "newsId", COUNT(DISTINCT "${userIdCol}")::int AS c
+             FROM ${table}
+            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
+              AND (UPPER("${typeCol}"::text) = 'OPEN')` + betweenOpen.sql +
+          ` GROUP BY "${newsRef}"`;
+        uniqueRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenOpen.params));
+      }
+      // acks (unique)
+      {
+        const sql =
+          `SELECT "${newsRef}" AS "newsId", COUNT(DISTINCT "${userIdCol}")::int AS c
+             FROM ${table}
+            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
+              AND (UPPER("${typeCol}"::text) = 'ACK')` + betweenAck.sql +
+          ` GROUP BY "${newsRef}"`;
+        acksRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenAck.params));
+      }
+    } else {
+      // fallback diário (sem filtro de período)
+      const daily = await this.nDailyRepo.find({ where: { newsId: In(newsIds) } });
+      const byId = new Map<string, { opens: number; unique: number; acks: number }>();
+      for (const r of daily) {
+        const k = (r as any).newsId as string;
+        const prev = byId.get(k) || { opens: 0, unique: 0, acks: 0 };
+        prev.opens += (r as any).opens || 0;
+        prev.unique += (r as any).uniqueOpens || 0;
+        prev.acks += (r as any).acks || 0;
+        byId.set(k, prev);
+      }
+      opensRows = Array.from(byId.entries()).map(([newsId, v]) => ({ newsId, c: v.opens }));
+      uniqueRows = Array.from(byId.entries()).map(([newsId, v]) => ({ newsId, c: v.unique }));
+      acksRows = Array.from(byId.entries()).map(([newsId, v]) => ({ newsId, c: v.acks }));
+    }
+
+    // montar saída
+    const out: Record<string, any> = {};
+    for (const id of newsIds) {
+      out[id] = {
+        newsId: id,
+        recebivel: 0,
+        recebeuPush: 0,
+        totalOpens: 0,
+        uniqueOpens: 0,
+        acks: 0,
+        reactionsByType: { like: 0, love: 0, clap: 0, smile: 0, neutral: 0, angry: 0 } as Record<ReactionKind, number>,
+        reactionsTotal: 0,
+        commentsTotal: 0,
+        sharesTotal: 0,
+      };
+    }
+
+    for (const r of recebivelRows || []) if (out[r.newsId]) out[r.newsId].recebivel = Number(r.c || 0);
+    for (const r of pushRows || []) if (out[r.newsId]) out[r.newsId].recebeuPush = Number(r.c || 0);
+    for (const r of commentsRows || []) if (out[r.newsId]) out[r.newsId].commentsTotal = Number(r.c || 0);
+    for (const r of sharesRows || []) if (out[r.newsId]) out[r.newsId].sharesTotal = Number(r.c || 0);
+    for (const r of opensRows || []) if (out[r.newsId]) out[r.newsId].totalOpens = Number(r.c || 0);
+    for (const r of uniqueRows || []) if (out[r.newsId]) out[r.newsId].uniqueOpens = Number(r.c || 0);
+    for (const r of acksRows || []) if (out[r.newsId]) out[r.newsId].acks = Number(r.c || 0);
+
+    for (const r of reactsRows || []) {
+      const id = r.newsId as string;
+      const key = String(r.reaction) as ReactionKind;
+      const c = Number(r.c || 0);
+      if (out[id]) {
+        if (key in out[id].reactionsByType) {
+          out[id].reactionsByType[key] += c;
+        }
+      }
+    }
+    for (const id of Object.keys(out)) {
+      out[id].reactionsTotal = Object.values(out[id].reactionsByType).reduce((s: number, v: number) => s + (v || 0), 0);
+    }
+
+    return out;
   }
 
   // =========================
@@ -318,51 +453,25 @@ export class AnalyticsV2Service {
     const f = toDateISO(params.from);
     const t = toDateISO(params.to);
 
-    // lista de posts publicados no período
-    {
-      const p: any[] = [companyId];
-      let sql =
-        `SELECT n.id, n.title, n."spaceId", n."channelId"
+    // posts publicados no período
+    const p: any[] = [companyId];
+    let sql =
+      `SELECT n.id, n.title, n."spaceId", n."channelId"
          FROM news_entity n
-         WHERE n."companyId"=$1 AND n.status='published'`;
+        WHERE n."companyId"=$1 AND n.status='published'`;
+    let idx = 2;
+    if (f) { sql += ` AND n."createdAt" >= $${idx}`; p.push(f); idx++; }
+    if (t) { sql += ` AND n."createdAt" < ($${idx}::date + INTERVAL '1 day')`; p.push(t); idx++; }
+    if (params.spaceId) { sql += ` AND n."spaceId" = $${idx}`; p.push(params.spaceId); idx++; }
+    if (params.channelId) { sql += ` AND n."channelId" = $${idx}`; p.push(params.channelId); idx++; }
 
-      let idx = 2;
-      if (f) {
-        sql += ` AND n."createdAt" >= $${idx}`;
-        p.push(f);
-        idx++;
-      }
-      if (t) {
-        sql += ` AND n."createdAt" < ($${idx}::date + INTERVAL '1 day')`;
-        p.push(t);
-        idx++;
-      }
-      if (params.spaceId) {
-        sql += ` AND n."spaceId" = $${idx}`;
-        p.push(params.spaceId);
-        idx++;
-      }
-      if (params.channelId) {
-        sql += ` AND n."channelId" = $${idx}`;
-        p.push(params.channelId);
-        idx++;
-      }
+    const posts = await this.newsRepo.query(sql, p);
+    const postIds: string[] = (posts || []).map((r: any) => r.id);
 
-      var posts = await this.newsRepo.query(sql, p);
-    }
-
-    const postIds: string[] = (posts || []).map((p: any) => p.id);
-    let opens = 0,
-      uniqueOpens = 0,
-      acks = 0,
-      reactions = 0,
-      comments = 0,
-      shares = 0;
-
+    let opens = 0, uniqueOpens = 0, acks = 0, reactions = 0, comments = 0, shares = 0;
     if (postIds.length) {
-      // somatório via news_metrics_daily (com período)
       const baseParams: any[] = [];
-      let sql =
+      let agg =
         `SELECT
            COALESCE(SUM(opens),0)::int AS opens,
            COALESCE(SUM("uniqueOpens"),0)::int AS "uniqueOpens",
@@ -372,27 +481,14 @@ export class AnalyticsV2Service {
            COALESCE(SUM(shares),0)::int AS shares
          FROM news_metrics_daily
          WHERE "newsId" IN (`;
-
-      // placeholders dinâmicos para IN (...)
       const placeholders = postIds.map((_, i) => `$${i + 1}`).join(',');
-      sql += placeholders + ')';
-
+      agg += placeholders + ')';
       baseParams.push(...postIds);
       let nextIdx = postIds.length + 1;
-
-      if (f) {
-        sql += ` AND "date" >= $${nextIdx}`;
-        baseParams.push(f);
-        nextIdx++;
-      }
-      if (t) {
-        sql += ` AND "date" < ($${nextIdx}::date + INTERVAL '1 day')`;
-        baseParams.push(t);
-        nextIdx++;
-      }
-
-      const rows = await this.nDailyRepo.query(sql, baseParams);
-      if (rows && rows[0]) {
+      if (f) { agg += ` AND "date" >= $${nextIdx}`; baseParams.push(f); nextIdx++; }
+      if (t) { agg += ` AND "date" < ($${nextIdx}::date + INTERVAL '1 day')`; baseParams.push(t); nextIdx++; }
+      const rows = await this.nDailyRepo.query(agg, baseParams);
+      if (rows?.[0]) {
         opens = Number(rows[0].opens || 0);
         uniqueOpens = Number(rows[0].uniqueOpens || 0);
         acks = Number(rows[0].acks || 0);
@@ -402,55 +498,38 @@ export class AnalyticsV2Service {
       }
     }
 
-    // heatmap do período para todos os posts (eventos OPEN)
+    // heatmap do período (OPEN)
     let heatmap: Array<{ hour: number; dow: number; count: number }> = [];
     if (postIds.length) {
       const meta = await this.detectEventMeta();
       if (meta) {
         const { table, typeCol, createdAtCol, newsRef } = meta;
-        const p: any[] = [companyId];
-        let sql =
+        const p2: any[] = [companyId];
+        let hsql =
           `SELECT EXTRACT(HOUR FROM "${createdAtCol}")::int AS hour,
                   EXTRACT(DOW  FROM "${createdAtCol}")::int AS dow,
                   COUNT(*)::int AS count
-           FROM ${table}
-           WHERE "companyId"=$1
-             AND "${newsRef}" IN (`;
-
-        // placeholders dos newsIds
+             FROM ${table}
+            WHERE "companyId"=$1
+              AND "${newsRef}" IN (`;
         const inPlaceholders = postIds.map((_, i) => `$${i + 2}`).join(',');
-        sql += inPlaceholders + ')';
-        p.push(...postIds);
-
+        hsql += inPlaceholders + ')';
+        p2.push(...postIds);
         let nextIdx = postIds.length + 2;
-        if (f) {
-          sql += ` AND "${createdAtCol}" >= $${nextIdx}`;
-          p.push(f);
-          nextIdx++;
-        }
-        if (t) {
-          sql += ` AND "${createdAtCol}" < ($${nextIdx}::date + INTERVAL '1 day')`;
-          p.push(t);
-          nextIdx++;
-        }
-        sql += ` AND (${typeCol} IN ('OPEN','open')) GROUP BY 1,2 ORDER BY 2,1`;
-
-        heatmap = await this.newsRepo.query(sql, p);
+        if (f) { hsql += ` AND "${createdAtCol}" >= $${nextIdx}`; p2.push(f); nextIdx++; }
+        if (t) { hsql += ` AND "${createdAtCol}" < ($${nextIdx}::date + INTERVAL '1 day')`; p2.push(t); nextIdx++; }
+        hsql += ` AND (UPPER("${typeCol}"::text) = 'OPEN') GROUP BY 1,2 ORDER BY 2,1`;
+        heatmap = await this.newsRepo.query(hsql, p2);
       }
     }
 
     return {
       period: { from: f ?? null, to: t ?? null },
       posts: postIds.length,
-      opens,
-      uniqueOpens,
-      acks,
-      reactions,
-      comments,
-      shares,
+      opens, uniqueOpens, acks, reactions, comments, shares,
       postsComInteracaoPct: postIds.length ? Math.round((Math.min(uniqueOpens, postIds.length) / postIds.length) * 100) : 0,
       heatmap,
-      topPosts: [], // (pode ser preenchido numa próxima iteração)
+      topPosts: [],
       bySpace: [],
       byChannel: [],
       byGroup: [],
@@ -471,37 +550,24 @@ export class AnalyticsV2Service {
       `SELECT COUNT(*)::int AS c FROM users WHERE "companyId"=$1`,
       [companyId],
     );
-    const totalColaboradores = totalUsersRow && totalUsersRow[0] && totalUsersRow[0].c ? Number(totalUsersRow[0].c) : 0;
+    const totalColaboradores = totalUsersRow?.[0]?.c ? Number(totalUsersRow[0].c) : 0;
 
-    const registradosApp = totalColaboradores; // placeholder (ajustar se houver critério de “registrado”)
+    const registradosApp = totalColaboradores; // placeholder
 
-    // ativos/engajados via user_metrics_daily
-    {
-      const p: any[] = [];
-      let sql =
-        `SELECT
-           COUNT(DISTINCT "userId")::int AS ativos,
-           COUNT(DISTINCT CASE WHEN (appOpens + newsOpens + reactions + comments + shares + surveyResponses) > 0 THEN "userId" END)::int AS engajados
-         FROM user_metrics_daily
-         WHERE 1=1`;
+    const p: any[] = [];
+    let sql =
+      `SELECT
+         COUNT(DISTINCT "userId")::int AS ativos,
+         COUNT(DISTINCT CASE WHEN (appOpens + newsOpens + reactions + comments + shares + surveyResponses) > 0 THEN "userId" END)::int AS engajados
+       FROM user_metrics_daily
+       WHERE 1=1`;
+    let idx = 1;
+    if (f) { sql += ` AND "date" >= $${idx}`; p.push(f); idx++; }
+    if (t) { sql += ` AND "date" < ($${idx}::date + INTERVAL '1 day')`; p.push(t); idx++; }
+    const rows = await this.uDailyRepo.query(sql, p);
 
-      let idx = 1;
-      if (f) {
-        sql += ` AND "date" >= $${idx}`;
-        p.push(f);
-        idx++;
-      }
-      if (t) {
-        sql += ` AND "date" < ($${idx}::date + INTERVAL '1 day')`;
-        p.push(t);
-        idx++;
-      }
-
-      var rows = await this.uDailyRepo.query(sql, p);
-    }
-
-    const ativosPeriodo = rows && rows[0] && rows[0].ativos ? Number(rows[0].ativos) : 0;
-    const engajadosPeriodo = rows && rows[0] && rows[0].engajados ? Number(rows[0].engajados) : 0;
+    const ativosPeriodo = rows?.[0]?.ativos ? Number(rows[0].ativos) : 0;
+    const engajadosPeriodo = rows?.[0]?.engajados ? Number(rows[0].engajados) : 0;
 
     const funnelPct = {
       registrados: totalColaboradores ? Math.round((registradosApp / totalColaboradores) * 100) : 0,
@@ -534,7 +600,6 @@ export class AnalyticsV2Service {
     const f = toDateISO(params.from);
     const t = toDateISO(params.to);
 
-    // totais
     const p1: any[] = [companyId];
     let sql1 =
       `SELECT
@@ -543,19 +608,10 @@ export class AnalyticsV2Service {
        FROM search_metrics_daily
        WHERE "companyId"=$1`;
     let idx1 = 2;
-    if (f) {
-      sql1 += ` AND "date" >= $${idx1}`;
-      p1.push(f);
-      idx1++;
-    }
-    if (t) {
-      sql1 += ` AND "date" < ($${idx1}::date + INTERVAL '1 day')`;
-      p1.push(t);
-      idx1++;
-    }
+    if (f) { sql1 += ` AND "date" >= $${idx1}`; p1.push(f); idx1++; }
+    if (t) { sql1 += ` AND "date" < ($${idx1}::date + INTERVAL '1 day')`; p1.push(t); idx1++; }
     const rows1 = await this.sDailyRepo.query(sql1, p1);
 
-    // top queries
     const p2: any[] = [companyId];
     let sql2 =
       `SELECT "queryHash" AS hash,
@@ -565,23 +621,15 @@ export class AnalyticsV2Service {
        FROM search_metrics_daily
        WHERE "companyId"=$1`;
     let idx2 = 2;
-    if (f) {
-      sql2 += ` AND "date" >= $${idx2}`;
-      p2.push(f);
-      idx2++;
-    }
-    if (t) {
-      sql2 += ` AND "date" < ($${idx2}::date + INTERVAL '1 day')`;
-      p2.push(t);
-      idx2++;
-    }
+    if (f) { sql2 += ` AND "date" >= $${idx2}`; p2.push(f); idx2++; }
+    if (t) { sql2 += ` AND "date" < ($${idx2}::date + INTERVAL '1 day')`; p2.push(t); idx2++; }
     sql2 += ` GROUP BY "queryHash" ORDER BY count DESC LIMIT 20`;
     const rows2 = await this.sDailyRepo.query(sql2, p2);
 
     return {
       period: { from: f ?? null, to: t ?? null },
-      totalQueries: rows1 && rows1[0] && rows1[0].totalQueries ? Number(rows1[0].totalQueries) : 0,
-      uniqueUsers: rows1 && rows1[0] && rows1[0].uniqueUsers ? Number(rows1[0].uniqueUsers) : 0,
+      totalQueries: rows1?.[0]?.totalQueries ? Number(rows1[0].totalQueries) : 0,
+      uniqueUsers: rows1?.[0]?.uniqueUsers ? Number(rows1[0].uniqueUsers) : 0,
       topQueries: rows2 || [],
     };
   }

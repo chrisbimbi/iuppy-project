@@ -50,7 +50,7 @@ class Surveys extends Table {
 class SurveyQuestions extends Table {
   TextColumn get id => text()();
   TextColumn get surveyId => text()();
-  TextColumn get label => text()(); // <— era `text`
+  TextColumn get label => text()(); // era `text`
   TextColumn get type =>
       text()(); // single_choice, multiple_choice, text, scale...
   @override
@@ -168,7 +168,7 @@ class AppDatabase extends _$AppDatabase {
               'name': r.name,
               'description': r.description,
               'priority': r.priority,
-              'active': r.active
+              'active': r.active,
             })
         .toList();
   }
@@ -184,7 +184,7 @@ class AppDatabase extends _$AppDatabase {
               'id': r.id,
               'name': r.name,
               'description': r.description,
-              'spaceId': r.spaceId
+              'spaceId': r.spaceId,
             })
         .toList();
   }
@@ -201,7 +201,8 @@ class AppDatabase extends _$AppDatabase {
               'id': r.id,
               'title': r.title,
               'channelId': r.channelId,
-              'createdAt': r.createdAt?.toIso8601String()
+              'createdAt': r.createdAt?.toIso8601String(),
+              'isPublished': r.isPublished, // 👈 essencial pro fallback
             })
         .toList();
   }
@@ -217,7 +218,7 @@ class AppDatabase extends _$AppDatabase {
         .map((r) => {
               'id': r.id,
               'title': r.title,
-              'createdAt': r.createdAt?.toIso8601String()
+              'createdAt': r.createdAt?.toIso8601String(),
             })
         .toList();
   }

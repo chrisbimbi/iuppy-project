@@ -1,12 +1,19 @@
-// lib/features/news/news_channel_list_page.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/providers.dart';
+import 'widgets/avatar_stack.dart';
 
 class NewsChannelListPage extends ConsumerWidget {
   final String channelId;
   const NewsChannelListPage({required this.channelId, super.key});
+
+  int _num(dynamic v) {
+    if (v is num) return v.toInt();
+    if (v == null) return 0;
+    return int.tryParse(v.toString()) ?? 0;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,49 +64,120 @@ class NewsChannelListPage extends ConsumerWidget {
               final thumb = _firstHttpUrl(n['highlightImages'] as List?);
               final channel = (n['channelName'] ?? '').toString();
 
+              // métricas/estado
+              final metrics = (n['metrics'] as Map?) ?? const {};
+              final reacts =
+                  _num(metrics['reactionsTotal'] ?? n['reactionsTotal']);
+              final shares = _num(metrics['sharesTotal'] ?? n['sharesTotal']);
+
+              // comentários (respeita moderação)
+              final commentsRequireModeration =
+                  (settings['allowComments'] ?? false) == true &&
+                      (settings['commentsRequireModeration'] ?? false) == true;
+
+              final approvedFromBackend = _num(
+                metrics['commentsApprovedTotal'] ??
+                    metrics['commentsApproved'] ??
+                    metrics['approvedComments'] ??
+                    metrics['comments_approved'] ??
+                    metrics['approved'],
+              );
+
+              final commentsBackend =
+                  _num(metrics['commentsTotal'] ?? n['commentsTotal']);
+              final comments = commentsRequireModeration
+                  ? approvedFromBackend // ← apenas aprovados contam
+                  : commentsBackend;
+
+              // amostra de quem reagiu
+              final reactorsSample =
+                  ((n['reactorsSample'] as List?) ?? const [])
+                      .whereType<Map>()
+                      .map((m) => (
+                            name: (m['name'] ?? '').toString(),
+                            avatar: (m['avatarUrl'] ?? '').toString(),
+                          ))
+                      .toList();
+
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () => context.push('/news/article/${n['id']}'),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (thumb != null)
-                        SizedBox(
-                          width: 96,
-                          height: 96,
-                          child: Image.network(thumb, fit: BoxFit.cover),
-                        ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                title.isEmpty ? 'Notícia' : title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(when, style: theme.textTheme.labelSmall),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
+                      Row(
+                        children: [
+                          if (thumb != null)
+                            SizedBox(
+                              width: 96,
+                              height: 96,
+                              child: Image.network(thumb, fit: BoxFit.cover),
+                            ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (channel.isNotEmpty)
-                                    _chip(context, channel),
-                                  if (hasAck) _chip(context, 'Para aceite'),
-                                  if (attachments.isNotEmpty)
-                                    _chip(context, 'Anexos'),
+                                  Text(
+                                    title.isEmpty ? 'Notícia' : title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(when, style: theme.textTheme.labelSmall),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      if (channel.isNotEmpty)
+                                        _chip(context, channel),
+                                      if (hasAck) _chip(context, 'Para aceite'),
+                                      if (attachments.isNotEmpty)
+                                        _chip(context, 'Anexos'),
+                                    ],
+                                  ),
                                 ],
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // rodapé de interações
+                      if (reacts > 0 || comments > 0 || shares > 0) ...[
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.favorite_border_rounded,
+                                  size: 16),
+                              const SizedBox(width: 6),
+                              Text('$reacts'),
+                              const SizedBox(width: 14),
+                              const Icon(Icons.mode_comment_outlined, size: 16),
+                              const SizedBox(width: 6),
+                              Text('$comments'),
+                              const Spacer(),
+                              AvatarStack(items: reactorsSample, size: 22),
                             ],
                           ),
                         ),
-                      ),
+                        if (shares > 0)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                            child: Text(
+                              '$shares compartilhamentos',
+                              style: theme.textTheme.labelSmall,
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
@@ -128,10 +206,7 @@ class NewsChannelListPage extends ConsumerWidget {
         color: color,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall,
-      ),
+      child: Text(text, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 

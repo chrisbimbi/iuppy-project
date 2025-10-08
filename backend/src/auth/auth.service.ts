@@ -6,7 +6,10 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly users: UsersService, private readonly jwt: JwtService) {}
+  constructor(
+    private readonly users: UsersService,
+    private readonly jwt: JwtService,
+  ) {}
 
   private accessSecret = process.env.JWT_ACCESS_SECRET!;
   private refreshSecret = process.env.JWT_REFRESH_SECRET!;
@@ -24,11 +27,27 @@ export class AuthService {
   async login(email: string, password: string, res: Response) {
     const user = await this.validateUser(email, password);
 
-    const payload = { sub: user.id, email: user.email, role: user.role, companyId: user.companyId };
-    const accessToken = await this.jwt.signAsync(payload, { secret: this.accessSecret, expiresIn: this.accessTtl });
-    const refreshToken = await this.jwt.signAsync(payload, { secret: this.refreshSecret, expiresIn: this.refreshTtl });
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId,
+    };
 
-    await this.users.updateRefreshTokenHash(user.id, await argon2.hash(refreshToken));
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: this.accessSecret,
+      expiresIn: this.accessTtl,
+    });
+
+    const refreshToken = await this.jwt.signAsync(payload, {
+      secret: this.refreshSecret,
+      expiresIn: this.refreshTtl,
+    });
+
+    await this.users.updateRefreshTokenHash(
+      user.id,
+      await argon2.hash(refreshToken),
+    );
 
     res.cookie('rt', refreshToken, {
       httpOnly: true,
@@ -42,18 +61,41 @@ export class AuthService {
   }
 
   async refresh(req: Request, res: Response) {
-    const user = (req as any).user as { sub: string; email: string; role?: string; companyId: string; rt: string };
+    const user = (req as any).user as {
+      sub: string;
+      email: string;
+      role?: string;
+      companyId: string;
+      rt: string;
+    };
+
     const dbUser = await this.users.findByIdWithRefresh(user.sub);
     if (!dbUser?.refreshTokenHash) throw new UnauthorizedException();
 
     const match = await argon2.verify(dbUser.refreshTokenHash, user.rt);
     if (!match) throw new UnauthorizedException();
 
-    const payload = { sub: dbUser.id, email: dbUser.email, role: dbUser.role, companyId: dbUser.companyId };
-    const accessToken = await this.jwt.signAsync(payload, { secret: this.accessSecret, expiresIn: this.accessTtl });
-    const refreshToken = await this.jwt.signAsync(payload, { secret: this.refreshSecret, expiresIn: this.refreshTtl });
+    const payload = {
+      sub: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      companyId: dbUser.companyId,
+    };
 
-    await this.users.updateRefreshTokenHash(dbUser.id, await argon2.hash(refreshToken));
+    const accessToken = await this.jwt.signAsync(payload, {
+      secret: this.accessSecret,
+      expiresIn: this.accessTtl,
+    });
+
+    const refreshToken = await this.jwt.signAsync(payload, {
+      secret: this.refreshSecret,
+      expiresIn: this.refreshTtl,
+    });
+
+    await this.users.updateRefreshTokenHash(
+      dbUser.id,
+      await argon2.hash(refreshToken),
+    );
 
     res.cookie('rt', refreshToken, {
       httpOnly: true,
@@ -66,12 +108,22 @@ export class AuthService {
     return { accessToken };
   }
 
+  // 🔥 AQUI ESTÁ A MUDANÇA
   async me(user: any) {
+    const u = await this.users.findById(user.sub);
+    if (!u) throw new UnauthorizedException();
+
+    // Garanta que esses campos existem no seu modelo/tabela
     return {
-      id: user.sub,
-      email: user.email,
-      role: user.role,
-      companyId: user.companyId,
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      companyId: u.companyId,
+      name: u.name ?? null,
+      displayName: u.displayName ?? null,
+      avatarUrl: u.avatarUrl ?? null,
+      groups: Array.isArray(u.groups) ? u.groups : [],
+      visibleGroups: Array.isArray(u.visibleGroups) ? u.visibleGroups : [],
     };
   }
 

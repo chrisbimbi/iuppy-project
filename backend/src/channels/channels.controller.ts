@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -15,34 +15,34 @@ export class ChannelsController {
 
   @Get()
   getAll(
-    @Query('companyId') companyId: string,
+    @Query('companyId', new ParseUUIDPipe()) companyId: string,
     @Query('spaceId') spaceId?: string,
   ): Promise<Channel[]> {
     return this.channelsService.findByCompanyAndSpace(companyId, spaceId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.channelsService.findOne(id);
   }
 
   @Put(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateChannelDto: UpdateChannelDto,
   ) {
     return this.channelsService.update(id, updateChannelDto);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.channelsService.remove(id);
   }
 
   /** Novo endpoint para reordenar canais globalmente */
   @Post('order')
   async reorder(
-    @Body('companyId') companyId: string,
+    @Body('companyId', new ParseUUIDPipe()) companyId: string,
     @Body('channelIds') channelIds: string[],
   ) {
     await this.channelsService.reorderChannels(companyId, channelIds);

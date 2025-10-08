@@ -1,3 +1,4 @@
+// backend/src/users/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -43,6 +44,17 @@ export class UserEntity implements User {
   @Column('text', { array: true, nullable: true })
   visibleGroups?: string[];
 
+  // Campos opcionais adicionais
+  @Column({ type: 'text', nullable: true })
+  phone?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  avatarUrl?: string | null; // ← novo campo (opcional)
+
+  @Column({ type: 'text', nullable: true })
+  locale?: string | null;
+
+  // Refresh token hash (controle do Auth)
   @Column({ name: 'refreshTokenHash', type: 'text', nullable: true, select: false })
   refreshTokenHash?: string | null;
 

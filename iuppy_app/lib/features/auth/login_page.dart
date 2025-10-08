@@ -7,8 +7,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key, this.from});
+  const LoginPage({super.key, this.from, this.companySettings});
   final String? from; // <- receber /surveys/ID etc. vindo do router
+  final CompanySettingsState? companySettings; // <- recebido via extra
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -68,10 +69,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Se não veio via extra, tenta puxar do provider (fallback)
+    final effectiveSettings = widget.companySettings ??
+        ref.watch(companySettingsProvider).maybeWhen(
+              data: (s) => s,
+              orElse: () => null,
+            );
+
+    final brandColor = Color(
+      (effectiveSettings?.branding.primary ?? 0xFF22B4FF),
+    );
+
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: brandColor,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -83,6 +98,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (effectiveSettings != null) ...[
+                      Text(
+                        effectiveSettings.branding.appSubtitle,
+                        style: theme.textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     TextFormField(
                       controller: _email,
                       enabled: !_loading,

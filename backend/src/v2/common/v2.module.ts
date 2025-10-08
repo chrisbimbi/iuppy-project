@@ -1,48 +1,50 @@
-import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 // ENTITIES base
-import { NewsEntity } from 'src/news/news.entity'
-import { Channel } from 'src/channels/channel.entity'
-import { SpaceEntity } from 'src/spaces/space.entity'
-import { UserEntity } from 'src/users/user.entity'
+import { NewsEntity } from 'src/news/news.entity';
+import { Channel } from 'src/channels/channel.entity';
+import { SpaceEntity } from 'src/spaces/space.entity';
+import { UserEntity } from 'src/users/user.entity';
 
 // ENTITIES v2 (interactions/metrics/push/audience)
-import { InteractionEventEntity } from '../interactions/entities/interaction-event.entity'
-import { NewsReactionEntity } from '../interactions/entities/news-reaction.entity'
-import { NewsCommentEntity } from '../interactions/entities/news-comment.entity'
-import { NewsShareEntity } from '../interactions/entities/news-share.entity'
-import { NewsAudienceEntity } from '../interactions/entities/news-audience.entity'
-import { NewsMetricsDailyEntity } from '../interactions/entities/news-metrics-daily.entity'
-import { UserMetricsDailyEntity } from '../interactions/entities/user-metrics-daily.entity'
-import { SearchMetricsDailyEntity } from '../interactions/entities/search-metrics-daily.entity'
-import { PushDeliveryEntity } from '../interactions/entities/push-delivery.entity'
+import { InteractionEventEntity } from '../interactions/entities/interaction-event.entity';
+import { NewsReactionEntity } from '../interactions/entities/news-reaction.entity';
+import { NewsCommentEntity } from '../interactions/entities/news-comment.entity';
+import { NewsShareEntity } from '../interactions/entities/news-share.entity';
+import { NewsAudienceEntity } from '../interactions/entities/news-audience.entity';
+import { NewsMetricsDailyEntity } from '../interactions/entities/news-metrics-daily.entity';
+import { UserMetricsDailyEntity } from '../interactions/entities/user-metrics-daily.entity';
+import { SearchMetricsDailyEntity } from '../interactions/entities/search-metrics-daily.entity';
+import { PushDeliveryEntity } from '../interactions/entities/push-delivery.entity';
 
 // CONTROLLERS
-import { NewsV2Controller } from '../news/news.controller'
-import { AnalyticsV2Controller } from '../analytics/analytics.controller'
-import { MeController } from '../me/me.controller'
-import { SpacesV2Controller } from '../spaces/spaces.controller'
-import { ChannelsV2Controller } from '../channels/channels.controller'
-import { SearchV2Controller } from '../search/search.controller'
-import { PushV2Controller } from '../push/push.controller'
+import { NewsV2Controller } from '../news/news.controller';
+import { AnalyticsV2Controller } from '../analytics/analytics.controller';
+import { MeController } from '../me/me.controller';
+import { SpacesV2Controller } from '../spaces/spaces.controller';
+import { ChannelsV2Controller } from '../channels/channels.controller';
+import { SearchV2Controller } from '../search/search.controller';
+import { PushV2Controller } from '../push/push.controller';
+import { InteractionsControllerV2 } from '../interactions/interactions.controller';
 
 // SERVICES
-import { NewsV2Service } from '../news/news.service'
-import { InteractionsService } from '../interactions/interactions.service'
-import { AnalyticsV2Service } from '../analytics/analytics.service'
-import { MeService } from '../me/me.service'
-import { SpacesV2Service } from '../spaces/spaces.service'
-import { ChannelsV2Service } from '../channels/channels.service'
-import { SearchV2Service } from '../search/search.service'
-import { PushV2Service } from '../push/push.service'
-import { FeedV2Service } from '../feed/feed.service'
-import { AudienceService } from '../audience/audience.service'
+import { NewsV2Service } from '../news/news.service';
+import { InteractionsService } from '../interactions/interactions.service';
+import { AnalyticsV2Service } from '../analytics/analytics.service';
+import { MeService } from '../me/me.service';
+import { SpacesV2Service } from '../spaces/spaces.service';
+import { ChannelsV2Service } from '../channels/channels.service';
+import { SearchV2Service } from '../search/search.service';
+import { PushV2Service } from '../push/push.service';
+import { FeedV2Service } from '../feed/feed.service';
+import { AudienceService } from '../audience/audience.service';
 
 // NEW/ATUALIZADOS
-import { SchemaIntrospectorV2 } from './schema-introspector.v2'
-import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter'
-import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service' // stub simples
+import { SchemaIntrospectorV2 } from './schema-introspector.v2';
+// >>>> IMPORTE DO MESMO LUGAR QUE O CONTROLLER <<<<
+import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service'; // stub simples
+import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter';
 
 @Module({
   imports: [
@@ -63,6 +65,7 @@ import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service' // stub
     ChannelsV2Controller,
     SearchV2Controller,
     PushV2Controller,
+    InteractionsControllerV2,
   ],
   providers: [
     // core services
@@ -79,8 +82,8 @@ import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service' // stub
 
     // add-ons p/ compatibilidade
     SchemaIntrospectorV2,
-    CommentCounterAdapterV2,
-    MetricsDailyServiceV2, // no-op para satisfazer injeções (se existirem)
+    CommentCounterAdapterV2,   // <<— AQUI
+    MetricsDailyServiceV2,
   ],
   exports: [
     TypeOrmModule,
@@ -88,7 +91,7 @@ import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service' // stub
     InteractionsService,
     AudienceService,
     SchemaIntrospectorV2,
-    CommentCounterAdapterV2,
+    CommentCounterAdapterV2,   // <<— exporte se outros módulos precisarem
     MetricsDailyServiceV2,
   ],
 })

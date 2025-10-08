@@ -1,15 +1,31 @@
-// lib/main.dart (FINAL)
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:iuppy_app/push_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:cookie_jar/cookie_jar.dart';
 
+import 'push_service.dart';
 import 'app/router.dart';
 import 'core/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔐 CookieJar persistente no diretório do app (evita “Read-only file system”)
+  final dir = await getApplicationSupportDirectory();
+  final jarPath = p.join(dir.path, 'cookies'); // p.ex. /data/.../cookies
+  final jar = PersistCookieJar(storage: FileStorage(jarPath));
+
   await PushService.instance.init();
-  runApp(const ProviderScope(child: IuppyApp()));
+
+  runApp(
+    ProviderScope(
+      // 👉 injeta a MESMA instância para todo o app (auth/login, refresh e dio principal)
+      overrides: [cookieJarProvider.overrideWithValue(jar)],
+      child: const IuppyApp(),
+    ),
+  );
 }
 
 class IuppyApp extends ConsumerStatefulWidget {
@@ -23,7 +39,7 @@ class _IuppyAppState extends ConsumerState<IuppyApp> {
   void initState() {
     super.initState();
 
-    // Navegação de deep links vinda de push
+    // Deep links via push
     PushService.instance.setDeepLinkHandler((link) {
       if (link == null || link.isEmpty) return;
       final uri = Uri.parse(link);
@@ -32,20 +48,15 @@ class _IuppyAppState extends ConsumerState<IuppyApp> {
       if (uri.pathSegments.isNotEmpty) segments.addAll(uri.pathSegments);
       final path = '/${segments.join('/')}';
       final query = uri.hasQuery ? '?${uri.query}' : '';
-
       ref.read(appRouterProvider).go(path + query);
     });
 
-    // Se o app abriu pela notificação (app finalizado)
     PushService.instance.consumeInitialMessageIfAny();
-
-    // 👉 imprime token mesmo sem login (pra debug)
     PushService.instance.printDebugToken();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Aqui PODE usar ref.listen
     ref.listen<AsyncValue<UserProfile?>>(
       userProfileProvider,
       (prev, next) async {

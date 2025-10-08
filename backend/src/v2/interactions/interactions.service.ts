@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NewsEntity } from 'src/news/news.entity';
@@ -6,7 +6,17 @@ import { InteractionEventEntity } from './entities/interaction-event.entity';
 import { NewsReactionEntity } from './entities/news-reaction.entity';
 import { NewsCommentEntity } from './entities/news-comment.entity';
 import { NewsShareEntity } from './entities/news-share.entity';
-import type { ReactionKind } from '@shared/types/v2/interactions';
+
+const REACTIONS = ['like', 'love', 'clap', 'smile', 'neutral', 'angry'] as const;
+type ReactionType = (typeof REACTIONS)[number];
+
+function normalizeReaction(v: unknown): ReactionType {
+  const r = String(v ?? '').trim().toLowerCase();
+  if (!REACTIONS.includes(r as ReactionType)) {
+    throw new BadRequestException(`invalid reaction. allowed: ${REACTIONS.join(', ')}`);
+  }
+  return r as ReactionType;
+}
 
 @Injectable()
 export class InteractionsService {
@@ -16,7 +26,7 @@ export class InteractionsService {
     @InjectRepository(NewsReactionEntity) private reactions: Repository<NewsReactionEntity>,
     @InjectRepository(NewsCommentEntity) private comments: Repository<NewsCommentEntity>,
     @InjectRepository(NewsShareEntity) private shares: Repository<NewsShareEntity>,
-  ) {}
+  ) { }
 
   async assertNews(companyId: string, newsId: string) {
     const n = await this.news.findOne({ where: { id: newsId } });
@@ -24,33 +34,79 @@ export class InteractionsService {
     return n;
   }
 
-  async markOpen(companyId: string, newsId: string, userId?: string) {
+  /** Upsert idempotente de evento (OPEN/ACK) com ON CONFLICT */
+  private async upsertEvent(
+    companyId: string,
+    newsId: string,
+    userId: string | null | undefined,
+    type: 'OPEN' | 'ACK',
+  ) {
     await this.assertNews(companyId, newsId);
-    const ev = this.events.create({ companyId, newsId, userId: userId || null, type: 'OPEN' });
-    return this.events.save(ev);
+
+    // garanta que bate com o nome real da tabela
+    const table = this.events.metadata.tableName || 'news_interaction_event';
+
+    // usa as COLUNAS no ON CONFLICT (não o nome da constraint)
+    const params = [companyId, newsId, userId ?? null, type];
+    const inserted = await this.events.query(
+      `INSERT INTO ${table} ("companyId","newsId","userId","type")
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT ("companyId","newsId","userId","type") DO NOTHING
+     RETURNING id, "createdAt"`,
+      params,
+    );
+
+    if (inserted?.[0]) return inserted[0];
+
+    const existing = await this.events.query(
+      `SELECT id, "createdAt"
+       FROM ${table}
+      WHERE "companyId"=$1 AND "newsId"=$2 AND "userId"=$3 AND "type"=$4
+      ORDER BY "createdAt" DESC
+      LIMIT 1`,
+      params,
+    );
+
+    return existing?.[0] ?? { ok: true };
+  }
+
+  async markOpen(companyId: string, newsId: string, userId?: string) {
+    return this.upsertEvent(companyId, newsId, userId, 'OPEN');
   }
 
   async acknowledge(companyId: string, newsId: string, userId?: string) {
-    await this.assertNews(companyId, newsId);
-    const ev = this.events.create({ companyId, newsId, userId: userId || null, type: 'ACK' });
-    return this.events.save(ev);
+    return this.upsertEvent(companyId, newsId, userId, 'ACK');
   }
 
-  async react(companyId: string, newsId: string, userId: string | undefined, reaction: ReactionKind) {
+  /** Upsert de reação: define/atualiza o tipo para o usuário. */
+  async react(companyId: string, newsId: string, userId: string | undefined, reactionIn: unknown) {
     await this.assertNews(companyId, newsId);
+    const reaction = normalizeReaction(reactionIn);
+
     const existing = await this.reactions.findOne({ where: { companyId, newsId, userId: userId || null } });
     if (existing) {
-      existing.reaction = reaction as any;
+      (existing as any).reaction = reaction;
       return this.reactions.save(existing);
     }
     const row = this.reactions.create({ companyId, newsId, userId: userId || null, reaction: reaction as any });
     return this.reactions.save(row);
   }
 
-  async comment(companyId: string, newsId: string, userId: string | undefined, text: string, moderate: boolean) {
+  /** Remove a reação do usuário (idempotente) */
+  async unreact(companyId: string, newsId: string, userId?: string) {
     await this.assertNews(companyId, newsId);
+    await this.reactions.delete({ companyId, newsId, userId: userId || null as any });
+    return { ok: true };
+  }
+
+  async comment(companyId: string, newsId: string, userId: string | undefined, textIn: unknown, moderate: boolean) {
+    await this.assertNews(companyId, newsId);
+    const text = String(textIn ?? '').trim();
+    if (!text) throw new BadRequestException('text is required');
+
     const row = this.comments.create({
-      companyId, newsId, userId: userId || null, text, approved: !moderate,
+      companyId, newsId, userId: userId || null, text,
+      approved: !moderate,
       approvedAt: !moderate ? new Date() : null,
     });
     return this.comments.save(row);
@@ -105,7 +161,7 @@ export class InteractionsService {
 
   async myReaction(companyId: string, newsId: string, userId: string) {
     const r = await this.reactions.findOne({ where: { companyId, newsId, userId } });
-    return (r as any)?.reaction as ReactionKind | undefined;
+    return (r as any)?.reaction as ReactionType | undefined;
   }
 
   async myCommentsCount(companyId: string, newsId: string, userId: string) {
