@@ -14,7 +14,6 @@ export const ContentService = {
   },
 
   update(id: string, dto: UpdatePayload & { authorId?: string; companyId?: string }): Promise<News> {
-    // mesmo que venha authorId/companyId do form, não mandamos
     const { settings, authorId: _a, companyId: _c, ...rest } = dto as any
     const { authorId: _dropA, companyId: _dropC, ...safeSettings } = settings || {}
     return api.put<News>(`/news/${id}`, { ...rest, settings: safeSettings }).then(r => r.data)
@@ -41,5 +40,22 @@ export const ContentService = {
     if (!items.length) return null
     items.sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime())
     return items[0]
+  },
+
+  // ✅ FINAL: batch de métricas para lista do CMS (corrigido endpoint/shape)
+  async batchMetrics(ids: string[], from?: string, to?: string): Promise<Record<string, any>> {
+    if (!ids.length) return {}
+    const params: any = { ids: ids.join(',') }
+    if (from) params.from = from
+    if (to) params.to = to
+    // /v2/news/metrics retorna um objeto plano { [newsId]: {...} }
+    const r = await api.get<Record<string, any>>('/v2/news/metrics', { params })
+    return r.data || {}
+  },
+
+  // (opcional) helper pra detalhe, se quiser padronizar as chamadas:
+  async getMetrics(newsId: string, from?: string, to?: string) {
+    const r = await api.get(`/v2/news/${newsId}/metrics`, { params: { from, to } })
+    return r.data
   },
 }

@@ -45,6 +45,7 @@ import { SchemaIntrospectorV2 } from './schema-introspector.v2';
 // >>>> IMPORTE DO MESMO LUGAR QUE O CONTROLLER <<<<
 import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service'; // stub simples
 import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter';
+import { NewsCommentsControllerV2 } from '../comments/news-comments.controller';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter';
     SearchV2Controller,
     PushV2Controller,
     InteractionsControllerV2,
+    NewsCommentsControllerV2
   ],
   providers: [
     // core services

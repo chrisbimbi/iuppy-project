@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { createHash } from 'crypto';
+import { Response } from 'express'
+import { createHash } from 'crypto'
 import {
   Controller,
   Res,
@@ -12,26 +12,24 @@ import {
   Query,
   Optional,
   BadRequestException,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { NewsV2Service, UserState } from './news.service';
-import { AnalyticsV2Service } from '../analytics/analytics.service';
-import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service';
+} from '@nestjs/common'
+import { AuthGuard } from '@nestjs/passport'
+import { NewsV2Service, UserState } from './news.service'
+import { AnalyticsV2Service } from '../analytics/analytics.service'
+import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service'
 
-type V2ShareChannel = 'app' | 'email' | 'whatsapp' | 'telegram';
+type V2ShareChannel = 'app' | 'email' | 'whatsapp' | 'telegram'
 
-const REACTIONS = ['like', 'love', 'clap', 'smile', 'neutral', 'angry'] as const;
-type ReactionType = (typeof REACTIONS)[number];
+const REACTIONS = ['like', 'love', 'clap', 'smile', 'neutral', 'angry'] as const
+type ReactionType = (typeof REACTIONS)[number]
 
 function normalizeReaction(v: unknown): ReactionType {
-  const r = String(v ?? '').trim().toLowerCase();
-  if (!r) throw new BadRequestException('reaction is required');
+  const r = String(v ?? '').trim().toLowerCase()
+  if (!r) throw new BadRequestException('reaction is required')
   if (!REACTIONS.includes(r as ReactionType)) {
-    throw new BadRequestException(
-      `invalid reaction. allowed: ${REACTIONS.join(', ')}`,
-    );
+    throw new BadRequestException(`invalid reaction. allowed: ${REACTIONS.join(', ')}`)
   }
-  return r as ReactionType;
+  return r as ReactionType
 }
 
 @UseGuards(AuthGuard('jwt'))
@@ -41,7 +39,7 @@ export class NewsV2Controller {
     private readonly news: NewsV2Service,
     private readonly analytics: AnalyticsV2Service,
     @Optional() private readonly metricsDaily?: MetricsDailyServiceV2,
-  ) { }
+  ) {}
 
   @Get(':id')
   async detail(
@@ -49,10 +47,10 @@ export class NewsV2Controller {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
 
-    const data = await this.news.detail(companyId, id, userId);
+    const data = await this.news.detail(companyId, id, userId)
 
     // ETag incluindo estado do usuário + métricas
     const etagPayload = {
@@ -67,27 +65,23 @@ export class NewsV2Controller {
         myReaction: data.userState?.myReaction ?? null,
         myComments: data.userState?.myComments ?? 0,
       },
-    };
-    const hash = createHash('sha1')
-      .update(JSON.stringify(etagPayload))
-      .digest('hex')
-      .slice(0, 32);
-    const etag = `W/"${hash}"`;
+    }
+    const hash = createHash('sha1').update(JSON.stringify(etagPayload)).digest('hex').slice(0, 32)
+    const etag = `W/"${hash}"`
 
-    // A resposta depende do usuário => variar por Authorization
-    res.setHeader('Vary', 'Authorization');
-    res.setHeader('ETag', etag);
+    res.setHeader('Vary', 'Authorization')
+    res.setHeader('ETag', etag)
 
     const ifNoneMatch =
       (req.headers['if-none-match'] as string | undefined) ??
-      (req.headers['If-None-Match'] as string | undefined);
+      (req.headers['If-None-Match'] as string | undefined)
 
     if (ifNoneMatch && ifNoneMatch === etag) {
-      res.status(304);
-      return;
+      res.status(304)
+      return
     }
 
-    return data;
+    return data
   }
 
   /** Métricas batch para cards/listas */
@@ -99,46 +93,81 @@ export class NewsV2Controller {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const companyId = req.user.companyId as string;
+    const companyId = req.user.companyId as string
     const ids = (idsStr ?? '')
       .split(',')
       .map((s) => s.trim())
-      .filter(Boolean);
-    if (!ids.length) throw new BadRequestException('ids is required');
+      .filter(Boolean)
+    if (!ids.length) throw new BadRequestException('ids is required')
 
-    const data = await this.analytics.batchNewsMetrics(companyId, ids, from, to);
+    const data = await this.analytics.batchNewsMetrics(companyId, ids, from, to)
 
-    const payload = { ids, from: from ?? null, to: to ?? null, data };
-    const hash = createHash('sha1')
-      .update(JSON.stringify(payload))
-      .digest('hex')
-      .slice(0, 32);
-    const etag = `W/"${hash}"`;
+    const payload = { ids, from: from ?? null, to: to ?? null, data }
+    const hash = createHash('sha1').update(JSON.stringify(payload)).digest('hex').slice(0, 32)
+    const etag = `W/"${hash}"`
 
-    res.setHeader('ETag', etag);
-    res.setHeader('Vary', 'Authorization');
+    res.setHeader('ETag', etag)
+    res.setHeader('Vary', 'Authorization')
 
     const ifNoneMatch =
       (req.headers['if-none-match'] as string | undefined) ??
-      (req.headers['If-None-Match'] as string | undefined);
+      (req.headers['If-None-Match'] as string | undefined)
     if (ifNoneMatch && ifNoneMatch === etag) {
-      res.status(304);
-      return;
+      res.status(304)
+      return
     }
 
-    return data;
+    return data
   }
 
+  /**
+   * Comentários — modo dual:
+   * - Admin (quando há status/q/from/to/page/pageSize): { items, total }
+   * - App   (sem esses params): { items, nextCursor }
+   */
   @Get(':id/comments')
   async listComments(
     @Param('id') id: string,
     @Query('limit') limitStr: string | undefined,
     @Query('cursor') cursor: string | undefined,
+
+    @Query('status') status: 'all' | 'pending' | 'approved' | 'rejected' | undefined,
+    @Query('q') q: string | undefined,
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('page') pageStr: string | undefined,
+    @Query('pageSize') pageSizeStr: string | undefined,
+
     @Req() req: any,
   ) {
-    const companyId = req.user.companyId as string;
-    const limit = Math.max(1, Math.min(100, Number(limitStr ?? 50)));
-    return this.news.listComments(companyId, id, { limit, cursor });
+    const companyId = req.user.companyId as string
+
+    const adminMode =
+      typeof status !== 'undefined' ||
+      typeof q !== 'undefined' ||
+      typeof from !== 'undefined' ||
+      typeof to !== 'undefined' ||
+      typeof pageStr !== 'undefined' ||
+      typeof pageSizeStr !== 'undefined'
+
+    if (adminMode) {
+      // ===== Admin: shape { items, total } =====
+      const page = Math.max(1, Number(pageStr ?? 1))
+      const pageSize = Math.max(1, Math.min(200, Number(pageSizeStr ?? 50)))
+
+      return this.news.listCommentsAdmin(companyId, id, {
+        status: (status ?? 'all') as any,
+        q: (q ?? '').trim() || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        page,
+        pageSize,
+      })
+    }
+
+    // ===== App: shape { items, nextCursor } =====
+    const limit = Math.max(1, Math.min(100, Number(limitStr ?? 50)))
+    return this.news.listCommentsPublic(companyId, id, { limit, cursor })
   }
 
   @Post(':id/audience/snapshot')
@@ -147,9 +176,9 @@ export class NewsV2Controller {
     @Query('companyWide') companyWide: string | undefined,
     @Req() req: any,
   ) {
-    const companyId = req.user.companyId as string;
-    const cw = companyWide === 'true' || companyWide === '1';
-    return this.news.snapshotAudience(companyId, id, { companyWide: cw });
+    const companyId = req.user.companyId as string
+    const cw = companyWide === 'true' || companyWide === '1'
+    return this.news.snapshotAudience(companyId, id, { companyWide: cw })
   }
 
   @Get(':id/metrics')
@@ -160,27 +189,24 @@ export class NewsV2Controller {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const companyId = req.user.companyId as string;
-    const data = await this.analytics.newsMetrics(companyId, id, from, to);
+    const companyId = req.user.companyId as string
+    const data = await this.analytics.newsMetrics(companyId, id, from, to)
 
-    const payload = { id, from: from ?? null, to: to ?? null, data };
-    const hash = createHash('sha1')
-      .update(JSON.stringify(payload))
-      .digest('hex')
-      .slice(0, 32);
-    const etag = `W/"${hash}"`;
+    const payload = { id, from: from ?? null, to: to ?? null, data }
+    const hash = createHash('sha1').update(JSON.stringify(payload)).digest('hex').slice(0, 32)
+    const etag = `W/"${hash}"`
 
-    res.setHeader('ETag', etag);
-    res.setHeader('Vary', 'Authorization');
+    res.setHeader('ETag', etag)
+    res.setHeader('Vary', 'Authorization')
 
     const ifNoneMatch =
       (req.headers['if-none-match'] as string | undefined) ??
-      (req.headers['If-None-Match'] as string | undefined);
+      (req.headers['If-None-Match'] as string | undefined)
     if (ifNoneMatch && ifNoneMatch === etag) {
-      res.status(304);
-      return;
+      res.status(304)
+      return
     }
-    return data;
+    return data
   }
 
   @Post(':id/open')
@@ -190,16 +216,16 @@ export class NewsV2Controller {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
 
-    const result = await this.news.open(companyId, id, userId, body?.meta);
+    const result = await this.news.open(companyId, id, userId, body?.meta)
 
     if (this.metricsDaily?.onEvent) {
-      this.metricsDaily.onEvent(companyId, id, userId, 'OPEN');
+      this.metricsDaily.onEvent(companyId, id, userId, 'OPEN')
     }
 
-    res.setHeader('Vary', 'Authorization');
+    res.setHeader('Vary', 'Authorization')
 
     // ETag parcial só com estado do user
     const etagPayload = {
@@ -210,16 +236,13 @@ export class NewsV2Controller {
         acknowledged: result.userState.acknowledged,
         acknowledgedAt: result.userState.acknowledgedAt,
       } as UserState,
-    };
-    const hash = createHash('sha1')
-      .update(JSON.stringify(etagPayload))
-      .digest('hex')
-      .slice(0, 32);
-    const etag = `W/"${hash}"`;
-    res.setHeader('ETag', etag);
+    }
+    const hash = createHash('sha1').update(JSON.stringify(etagPayload)).digest('hex').slice(0, 32)
+    const etag = `W/"${hash}"`
+    res.setHeader('ETag', etag)
 
-    res.status(201);
-    return result;
+    res.status(201)
+    return result
   }
 
   @Post(':id/ack')
@@ -229,16 +252,16 @@ export class NewsV2Controller {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
 
-    const result = await this.news.ack(companyId, id, userId);
+    const result = await this.news.ack(companyId, id, userId)
 
     if (this.metricsDaily?.onEvent) {
-      this.metricsDaily.onEvent(companyId, id, userId, 'ACK');
+      this.metricsDaily.onEvent(companyId, id, userId, 'ACK')
     }
 
-    res.setHeader('Vary', 'Authorization');
+    res.setHeader('Vary', 'Authorization')
 
     const etagPayload = {
       id,
@@ -248,60 +271,53 @@ export class NewsV2Controller {
         acknowledged: result.userState.acknowledged,
         acknowledgedAt: result.userState.acknowledgedAt,
       } as UserState,
-    };
-    const hash = createHash('sha1')
-      .update(JSON.stringify(etagPayload))
-      .digest('hex')
-      .slice(0, 32);
-    const etag = `W/"${hash}"`;
-    res.setHeader('ETag', etag);
+    }
+    const hash = createHash('sha1').update(JSON.stringify(etagPayload)).digest('hex').slice(0, 32)
+    const etag = `W/"${hash}"`
+    res.setHeader('ETag', etag)
 
-    res.status(201);
-    return result;
+    res.status(201)
+    return result
   }
 
   @Post(':id/react')
   async react(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
-    const reaction = normalizeReaction(body?.reaction);
-    const res = await this.news.react(companyId, id, userId, reaction);
-    if (this.metricsDaily?.onEvent)
-      this.metricsDaily.onEvent(companyId, id, userId, 'REACT');
-    return res;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
+    const reaction = normalizeReaction(body?.reaction)
+    const res = await this.news.react(companyId, id, userId, reaction)
+    if (this.metricsDaily?.onEvent) this.metricsDaily.onEvent(companyId, id, userId, 'REACT')
+    return res
   }
 
   @Post(':id/unreact')
   async unreact(@Param('id') id: string, @Req() req: any) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
-    const res = await this.news.unreact(companyId, id, userId);
-    if (this.metricsDaily?.onEvent)
-      this.metricsDaily.onEvent(companyId, id, userId, 'REACT');
-    return res;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
+    const res = await this.news.unreact(companyId, id, userId)
+    if (this.metricsDaily?.onEvent) this.metricsDaily.onEvent(companyId, id, userId, 'REACT')
+    return res
   }
 
   @Post(':id/comments')
   async comment(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
-    const text = String(body?.text ?? '').trim();
-    if (!text) throw new BadRequestException('text is required');
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
+    const text = String(body?.text ?? '').trim()
+    if (!text) throw new BadRequestException('text is required')
 
-    const res = await this.news.comment(companyId, id, userId, text);
-    if (this.metricsDaily?.onEvent)
-      this.metricsDaily.onEvent(companyId, id, userId, 'COMMENT');
-    return res;
+    const res = await this.news.comment(companyId, id, userId, text)
+    if (this.metricsDaily?.onEvent) this.metricsDaily.onEvent(companyId, id, userId, 'COMMENT')
+    return res
   }
 
   @Post(':id/share')
   async share(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-    const companyId = req.user.companyId as string;
-    const userId = (req.user.id || req.user.sub) as string;
-    const channel = body?.channel as V2ShareChannel | undefined;
-    const res = await this.news.share(companyId, id, userId, channel, body?.meta);
-    if (this.metricsDaily?.onEvent)
-      this.metricsDaily.onEvent(companyId, id, userId, 'SHARE');
-    return res;
+    const companyId = req.user.companyId as string
+    const userId = (req.user.id || req.user.sub) as string
+    const channel = body?.channel as V2ShareChannel | undefined
+    const res = await this.news.share(companyId, id, userId, channel, body?.meta)
+    if (this.metricsDaily?.onEvent) this.metricsDaily.onEvent(companyId, id, userId, 'SHARE')
+    return res
   }
 }

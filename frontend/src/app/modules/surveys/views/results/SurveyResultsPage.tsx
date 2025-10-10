@@ -6,12 +6,12 @@ import { Content } from 'src/layout/components/Content'
 import { useAuth } from 'src/app/modules/auth'
 import { SurveyService } from '../../services/surveys.service'
 import { Survey, SurveyStatisticsDto } from '@shared/types'
+import { exportSurveyXlsxGlobal, exportSurveyPanelPdfGlobal } from 'src/app/modules/surveys/utils/export'
 
 import ReactApexChart from 'react-apexcharts'
 
 // utils de export
-import { exportSurveyXlsx } from '../../utils/xls'
-import { exportSectionsAsPdf } from '../../utils/pdf'
+
 import WordCloudCanvas from '../../components/WordCloudCanvas'
 
 type StatsFilters = {
@@ -88,12 +88,7 @@ const SurveyResultsPage = () => {
   const handleExportPDF = async () => {
     try {
       setExportingPdf(true)
-      await exportSectionsAsPdf(PANEL_ID, `survey-${surveyId}-painel.pdf`, {
-        margin: 36,
-        scale: 3,
-        orientation: 'p',
-        format: 'a4',
-      })
+      await exportSurveyPanelPdfGlobal('survey-results-panel', `survey-${surveyId}.pdf`)
     } catch (err: any) {
       console.error('Erro ao exportar PDF', err)
       alert('Não foi possível gerar o PDF. Tente novamente.')
@@ -106,7 +101,7 @@ const SurveyResultsPage = () => {
     if (!survey || !stats) return
     try {
       setExportingXlsx(true)
-      await Promise.resolve(exportSurveyXlsx(survey, stats, `survey-${surveyId}-relatorio.xlsx`))
+      await exportSurveyXlsxGlobal(survey, stats, `survey-${survey.id}.xlsx`)
     } catch (err: any) {
       console.error('Erro ao exportar XLSX', err)
       alert('Não foi possível gerar o XLSX. Tente novamente.')

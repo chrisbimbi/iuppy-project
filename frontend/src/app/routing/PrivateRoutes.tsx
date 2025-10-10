@@ -7,6 +7,8 @@ import { MenuTestPage } from '../pages/MenuTestPage'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 
 import ContentPage from 'src/app/modules/communication/controllers/ContentPage'
+import NewsStatsPage from 'src/app/modules/communication/views/NewsStatsPage'
+import NewsCommentsPage from 'src/app/modules/communication/views/NewsCommentsPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
 import ChannelsPage from '../modules/channels/controllers/ChannelsPage'
 
@@ -32,6 +34,8 @@ const PrivateRoutes: FC = () => {
 
         {/* Conteúdos */}
         <Route path="contents" element={<ContentPage />} />
+        <Route path="contents/:newsId/stats" element={<NewsStatsPage />} />
+        <Route path="contents/:newsId/comments" element={<NewsCommentsPage />} /> {/* ✅ nova */}
 
         {/* Grupos */}
         <Route path="groups" element={<GroupsPage />} />
@@ -41,7 +45,6 @@ const PrivateRoutes: FC = () => {
 
         {/* Surveys (protegidas pelo módulo 'surveys') */}
         <Route path="modules" element={<ModulesLanding />} />
-
         <Route
           path="modules/surveys"
           element={
@@ -66,7 +69,7 @@ const PrivateRoutes: FC = () => {
             </RequireModule>
           }
         />
-        {/* results — mantive tua rota antiga e adicionei o alias sob /modules */}
+        {/* results + alias */}
         <Route
           path="surveys/:surveyId/results"
           element={

@@ -1,6 +1,7 @@
+// src/v2/analytics/analytics.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, DataSource } from 'typeorm';
 
 import { NewsEntity } from 'src/news/news.entity';
 import { NewsReactionEntity } from 'src/v2/interactions/entities/news-reaction.entity';
@@ -12,6 +13,15 @@ import { SearchMetricsDailyEntity } from 'src/v2/interactions/entities/search-me
 import { PushDeliveryEntity } from 'src/v2/interactions/entities/push-delivery.entity';
 import { NewsAudienceEntity } from 'src/v2/interactions/entities/news-audience.entity';
 
+import { SchemaIntrospectorV2 } from '../common/schema-introspector.v2';
+
+type NewsOverviewParams = {
+  from?: string
+  to?: string
+  spaceId?: string
+  channelId?: string
+  groupId?: string
+}
 type ReactionKind = 'like' | 'love' | 'clap' | 'smile' | 'neutral' | 'angry';
 
 function toDateISO(d?: string): string | undefined {
@@ -33,6 +43,8 @@ export class AnalyticsV2Service {
     @InjectRepository(SearchMetricsDailyEntity) private readonly sDailyRepo: Repository<SearchMetricsDailyEntity>,
     @InjectRepository(PushDeliveryEntity) private readonly pushRepo: Repository<PushDeliveryEntity>,
     @InjectRepository(NewsAudienceEntity) private readonly audienceRepo: Repository<NewsAudienceEntity>,
+    private readonly ds: DataSource,
+    private readonly schema: SchemaIntrospectorV2,
   ) { }
 
   // ========= infra =========
@@ -62,10 +74,23 @@ export class AnalyticsV2Service {
     const typeCol = names.includes('type') ? 'type' : names.includes('event') ? 'event' : null;
     const newsRef = names.includes('newsId') ? 'newsId' : names.includes('objectId') ? 'objectId' : null;
     const userIdCol = names.includes('userId') ? 'userId' : null;
-    const createdAtCol = names.includes('createdAt') ? 'createdAt' : null;
+    const createdAtCol = names.includes('createdAt') ? 'createdAt' : names.includes('created_at') ? 'created_at' : null;
 
     if (!typeCol || !newsRef || !userIdCol || !createdAtCol) return null;
     return { table, typeCol, newsRef, userIdCol, createdAtCol };
+  }
+
+  // Mantida (pode ser útil em outros pontos), mas não é mais usada no fallback.
+  private async spaceIdsIsUuidArray(): Promise<boolean> {
+    const q = `
+      SELECT udt_name
+        FROM information_schema.columns
+       WHERE table_schema='public'
+         AND table_name='channel'
+         AND column_name='space_ids'
+       LIMIT 1`;
+    const r = await this.ds.query(q);
+    return (r?.[0]?.udt_name ?? '') === '_uuid';
   }
 
   private buildBetweenClause(
@@ -91,6 +116,23 @@ export class AnalyticsV2Service {
       idx++;
     }
     return { sql, params, nextIndex: idx };
+  }
+
+  /** Detecta se o esquema de comentários usa 'status' (legado) ou 'approved' (atual). */
+  private async detectCommentModerationColumn(): Promise<'status' | 'approved'> {
+    try {
+      const rows = await this.ds.query(
+        `SELECT column_name
+           FROM information_schema.columns
+          WHERE table_schema='public' AND table_name='news_comment'
+            AND column_name IN ('status','approved')`
+      );
+      const names: string[] = rows?.map((r: any) => r.column_name) ?? [];
+      if (names.includes('status')) return 'status';
+      return 'approved';
+    } catch {
+      return 'approved';
+    }
   }
 
   // =========================
@@ -124,20 +166,42 @@ export class AnalyticsV2Service {
       if (key in reactionsByType) reactionsByType[key] = Number(row.c || 0);
     }
 
-    // comments (totais/pending/approved/rejected)
-    const commentsAgg = await this.commentRepo.query(
-      `SELECT
-         COUNT(*)::int AS total,
-         SUM((status='pending')::int)::int AS pending,
-         SUM((status='approved')::int)::int AS approved,
-         SUM((status='rejected')::int)::int AS rejected
-       FROM news_comment
-       WHERE "newsId"=$1 AND "companyId"=$2`,
-      [newsId, companyId],
-    );
-    const comments = (commentsAgg && commentsAgg[0]) || {
-      total: 0, pending: 0, approved: 0, rejected: 0,
-    };
+    // --------- comentários (compatível com status/approved) ----------
+    let comments = { total: 0, pending: 0, approved: 0, rejected: 0 };
+    try {
+      const col = await this.detectCommentModerationColumn();
+      let sql = '';
+      if (col === 'status') {
+        sql = `
+          SELECT
+            COUNT(*)::int AS total,
+            SUM((status='pending')::int)::int AS pending,
+            SUM((status='approved')::int)::int AS approved,
+            SUM((status='rejected')::int)::int AS rejected
+          FROM news_comment
+          WHERE "newsId"=$1 AND "companyId"=$2`;
+      } else {
+        // approved: null=pending, true=approved, false=rejected
+        sql = `
+          SELECT
+            COUNT(*)::int AS total,
+            SUM((approved IS NULL)::int)::int AS pending,
+            SUM((approved = true)::int)::int AS approved,
+            SUM((approved = false)::int)::int AS rejected
+          FROM news_comment
+          WHERE "newsId"=$1 AND "companyId"=$2`;
+      }
+      const agg = await this.commentRepo.query(sql, [newsId, companyId]);
+      comments = (agg && agg[0]) ? {
+        total: Number(agg[0].total || 0),
+        pending: Number(agg[0].pending || 0),
+        approved: Number(agg[0].approved || 0),
+        rejected: Number(agg[0].rejected || 0),
+      } : comments;
+    } catch {
+      // ignora e mantém zeros
+    }
+    // -----------------------------------------------------------------
 
     // opens/unique/acks
     let totalOpens = 0, uniqueOpens = 0, acks = 0;
@@ -264,12 +328,7 @@ export class AnalyticsV2Service {
       uniqueOpens,
       acks,
       reactionsByType,
-      comments: {
-        total: Number(comments.total || 0),
-        pending: Number(comments.pending || 0),
-        approved: Number(comments.approved || 0),
-        rejected: Number(comments.rejected || 0),
-      },
+      comments,
       opens24hAposPushPct,
       seriesDaily,
       heatmap,
@@ -444,99 +503,6 @@ export class AnalyticsV2Service {
   }
 
   // =========================
-  //   /analytics/news/overview
-  // =========================
-  async newsOverview(
-    companyId: string,
-    params: { from?: string; to?: string; spaceId?: string; channelId?: string; groupId?: string },
-  ) {
-    const f = toDateISO(params.from);
-    const t = toDateISO(params.to);
-
-    // posts publicados no período
-    const p: any[] = [companyId];
-    let sql =
-      `SELECT n.id, n.title, n."spaceId", n."channelId"
-         FROM news_entity n
-        WHERE n."companyId"=$1 AND n.status='published'`;
-    let idx = 2;
-    if (f) { sql += ` AND n."createdAt" >= $${idx}`; p.push(f); idx++; }
-    if (t) { sql += ` AND n."createdAt" < ($${idx}::date + INTERVAL '1 day')`; p.push(t); idx++; }
-    if (params.spaceId) { sql += ` AND n."spaceId" = $${idx}`; p.push(params.spaceId); idx++; }
-    if (params.channelId) { sql += ` AND n."channelId" = $${idx}`; p.push(params.channelId); idx++; }
-
-    const posts = await this.newsRepo.query(sql, p);
-    const postIds: string[] = (posts || []).map((r: any) => r.id);
-
-    let opens = 0, uniqueOpens = 0, acks = 0, reactions = 0, comments = 0, shares = 0;
-    if (postIds.length) {
-      const baseParams: any[] = [];
-      let agg =
-        `SELECT
-           COALESCE(SUM(opens),0)::int AS opens,
-           COALESCE(SUM("uniqueOpens"),0)::int AS "uniqueOpens",
-           COALESCE(SUM(acks),0)::int AS acks,
-           COALESCE(SUM(reactions),0)::int AS reactions,
-           COALESCE(SUM(comments),0)::int AS comments,
-           COALESCE(SUM(shares),0)::int AS shares
-         FROM news_metrics_daily
-         WHERE "newsId" IN (`;
-      const placeholders = postIds.map((_, i) => `$${i + 1}`).join(',');
-      agg += placeholders + ')';
-      baseParams.push(...postIds);
-      let nextIdx = postIds.length + 1;
-      if (f) { agg += ` AND "date" >= $${nextIdx}`; baseParams.push(f); nextIdx++; }
-      if (t) { agg += ` AND "date" < ($${nextIdx}::date + INTERVAL '1 day')`; baseParams.push(t); nextIdx++; }
-      const rows = await this.nDailyRepo.query(agg, baseParams);
-      if (rows?.[0]) {
-        opens = Number(rows[0].opens || 0);
-        uniqueOpens = Number(rows[0].uniqueOpens || 0);
-        acks = Number(rows[0].acks || 0);
-        reactions = Number(rows[0].reactions || 0);
-        comments = Number(rows[0].comments || 0);
-        shares = Number(rows[0].shares || 0);
-      }
-    }
-
-    // heatmap do período (OPEN)
-    let heatmap: Array<{ hour: number; dow: number; count: number }> = [];
-    if (postIds.length) {
-      const meta = await this.detectEventMeta();
-      if (meta) {
-        const { table, typeCol, createdAtCol, newsRef } = meta;
-        const p2: any[] = [companyId];
-        let hsql =
-          `SELECT EXTRACT(HOUR FROM "${createdAtCol}")::int AS hour,
-                  EXTRACT(DOW  FROM "${createdAtCol}")::int AS dow,
-                  COUNT(*)::int AS count
-             FROM ${table}
-            WHERE "companyId"=$1
-              AND "${newsRef}" IN (`;
-        const inPlaceholders = postIds.map((_, i) => `$${i + 2}`).join(',');
-        hsql += inPlaceholders + ')';
-        p2.push(...postIds);
-        let nextIdx = postIds.length + 2;
-        if (f) { hsql += ` AND "${createdAtCol}" >= $${nextIdx}`; p2.push(f); nextIdx++; }
-        if (t) { hsql += ` AND "${createdAtCol}" < ($${nextIdx}::date + INTERVAL '1 day')`; p2.push(t); nextIdx++; }
-        hsql += ` AND (UPPER("${typeCol}"::text) = 'OPEN') GROUP BY 1,2 ORDER BY 2,1`;
-        heatmap = await this.newsRepo.query(hsql, p2);
-      }
-    }
-
-    return {
-      period: { from: f ?? null, to: t ?? null },
-      posts: postIds.length,
-      opens, uniqueOpens, acks, reactions, comments, shares,
-      postsComInteracaoPct: postIds.length ? Math.round((Math.min(uniqueOpens, postIds.length) / postIds.length) * 100) : 0,
-      heatmap,
-      topPosts: [],
-      bySpace: [],
-      byChannel: [],
-      byGroup: [],
-    };
-  }
-
-  // =========================
   //   /analytics/users/overview
   // =========================
   async usersOverview(
@@ -631,6 +597,194 @@ export class AnalyticsV2Service {
       totalQueries: rows1?.[0]?.totalQueries ? Number(rows1[0].totalQueries) : 0,
       uniqueUsers: rows1?.[0]?.uniqueUsers ? Number(rows1[0].uniqueUsers) : 0,
       topQueries: rows2 || [],
+    };
+  }
+
+  // =========================
+  //   /analytics/news/overview
+  // =========================
+
+  async newsOverview(
+    companyId: string,
+    { from, to, spaceId, channelId, groupId }: NewsOverviewParams,
+  ) {
+    const q = (s: string) => (s.includes('"') ? s : `"${s}"`);
+    const hasNewsSpaceId = await this.schema.hasColumn('news_entity', 'spaceId');
+    const hasStatusCol = await this.schema.hasColumn('news_entity', 'status');
+    const hasIsPublishedCol = await this.schema.hasColumn('news_entity', 'isPublished');
+
+    let select = `SELECT n.id, n.title, n."channelId", n."createdAt"`;
+    let fromClause = `FROM news_entity n`;
+    const where: string[] = [`n."companyId" = $1`];
+    if (hasStatusCol) {
+      where.push(`n.status = 'published'`);
+    } else if (hasIsPublishedCol) {
+      // alguns schemas usam booleano isPublished em vez de enum status
+      where.push(`COALESCE(n."isPublished", true) = true`);
+    }
+    const params: any[] = [companyId];
+    let i = params.length + 1;
+
+    if (from) {
+      where.push(`n."createdAt" >= $${i++}`);
+      params.push(from);
+    }
+    if (to) {
+      where.push(`n."createdAt" < ($${i++}::date + INTERVAL '1 day')`);
+      params.push(to);
+    }
+
+    if (spaceId) {
+      if (hasNewsSpaceId) {
+        select += `, n."spaceId"`;
+        where.push(`n."spaceId" = $${i++}`);
+        params.push(spaceId);
+      } else {
+        // Fallback via channel.space_ids (robusto p/ uuid[] OU varchar[])
+        fromClause += ` JOIN channel c ON c.id::text = n."channelId"::text`;
+
+        // 1) placeholder do SELECT (apenas para retornar "spaceId" no payload)
+        const selIdx = i++;
+        select += `, CAST($${selIdx} AS uuid) AS "spaceId"`;
+        params.push(spaceId);
+
+        // 2) placeholder do WHERE (comparação como texto contra o array convertido p/ text[])
+        const whereIdx = i++;
+        where.push(`CAST($${whereIdx} AS text) = ANY(c."space_ids"::text[])`);
+        params.push(spaceId);
+      }
+    }
+
+    if (channelId) {
+      where.push(`n."channelId" = $${i++}`);
+      params.push(channelId);
+    }
+
+    const newsSql = `${select}
+${fromClause}
+WHERE ${where.join(' AND ')}`;
+
+    const newsRows: Array<{
+      id: string
+      title: string
+      channelId: string
+      createdAt: string
+      spaceId?: string
+    }> = await this.ds.query(newsSql, params);
+
+    if (newsRows.length === 0) {
+      return {
+        openRate30d: 0,
+        ackRate30d: 0,
+        reactionsPerBase: 0,
+        totalInteractions: 0,
+        items: [],
+      };
+    }
+
+    // ------ métricas por ID ------
+    const ids = newsRows.map(r => r.id);
+    const ph = ids.map((_, idx) => `$${idx + 1}`).join(',');
+    const baseParams = [...ids];
+
+    // Eventos (open/ack)
+    const evMap = await this.schema.detectEventMap();
+    let opensById = new Map<string, number>();
+    let acksById = new Map<string, number>();
+    if (evMap) {
+      const evSql = `
+        SELECT ${q(evMap.newsIdCol)} AS nid, LOWER(${q(evMap.typeCol)}::text) AS etype, COUNT(1)::int AS cnt
+          FROM ${evMap.table}
+         WHERE ${q(evMap.newsIdCol)} IN (${ph})
+           AND "companyId" = $${baseParams.length + 1}
+           ${from ? `AND ${q(evMap.createdAtCol)} >= $${baseParams.length + 2}` : ''}
+           ${to ? `AND ${q(evMap.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
+         GROUP BY 1,2
+      `;
+      const evParams = [
+        ...baseParams,
+        companyId,
+        ...(from ? [from] : []),
+        ...(to ? [to] : []),
+      ];
+      const evRows: Array<{ nid: string; etype: string; cnt: number }> = await this.ds.query(evSql, evParams);
+      opensById = new Map(evRows.filter(r => r.etype === 'open').map(r => [r.nid, r.cnt]));
+      acksById = new Map(evRows.filter(r => r.etype === 'ack' || r.etype === 'acknowledge').map(r => [r.nid, r.cnt]));
+    }
+
+    // Reações
+    let reactsById = new Map<string, number>();
+    if (await this.schema.hasTable('news_reaction')) {
+      const rSql = `
+        SELECT "newsId" AS nid, COUNT(1)::int AS cnt
+          FROM news_reaction
+         WHERE "newsId" IN (${ph})
+           AND "companyId" = $${baseParams.length + 1}
+           ${from ? `AND "createdAt" >= $${baseParams.length + 2}` : ''}
+           ${to ? `AND "createdAt" < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
+         GROUP BY "newsId"
+      `;
+      const rParams = [
+        ...baseParams,
+        companyId,
+        ...(from ? [from] : []),
+        ...(to ? [to] : []),
+      ];
+      const rRows: Array<{ nid: string; cnt: number }> = await this.ds.query(rSql, rParams);
+      reactsById = new Map(rRows.map(r => [r.nid, r.cnt]));
+    }
+
+    // Comentários
+    let commentsById = new Map<string, number>();
+    if (await this.schema.hasTable('news_comment')) {
+      const cm = await this.schema.detectCommentMap();
+      const cSql = `
+        SELECT "newsId" AS nid, COUNT(1)::int AS cnt
+          FROM ${cm!.table}
+         WHERE "newsId" IN (${ph})
+           AND "companyId" = $${baseParams.length + 1}
+           ${from ? `AND ${q(cm!.createdAtCol)} >= $${baseParams.length + 2}` : ''}
+           ${to ? `AND ${q(cm!.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
+         GROUP BY "newsId"
+      `;
+      const cParams = [
+        ...baseParams,
+        companyId,
+        ...(from ? [from] : []),
+        ...(to ? [to] : []),
+      ];
+      const cRows: Array<{ nid: string; cnt: number }> = await this.ds.query(cSql, cParams);
+      commentsById = new Map(cRows.map(r => [r.nid, r.cnt]));
+    }
+
+    const items = newsRows.map(n => ({
+      id: n.id,
+      title: n.title,
+      channelId: n.channelId,
+      spaceId: n.spaceId ?? spaceId ?? null,
+      createdAt: n.createdAt,
+      metrics: {
+        open: opensById.get(n.id) ?? 0,
+        ack: acksById.get(n.id) ?? 0,
+        reactions: reactsById.get(n.id) ?? 0,
+        comments: commentsById.get(n.id) ?? 0,
+        shares: 0,
+      },
+    }));
+
+    // KPIs simples (placeholder)
+    const base = items.length || 1;
+    const openRate30d = (items.reduce((s, it) => s + it.metrics.open, 0) / base) / 100;
+    const ackRate30d = (items.reduce((s, it) => s + it.metrics.ack, 0) / base) / 100;
+    const reactionsPerBase = (items.reduce((s, it) => s + it.metrics.reactions, 0) / base) / 100;
+    const totalInteractions = items.reduce((s, it) => s + it.metrics.reactions + it.metrics.comments, 0);
+
+    return {
+      openRate30d,
+      ackRate30d,
+      reactionsPerBase,
+      totalInteractions,
+      items,
     };
   }
 }
