@@ -1839,6 +1839,11 @@
   dependencies:
     "@swc/helpers" "^0.5.0"
 
+"@react-native-firebase/in-app-messaging@^23.4.0":
+  version "23.4.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/in-app-messaging/-/in-app-messaging-23.4.0.tgz#508806fa219777c95d121b87aaaee787de686a20"
+  integrity sha512-7YufQjHoL5fKLZMQ34jC4bfJZhMN+GEeQxi5LDP/1dYSKObpeovVCzgi0owVZgTyeyBRjwIAxZ63y7tHuDv3KA==
+
 "@remix-run/router@1.18.0":
   version "1.18.0"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.18.0.tgz"

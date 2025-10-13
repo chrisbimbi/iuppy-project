@@ -27,14 +27,15 @@ services:
     depends_on:
       - postgres
     command: >
-      sh -c "npm run migration:run &&
-        npm run start:dev"
+      sh -c "npm run migration:run && npm run start:dev"
     ports:
       - "4000:3000"
     volumes:
       - ./backend:/usr/src/app
       - ./shared:/usr/src/shared
-      - api_node_modules:/usr/src/app/node_modules   # << NOMEADO
+      - api_node_modules:/usr/src/app/node_modules
+      # 👇 MONTA O JSON DENTRO DO CONTAINER EXATAMENTE NO PATH DA ENV
+      - ./backend/creds/firebase-admin.json:/usr/src/app/creds/firebase-admin.json:ro
 
 volumes:
   iuppy_postgres_data:

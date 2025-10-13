@@ -24,6 +24,7 @@ import { V2Module } from './v2/common/v2.module';
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { APP_GUARD } from '@nestjs/core';
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
+    NotificationsModule,
 
     ThrottlerModule.forRoot([{ ttl: 60, limit: 60 }]),
 
@@ -83,4 +85,4 @@ import { APP_GUARD } from '@nestjs/core';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule { }
