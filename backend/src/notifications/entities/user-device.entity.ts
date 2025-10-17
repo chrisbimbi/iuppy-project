@@ -4,7 +4,7 @@ export type DevicePlatform = 'web' | 'android' | 'ios'
 
 @Entity('user_device')
 @Index(['companyId', 'userId'])
-@Index(['companyId', 'token'], { unique: true })
+@Index(['companyId', 'token'], { unique: true }) // idempotência por company+token
 export class UserDeviceEntity {
   @PrimaryGeneratedColumn('uuid') id!: string
 

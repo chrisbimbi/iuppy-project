@@ -7,21 +7,17 @@ import { FirebaseAdminProvider } from './firebase-admin.provider'
 
 import { UserDeviceEntity } from './entities/user-device.entity'
 
-// ✅ Declare o SchemaIntrospectorV2 aqui para resolver a injeção no CommunicationsService
+// (opcional) se você precisar do SchemaIntrospectorV2 em outro lugar, deixe.
 import { SchemaIntrospectorV2 } from 'src/v2/common/schema-introspector.v2'
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([UserDeviceEntity]),
-  ],
+  imports: [TypeOrmModule.forFeature([UserDeviceEntity])],
   controllers: [NotificationsController],
   providers: [
     ...FirebaseAdminProvider,
-    SchemaIntrospectorV2,     // <<— AQUI (resolve o “index [1]”)
+    SchemaIntrospectorV2,
     CommunicationsService,
   ],
-  exports: [
-    CommunicationsService,    // usado em outros módulos (ex.: V2)
-  ],
+  exports: [CommunicationsService],
 })
 export class NotificationsModule {}

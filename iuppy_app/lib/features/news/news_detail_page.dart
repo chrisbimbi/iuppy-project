@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import 'package:iuppy_app/features/news/providers/news_providers.dart';
 import '../../core/providers.dart';
@@ -16,8 +17,16 @@ import './widgets/html_content.dart';
 import './widgets/reaction_action.dart';
 
 class NewsDetailPage extends ConsumerStatefulWidget {
-  const NewsDetailPage({super.key, required this.id});
+  const NewsDetailPage({
+    super.key,
+    required this.id,
+    this.cameFromPush = false,
+    this.pushMessageId,
+  });
+
   final String id;
+  final bool cameFromPush;
+  final String? pushMessageId;
 
   @override
   ConsumerState<NewsDetailPage> createState() => _NewsDetailPageState();
@@ -25,6 +34,34 @@ class NewsDetailPage extends ConsumerStatefulWidget {
 
 class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   bool _ackedNow = false; // marcação local imediata após sucesso
+  DateTime? _lastOpenSentAt; // de-bounce p/ /open
+  bool _firstOpenSent = false; // garante “push-open-once”
+
+  @override
+  void initState() {
+    super.initState();
+    // primeiro OPEN decidido pela origem do deep link
+    Future.microtask(() async {
+      final ctrl = ref.read(newsDetailControllerProvider(widget.id));
+      if (_firstOpenSent) return;
+
+      final tz = DateTime.now().timeZoneOffset.inMinutes;
+      if (widget.cameFromPush) {
+        await ctrl.sendOpen(meta: {
+          'origin': 'push',
+          'tzOffsetMinutes': tz,
+          if (widget.pushMessageId != null && widget.pushMessageId!.isNotEmpty)
+            'mid': widget.pushMessageId,
+        });
+      } else {
+        await ctrl.sendOpen(meta: {
+          'origin': 'app',
+          'tzOffsetMinutes': tz,
+        });
+      }
+      _firstOpenSent = true;
+    });
+  }
 
   // Remove duplicados por (avatar || nome)
   List<({String name, String avatar})> _uniquePeople(
@@ -84,12 +121,10 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         final ctrl = ref.read(newsDetailControllerProvider(widget.id));
         await ctrl.acknowledge();
 
-        // marca localmente para esconder o botão sem esperar reload
         setState(() {
           _ackedNow = true;
         });
 
-        // notifica feeds/carrosséis para recarregarem métricas/estado
         ref.read(feedVersionProvider.notifier).state++;
 
         if (mounted) {
@@ -107,6 +142,23 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
     }
   }
 
+  void _onVisiblePing() {
+    final now = DateTime.now();
+    if (_lastOpenSentAt != null &&
+        now.difference(_lastOpenSentAt!).inSeconds < 2) {
+      debugPrint('[NEWS:${widget.id}] onVisible skipped (debounced)');
+      return;
+    }
+    _lastOpenSentAt = now;
+
+    final ctrl = ref.read(newsDetailControllerProvider(widget.id));
+    debugPrint('[NEWS:${widget.id}] onVisible → POST /open');
+    ctrl.sendOpen(meta: {
+      'origin': 'app',
+      'tzOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctrl = ref.watch(newsDetailControllerProvider(widget.id));
@@ -118,318 +170,305 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
 
     final t = Theme.of(context);
 
-    // Amostras únicas p/ render
     final reactorsUnique = _uniquePeople(vm.reactorsSample);
     final commentersUnique = _uniquePeople(vm.commentersSample);
     final sharersUnique = _uniquePeople(vm.sharersSample);
 
     final bool acknowledged = _ackedNow || vm.acknowledged;
-    final bool showAckBar = vm.ackRequired; // mostra se for requerido
+    final bool showAckBar = vm.ackRequired;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Voltar',
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/home'),
-        ),
-        title: Text(
-          vm.title.isEmpty ? 'Notícia' : vm.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          if (vm.shareEnabled)
-            IconButton(
-              tooltip: 'Compartilhar',
-              icon: const Icon(Icons.ios_share_rounded),
-              onPressed: _share,
-            ),
-        ],
-      ),
-      bottomNavigationBar: showAckBar
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed: acknowledged ? null : _confirmAck,
-                  child: Text(acknowledged ? 'Aceito' : 'Ler e aceitar'),
-                ),
+    return VisibilityDetector(
+      key: ValueKey('news-visible-${widget.id}'),
+      onVisibilityChanged: (info) {
+        if (info.visibleFraction >= 0.6) _onVisiblePing();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Voltar',
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/home'),
+          ),
+          title: Text(
+            vm.title.isEmpty ? 'Notícia' : vm.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          actions: [
+            if (vm.shareEnabled)
+              IconButton(
+                tooltip: 'Compartilhar',
+                icon: const Icon(Icons.ios_share_rounded),
+                onPressed: _share,
               ),
-            )
-          : null,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Carrossel de imagens
-          if (vm.images.isNotEmpty) ...[
-            ImagesSlider(
-              urls: vm.images,
-              onTap: (idx) =>
-                  openImageGalleryDialog(context, vm.images, initialIndex: idx),
+          ],
+        ),
+        bottomNavigationBar: showAckBar
+            ? SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: acknowledged ? null : _confirmAck,
+                    child: Text(acknowledged ? 'Aceito' : 'Ler e aceitar'),
+                  ),
+                ),
+              )
+            : null,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (vm.images.isNotEmpty) ...[
+              ImagesSlider(
+                urls: vm.images,
+                onTap: (idx) => openImageGalleryDialog(context, vm.images,
+                    initialIndex: idx),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              vm.title,
+              style: t.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (vm.subtitle.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                vm.subtitle,
+                style: t.textTheme.titleMedium
+                    ?.copyWith(color: t.colorScheme.onSurfaceVariant),
+              ),
+            ],
+            if (vm.authorId != null && vm.authorName != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Avatar(vm.authorAvatarUrl ?? '',
+                      name: vm.authorName!, size: 28),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Escrito por ${vm.authorName!}',
+                      style: t.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            if (vm.createdAtStr != null) ...[
+              Row(children: [
+                const Icon(Icons.event, size: 16),
+                const SizedBox(width: 6),
+                Text(vm.createdAtStr!, style: t.textTheme.bodySmall),
+                if (vm.updatedAtStr != null &&
+                    vm.updatedAtStr != vm.createdAtStr) ...[
+                  const SizedBox(width: 10),
+                  const Icon(Icons.edit_calendar, size: 16),
+                  const SizedBox(width: 6),
+                  Text('Atualizada ${vm.updatedAtStr}',
+                      style: t.textTheme.bodySmall),
+                ],
+              ]),
+            ],
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ...vm.channelNames.map((n) => Pill(n)),
+                if (vm.ackRequired)
+                  Pill('Ação necessária', color: Colors.amber),
+                if (vm.attachments.isNotEmpty)
+                  Pill('Anexos (${vm.attachments.length})',
+                      color: t.colorScheme.primary),
+              ],
             ),
             const SizedBox(height: 16),
-          ],
-
-          // Título / Subtítulo
-          Text(
-            vm.title,
-            style: t.textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          if (vm.subtitle.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              vm.subtitle,
-              style: t.textTheme.titleMedium
-                  ?.copyWith(color: t.colorScheme.onSurfaceVariant),
-            ),
-          ],
-
-          // “Escrito por …”
-          if (vm.authorId != null && vm.authorName != null) ...[
-            const SizedBox(height: 10),
+            const Divider(height: 24, thickness: 1, color: Colors.black12),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Avatar(vm.authorAvatarUrl ?? '',
-                    name: vm.authorName!, size: 28),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'Escrito por ${vm.authorName!}',
-                    style: t.textTheme.bodyMedium,
+                if (vm.allowReactions)
+                  Expanded(
+                    child: Center(
+                      child: ReactionAction(
+                        currentKind: vm.myReaction,
+                        onReact: (k) async {
+                          await ctrl.react(k);
+                          ref.read(feedVersionProvider.notifier).state++;
+                        },
+                        onUnreact: () async {
+                          await ctrl.unreact();
+                          ref.read(feedVersionProvider.notifier).state++;
+                        },
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (vm.allowComments)
+                  Expanded(
+                    child: Center(
+                      child: _CircleActionButtonPlain(
+                        icon: Icons.mode_comment_outlined,
+                        onTap: () async {
+                          await openCommentsSheet(
+                            context,
+                            previews: vm.previewComments
+                                .map((e) => CommentPreview(
+                                    text: e.text,
+                                    name: e.name,
+                                    avatar: e.avatar))
+                                .toList(),
+                            onCompose: () async {
+                              final text = await openCommentComposer(context);
+                              if (text == null || text.trim().isEmpty) return;
+                              try {
+                                final appeared =
+                                    await ctrl.comment(text.trim());
+                                if (context.mounted) {
+                                  final msg = appeared
+                                      ? 'Comentário enviado!'
+                                      : 'Comentário enviado! Aguardando aprovação do moderador';
+                                  await showDialog<void>(
+                                    context: context,
+                                    builder: (c) => AlertDialog(
+                                      content: Text(msg),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(c).pop(),
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              } catch (_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content:
+                                            Text('Falha ao enviar comentário')),
+                                  );
+                                }
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (vm.shareEnabled)
+                  Expanded(
+                    child: Center(
+                      child: _CircleActionButtonPlain(
+                        icon: Icons.ios_share_rounded,
+                        onTap: _share,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                Expanded(
+                  child: Center(
+                    child: _CircleActionButtonPlain(
+                      icon: Icons.bookmark_outline,
+                      onTap: () {}, // TODO
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
-
-          const SizedBox(height: 8),
-
-          // Criado/Atualizado
-          if (vm.createdAtStr != null) ...[
-            Row(children: [
-              const Icon(Icons.event, size: 16),
-              const SizedBox(width: 6),
-              Text(vm.createdAtStr!, style: t.textTheme.bodySmall),
-              if (vm.updatedAtStr != null &&
-                  vm.updatedAtStr != vm.createdAtStr) ...[
-                const SizedBox(width: 10),
-                const Icon(Icons.edit_calendar, size: 16),
-                const SizedBox(width: 6),
-                Text('Atualizada ${vm.updatedAtStr}',
-                    style: t.textTheme.bodySmall),
-              ],
-            ]),
-          ],
-
-          const SizedBox(height: 12),
-
-          // Chips: channel / ack / anexos
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              ...vm.channelNames.map((n) => Pill(n)),
-              if (vm.ackRequired) Pill('Ação necessária', color: Colors.amber),
-              if (vm.attachments.isNotEmpty)
-                Pill('Anexos (${vm.attachments.length})',
-                    color: t.colorScheme.primary),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-          const Divider(height: 24, thickness: 1, color: Colors.black12),
-
-          // 1) LINHA DOS BOTÕES (CENTRADA, SEM BORDAS)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              if (vm.allowReactions)
-                Expanded(
-                  child: Center(
-                    child: ReactionAction(
-                      currentKind: vm.myReaction,
-                      onReact: (k) async {
-                        await ctrl.react(k);
-                        // bump feed version so home feeds and carousels refresh
-                        ref.read(feedVersionProvider.notifier).state++;
-                      },
-                      onUnreact: () async {
-                        await ctrl.unreact();
-                        ref.read(feedVersionProvider.notifier).state++;
-                      },
-                    ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              if (vm.allowComments)
-                Expanded(
-                  child: Center(
-                    child: _CircleActionButtonPlain(
-                      icon: Icons.mode_comment_outlined,
-                      onTap: () async {
-                        await openCommentsSheet(
-                          context,
-                          previews: vm.previewComments
-                              .map((e) => CommentPreview(
-                                  text: e.text, name: e.name, avatar: e.avatar))
-                              .toList(),
-                          onCompose: () async {
-                            final text = await openCommentComposer(context);
-                            if (text == null || text.trim().isEmpty) return;
-                            try {
-                              final appeared = await ctrl.comment(text.trim());
-                              if (context.mounted) {
-                                final msg = appeared
-                                    ? 'Comentário enviado!'
-                                    : 'Comentário enviado! Aguardando aprovação do moderador';
-                                await showDialog<void>(
-                                  context: context,
-                                  builder: (c) => AlertDialog(
-                                    content: Text(msg),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(c).pop(),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            } catch (_) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Falha ao enviar comentário')),
-                                );
-                              }
-                            }
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              if (vm.shareEnabled)
-                Expanded(
-                  child: Center(
-                    child: _CircleActionButtonPlain(
-                      icon: Icons.ios_share_rounded,
-                      onTap: _share,
-                    ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              Expanded(
-                child: Center(
-                  child: _CircleActionButtonPlain(
-                    icon: Icons.bookmark_outline,
-                    onTap: () {}, // TODO
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // 2) LINHA DOS AVATARES (com badge de contagem regra ≤3 / +x)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (vm.allowReactions)
-                Expanded(
-                  child: Center(
-                    child: reactorsUnique.isEmpty
-                        ? const SizedBox(height: 22)
-                        : AvatarStack(
-                            items: reactorsUnique,
-                            size: 22,
-                            maxShown: 3,
-                            totalCount: vm.totalReacts,
-                          ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              if (vm.allowComments)
-                Expanded(
-                  child: Center(
-                    child: commentersUnique.isEmpty
-                        ? const SizedBox(height: 22)
-                        : AvatarStack(
-                            items: commentersUnique,
-                            size: 22,
-                            maxShown: 3,
-                            totalCount: vm.commentsShown,
-                          ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              if (vm.shareEnabled)
-                Expanded(
-                  child: Center(
-                    child: sharersUnique.isEmpty
-                        ? const SizedBox(height: 22)
-                        : AvatarStack(
-                            items: sharersUnique,
-                            size: 22,
-                            maxShown: 3,
-                            totalCount: vm.shares,
-                          ),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-              const Expanded(child: SizedBox(height: 22)),
-            ],
-          ),
-
-          const Divider(height: 24, thickness: 1, color: Colors.black12),
-
-          // Conteúdo HTML
-          if (vm.contentHtml.isNotEmpty)
-            HtmlContent(html: vm.contentHtml)
-          else
-            const Text('Sem conteúdo.'),
-
-          // Anexos
-          if (vm.attachments.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Anexos',
-                style: t.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            ...vm.attachments.map(
-              (att) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.attachment_outlined),
-                  title: Text(
-                    att.name.isEmpty
-                        ? Uri.parse(att.url).pathSegments.last
-                        : att.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (vm.allowReactions)
+                  Expanded(
+                    child: Center(
+                      child: reactorsUnique.isEmpty
+                          ? const SizedBox(height: 22)
+                          : AvatarStack(
+                              items: reactorsUnique,
+                              size: 22,
+                              maxShown: 3,
+                              totalCount: vm.totalReacts,
+                            ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (vm.allowComments)
+                  Expanded(
+                    child: Center(
+                      child: commentersUnique.isEmpty
+                          ? const SizedBox(height: 22)
+                          : AvatarStack(
+                              items: commentersUnique,
+                              size: 22,
+                              maxShown: 3,
+                              totalCount: vm.commentsShown,
+                            ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                if (vm.shareEnabled)
+                  Expanded(
+                    child: Center(
+                      child: sharersUnique.isEmpty
+                          ? const SizedBox(height: 22)
+                          : AvatarStack(
+                              items: sharersUnique,
+                              size: 22,
+                              maxShown: 3,
+                              totalCount: vm.shares,
+                            ),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                const Expanded(child: SizedBox(height: 22)),
+              ],
+            ),
+            const Divider(height: 24, thickness: 1, color: Colors.black12),
+            if (vm.contentHtml.isNotEmpty)
+              HtmlContent(html: vm.contentHtml)
+            else
+              const Text('Sem conteúdo.'),
+            if (vm.attachments.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text('Anexos',
+                  style: t.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              ...vm.attachments.map(
+                (att) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.attachment_outlined),
+                    title: Text(
+                      att.name.isEmpty
+                          ? Uri.parse(att.url).pathSegments.last
+                          : att.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => openWebSheet(context, att.url, title: 'Anexo'),
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => openWebSheet(context, att.url, title: 'Anexo'),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -457,8 +496,8 @@ class _CircleActionButtonPlain extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: bg, // null => sem pintura
-          shape: BoxShape.circle, // sem borda
+          color: bg,
+          shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
         child: Icon(icon, size: iconSize),

@@ -582,13 +582,12 @@ export class NewsV2Service {
 
   // ---------- interactions
 
-  async open(companyId: string, newsId: string, userId: string, _meta?: Record<string, any>): Promise<{ userState: UserState }> {
-    await this.ensureNews(companyId, newsId)
+  async open(companyId: string, newsId: string, userId: string, meta?: Record<string, any>): Promise<{ userState: any }> {
+    const n = await this.ensureNews(companyId, newsId)
     await this.interactions.markOpen(companyId, newsId, userId)
     const userState = await this.getUserState(companyId, newsId, userId)
     return { userState }
   }
-
   async ack(companyId: string, newsId: string, userId: string): Promise<{ userState: UserState }> {
     await this.ensureNews(companyId, newsId)
     await this.interactions.acknowledge(companyId, newsId, userId)

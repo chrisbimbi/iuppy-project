@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,17 +11,20 @@ import 'core/providers.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔐 CookieJar persistente no diretório do app (evita “Read-only file system”)
+  // 🔐 CookieJar persistente no diretório do app
   final dir = await getApplicationSupportDirectory();
-  final jarPath = p.join(dir.path, 'cookies'); // p.ex. /data/.../cookies
+  final jarPath = p.join(dir.path, 'cookies');
   final jar = PersistCookieJar(storage: FileStorage(jarPath));
 
+  // 🔥 Inicializa FCM/local notifications cedo (antes do runApp)
   await PushService.instance.init();
 
   runApp(
     ProviderScope(
-      // 👉 injeta a MESMA instância para todo o app (auth/login, refresh e dio principal)
-      overrides: [cookieJarProvider.overrideWithValue(jar)],
+      overrides: [
+        // injeta a MESMA instância para todo o app (auth/login, refresh e dio principal)
+        cookieJarProvider.overrideWithValue(jar),
+      ],
       child: const IuppyApp(),
     ),
   );
@@ -51,25 +53,20 @@ class _IuppyAppState extends ConsumerState<IuppyApp> {
       ref.read(appRouterProvider).go(path + query);
     });
 
+    // Se o app foi aberto por uma notificação “morta”
     PushService.instance.consumeInitialMessageIfAny();
+
+    // Só para debug (mostra o token atual nos logs)
     PushService.instance.printDebugToken();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<UserProfile?>>(
-      userProfileProvider,
-      (prev, next) async {
-        if (next.hasValue && next.value?.id != null) {
-          final env = ref.read(envProvider);
-          await PushService.instance.askPermissionAndRegister(
-            userId: next.value!.id!,
-            companyId: env.companyId,
-            apiBaseUrl: env.apiBaseUrl,
-          );
-        }
-      },
-    );
+    // 🔔 Ativa o bootstrap centralizado de push:
+    // - acompanha login/refresh e mantém o Bearer no PushService
+    // - quando /auth/me resolve (tem userId), pede permissão e registra o FCM
+    // - imprime o token para debug
+    ref.watch(pushBootstrapProvider);
 
     final env = ref.watch(envProvider);
     final themePair = ref.watch(appThemeProvider);

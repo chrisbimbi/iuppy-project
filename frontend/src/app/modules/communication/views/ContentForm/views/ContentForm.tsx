@@ -8,6 +8,8 @@ import { Step2 } from './steps/Step2';
 import { KTSVG } from 'src/helpers';
 import { PageTitle } from 'src/layout/core';
 import { Content } from 'src/layout/components/Content';
+import { api } from 'src/app/api'
+
 import {
   CreateNewsDto as CreateContentDto,
   UpdateNewsDto as UpdateContentDto,
@@ -190,13 +192,40 @@ const ContentForm: React.FC<ContentFormProps> = ({
       };
 
       if (editingId) {
-        await editItem(editingId, updateDto);
+        const updated = await editItem(editingId, updateDto)
+        const shouldPush =
+          (updated?.settings?.pushNotification ?? updateDto?.settings?.pushNotification ?? dto?.settings?.pushNotification) === true
+          && (updated?.isPublished ?? updateDto?.isPublished ?? dto?.isPublished) === true
+
+        if (shouldPush) {
+          try {
+            const r = await api.post(`/v2/news/${editingId}/push`, { onlyNotOpened: false })
+            console.log('[push] disparo edição ok', r.data)
+            // TODO (opcional): mostrar toast com r.data.requested/success/failure/receivable
+          } catch (err) {
+            console.warn('[push] falha ao disparar após edição', err)
+          }
+        }
       } else {
-        await createItem({
+        const created = await createItem({
           ...dto,
           attachments: uploaded.attachments,
           highlightImages: uploaded.highlightImages as any,
-        } as any);
+        } as any)
+
+        const shouldPush =
+          (created?.settings?.pushNotification ?? dto?.settings?.pushNotification) === true
+          && (created?.isPublished ?? dto?.isPublished) === true
+
+        if (shouldPush && created?.id) {
+          try {
+            const r = await api.post(`/v2/news/${created.id}/push`, { onlyNotOpened: false })
+            console.log('[push] disparo criação ok', r.data)
+            // TODO (opcional): mostrar toast com r.data.requested/success/failure/receivable
+          } catch (err) {
+            console.warn('[push] falha ao disparar após criação', err)
+          }
+        }
       }
       // sucesso — o modal fecha via onSaved()
     } catch (error) {

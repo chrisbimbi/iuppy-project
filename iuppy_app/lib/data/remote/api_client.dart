@@ -310,7 +310,10 @@ class ApiClient {
     try {
       final r = await _dio.post(
         '/v2/news/$newsId/open',
-        data: meta ?? const {'origin': 'app'},
+        // <— conforme combinado: meta dentro do body
+        data: {
+          'meta': meta ?? const {'origin': 'app'}
+        },
         options:
             Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
         cancelToken: cancelToken,

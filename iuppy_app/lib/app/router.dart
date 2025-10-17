@@ -1,4 +1,3 @@
-// lib/app/router.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -139,10 +138,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/news/article/:id',
         name: 'news-detail',
-        pageBuilder: (context, state) => MaterialPage(
-          key: state.pageKey,
-          child: NewsDetailPage(id: state.pathParameters['id']!),
-        ),
+        pageBuilder: (context, state) {
+          final cameFromPush =
+              (state.uri.queryParameters['cameFromPush'] ?? '') == '1';
+          final mid = state.uri.queryParameters['mid'];
+          return MaterialPage(
+            key: state.pageKey,
+            child: NewsDetailPage(
+              id: state.pathParameters['id']!,
+              cameFromPush: cameFromPush,
+              pushMessageId: mid,
+            ),
+          );
+        },
       ),
       GoRoute(path: '/surveys', builder: (_, __) => const SurveysListPage()),
       GoRoute(

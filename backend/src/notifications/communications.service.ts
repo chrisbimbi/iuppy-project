@@ -1,338 +1,371 @@
-import { Injectable, Inject, Logger } from '@nestjs/common'
-import { DataSource, In, Repository } from 'typeorm'
-import { InjectRepository } from '@nestjs/typeorm'
-import * as admin from 'firebase-admin'
-import { FIREBASE_MESSAGING } from './firebase-admin.provider'
-import { UserDeviceEntity } from './entities/user-device.entity'
-import { SchemaIntrospectorV2 } from 'src/v2/common/schema-introspector.v2'
+import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import * as admin from 'firebase-admin';
 
-type Platform = 'web' | 'android' | 'ios'
-type Messaging = admin.messaging.Messaging
-type MulticastMessage = admin.messaging.MulticastMessage
+type Platform = 'web' | 'android' | 'ios';
 
-export type SendPushInput = {
-  companyId: string
-  userIds: string[]
-  title: string
-  body: string
-  imageUrl?: string | null
-  deepLink?: string | null
-  data?: Record<string, string | number | boolean | null | undefined>
-  kind: 'NEWS' | 'SURVEY' | 'FORM' | 'ONBOARDING' | string
-  entityId?: string
-}
+type SendPushInput = {
+  companyId: string;
+  userIds: string[];
+  title: string;
+  body: string;
+  imageUrl?: string;
+  deepLinkMobile?: string; // DATA→ deepLink (app)
+  webLink?: string;        // webpush.fcmOptions.link (web)
+  data?: Record<string, string | number | boolean | null | undefined>;
+  kind: 'NEWS' | string;
+  entityId?: string;
+};
+
+type TokenRow = { userId: string; platform: Platform; token: string; id: string };
 
 @Injectable()
 export class CommunicationsService {
-  private readonly logger = new Logger(CommunicationsService.name)
+  private readonly logger = new Logger('CommunicationsService');
 
-  constructor(
-    private readonly ds: DataSource,
-    private readonly schema: SchemaIntrospectorV2,
-    @InjectRepository(UserDeviceEntity) private readonly deviceRepo: Repository<UserDeviceEntity>,
-    @Inject(FIREBASE_MESSAGING) private readonly fcm: Messaging,
-  ) { }
+  private readonly CHUNK = 500;
+  private readonly DEBUG_PAYLOAD = process.env.PUSH_LOG_PAYLOAD === '1';
+  private readonly DEBUG_TOKENS = process.env.PUSH_LOG_TOKENS === '1';
 
-  async getTokens(
-    companyId: string,
-    userIds: string[],
-  ): Promise<Array<{ userId: string; platform: Platform; token: string }>> {
-    if (!userIds.length) return []
-    const rows = await this.deviceRepo.find({
-      where: { companyId, userId: In(userIds), enabled: true },
-      select: ['userId', 'platform', 'token'],
-    })
-    const seen = new Set<string>()
-    return rows.filter((r) => {
-      if (!r.token) return false
-      if (seen.has(r.token)) return false
-      seen.add(r.token)
-      return true
-    })
+  constructor(private readonly ds: DataSource) {}
+
+  private maskToken(t: string) {
+    if (!t) return '';
+    if (this.DEBUG_TOKENS) return t;
+    if (t.length <= 12) return `${t.slice(0, 2)}***${t.slice(-2)}`;
+    return `${t.slice(0, 6)}***${t.slice(-6)}`;
   }
 
-  private chunk<T>(arr: T[], size = 500): T[][] {
-    const out: T[][] = []
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
-    return out
+  private async tableExists(name: string): Promise<boolean> {
+    const r = await this.ds.query(`SELECT to_regclass($1) IS NOT NULL AS x`, [`public.${name}`]);
+    return !!r?.[0]?.x;
   }
 
-  private makeMessage(platform: Platform, tokens: string[], input: SendPushInput): MulticastMessage {
-    const { title, body, imageUrl, deepLink, data, kind, entityId, companyId } = input
-    const commonData: Record<string, string> = {
-      companyId,
-      kind,
-      ...(entityId ? { entityId } : {}),
-      ...(data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? '')])) : {}),
-      ...(deepLink ? { deeplink: deepLink } : {}),
+  private split<T>(arr: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
+  // shape dinâmico de push_delivery
+  private async getPushDeliveryColumns(): Promise<Set<string> | null> {
+    const exists = await this.tableExists('push_delivery');
+    if (!exists) return null;
+    const rows = await this.ds.query(
+      `SELECT a.attname AS col
+         FROM pg_attribute a
+         JOIN pg_class c ON a.attrelid=c.oid
+         JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relname='push_delivery' AND a.attnum>0`,
+    );
+    return new Set<string>((rows || []).map((r: any) => r.col));
+  }
+
+  private async insertPushDeliveryDynamic(cols: Set<string>, row: {
+    companyId?: string; userId?: string | null; platform?: Platform;
+    token?: string; provider?: string; channel?: string;
+    status?: 'queued' | 'delivered' | 'failed';
+    sentAt?: Date | null; deliveredAt?: Date | null; openedAt?: Date | null;
+    meta?: any; error?: string | null; kind?: string | null; entityId?: string | null;
+  }) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    const put = (name: string, value: any) => {
+      if (!cols.has(name)) return;
+      fields.push(`"${name}"`);
+      values.push(value);
+      placeholders.push(`$${values.length}`);
+    };
+
+    put('companyId', row.companyId ?? null);
+    put('userId', row.userId ?? null);
+    put('platform', row.platform ?? null);
+    put('token', row.token ?? null);
+    put('provider', row.provider ?? 'fcm');
+    put('channel', row.channel ?? 'notify');
+    put('status', row.status ?? 'delivered');
+    put('sentAt', row.sentAt ?? new Date());
+    put('deliveredAt', row.deliveredAt ?? new Date());
+    put('openedAt', row.openedAt ?? null);
+    put('meta', row.meta ? JSON.stringify(row.meta) : JSON.stringify({}));
+    put('error', row.error ?? null);
+    put('kind', row.kind ?? null);
+    put('entityId', row.entityId ?? null);
+
+    if (!fields.length) return;
+    const sql = `INSERT INTO push_delivery (${fields.join(',')}) VALUES (${placeholders.join(',')})`;
+    await this.ds.query(sql, values);
+  }
+
+  private buildCrossPlatformMessage(
+    title: string,
+    body: string,
+    imageUrl?: string,
+    deepLinkMobile?: string,
+    webLink?: string,
+    dataBase?: Record<string, any>,
+  ): Omit<admin.messaging.MulticastMessage, 'tokens'> {
+    const data: Record<string, string> = {};
+    if (dataBase) {
+      for (const [k, v] of Object.entries(dataBase)) {
+        if (v === undefined || v === null) continue;
+        data[k] = String(v);
+      }
     }
+    if (deepLinkMobile) data['deepLink'] = deepLinkMobile;
 
     return {
-      tokens,
-      notification: { title, body, imageUrl: imageUrl || undefined },
-      data: commonData,
+      notification: { title, body, ...(imageUrl ? { image: imageUrl } : {}) },
+      data,
       android: {
         priority: 'high',
         notification: {
-          imageUrl: imageUrl || undefined,
           clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-          channelId: 'default',
+          channelId: process.env.FCM_ANDROID_CHANNEL_ID || 'news_channel',
+          ...(imageUrl ? { image: imageUrl } : {}),
         },
-        fcmOptions: { analyticsLabel: 'news_push' },
+        fcmOptions: { analyticsLabel: 'news_android' },
       },
       apns: {
         headers: { 'apns-priority': '10' },
-        payload: { aps: { alert: { title, body }, 'mutable-content': 1, sound: 'default' } },
-        fcmOptions: { imageUrl: imageUrl || undefined, analyticsLabel: 'news_push' } as any,
+        payload: { aps: { alert: { title, body }, sound: 'default', 'mutable-content': 1 } },
+        fcmOptions: { analyticsLabel: 'news_ios' },
       },
       webpush: {
-        notification: {
-          title,
-          body,
-          icon: '/icons/icon-192.png',
-          image: imageUrl || undefined,
-        },
-        fcmOptions: deepLink ? { link: deepLink } : undefined,
         headers: { Urgency: 'high' },
+        notification: { icon: process.env.FCM_WEB_ICON || undefined, ...(imageUrl ? { image: imageUrl } : {}) },
+        fcmOptions: { link: webLink },
       },
+    };
+  }
+
+  private async fetchTokens(companyId: string, userIds: string[]): Promise<TokenRow[]> {
+    return this.ds.query(
+      `SELECT "userId","platform","token","id"
+         FROM user_device
+        WHERE "companyId"=$1 AND "userId"=ANY($2::uuid[]) AND "enabled"=true`,
+      [companyId, userIds],
+    );
+  }
+
+  private groupByPlatform(tokens: TokenRow[]) {
+    const by: Record<Platform, TokenRow[]> = { web: [], android: [], ios: [] };
+    for (const t of tokens) {
+      if (t.platform === 'web' || t.platform === 'android' || t.platform === 'ios') by[t.platform].push(t);
     }
-  }
-
-  private async detectPushDeliveryShape(): Promise<
-    | { shape: 'rich'; hasOpenedAt: boolean }
-    | { shape: 'simple' }
-    | null
-  > {
-    const has = await this.schema.hasTable('push_delivery')
-    if (!has) return null
-
-    const richCols = await Promise.all([
-      this.schema.hasColumn('push_delivery', 'status'),
-      this.schema.hasColumn('push_delivery', 'channel'),
-      this.schema.hasColumn('push_delivery', 'provider'),
-      this.schema.hasColumn('push_delivery', 'token'),
-      this.schema.hasColumn('push_delivery', 'sentAt'),
-      this.schema.hasColumn('push_delivery', 'deliveredAt'),
-      this.schema.hasColumn('push_delivery', 'meta'),
-      this.schema.hasColumn('push_delivery', 'error'),
-    ])
-    const isRich = richCols.every(Boolean)
-    if (isRich) {
-      const hasOpenedAt = await this.schema.hasColumn('push_delivery', 'openedAt')
-      return { shape: 'rich', hasOpenedAt }
-    }
-
-    const simpleCols = await Promise.all([
-      this.schema.hasColumn('push_delivery', 'messageId'),
-      this.schema.hasColumn('push_delivery', 'platform'),
-      this.schema.hasColumn('push_delivery', 'token'),
-      this.schema.hasColumn('push_delivery', 'deliveredAt'),
-    ])
-    if (simpleCols.every(Boolean)) return { shape: 'simple' }
-
-    return null
-  }
-
-  private async insertDeliveriesSimple(rows: Array<{
-    companyId: string
-    newsId: string | null
-    userId: string
-    platform: string | null
-    token: string
-    messageId: string | null
-    deliveredAt: Date
-  }>) {
-    if (!rows.length) return
-    const values = rows.map(() => `($1,$2,$3,$4,$5,$6,$7)`).join(',')
-    const params: any[] = []
-    rows.forEach((v) => params.push(v.companyId, v.newsId, v.userId, v.platform, v.token, v.messageId, v.deliveredAt))
-    await this.ds.query(
-      `INSERT INTO push_delivery ("companyId","newsId","userId","platform","token","messageId","deliveredAt")
-       VALUES ${values}`,
-      params,
-    )
-  }
-
-  private async insertDeliveriesRich(rows: Array<{
-    companyId: string
-    newsId: string | null
-    userId: string
-    token: string
-    providerMsgId: string | null
-    sentAt: Date
-    deliveredAt: Date | null
-    meta?: any
-  }>) {
-    if (!rows.length) return
-    const values = rows.map(() => `($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`).join(',')
-    const params: any[] = []
-    rows.forEach((v) =>
-      params.push(
-        v.companyId,
-        v.newsId,
-        v.userId,
-        'notify',
-        'fcm',
-        v.token,
-        'delivered',
-        v.sentAt,
-        v.deliveredAt,
-        JSON.stringify({ mid: v.providerMsgId, ...(v.meta || {}) }),
-      ),
-    )
-    await this.ds.query(
-      `INSERT INTO push_delivery ("companyId","newsId","userId","channel","provider","token","status","sentAt","deliveredAt","meta")
-       VALUES ${values}`,
-      params,
-    )
-  }
-
-  private async persistDeliveries(
-    shape: Awaited<ReturnType<CommunicationsService['detectPushDeliveryShape']>>,
-    items: Array<{
-      companyId: string
-      newsId: string | null
-      userId: string
-      platform: Platform | null
-      token: string
-      messageId: string | null
-      sentAt: Date
-      deliveredAt: Date | null
-    }>,
-  ) {
-    if (!shape || !items.length) return
-    if (shape.shape === 'simple') {
-      await this.insertDeliveriesSimple(
-        items.map((i) => ({
-          companyId: i.companyId,
-          newsId: i.newsId,
-          userId: i.userId,
-          platform: i.platform,
-          token: i.token,
-          messageId: i.messageId,
-          deliveredAt: i.deliveredAt || i.sentAt,
-        })),
-      )
-      return
-    }
-
-    await this.insertDeliveriesRich(
-      items.map((i) => ({
-        companyId: i.companyId,
-        newsId: i.newsId,
-        userId: i.userId,
-        token: i.token,
-        providerMsgId: i.messageId,
-        sentAt: i.sentAt,
-        deliveredAt: i.deliveredAt,
-      })),
-    )
+    return by;
   }
 
   async sendPush(input: SendPushInput) {
-    const { companyId, userIds, kind, entityId } = input
-    if (!userIds.length) return { requested: 0, success: 0, failure: 0 }
+    const reqId = Math.random().toString(36).slice(2, 10);
+    this.logger.log(
+      `[${reqId}] sendPush start kind=${input.kind} entityId=${input.entityId} users=${input.userIds.length} deepLinkMobile=${input.deepLinkMobile} webLink=${input.webLink}`,
+    );
 
-    const tokenRows = await this.getTokens(companyId, userIds)
-    if (!tokenRows.length) return { requested: 0, success: 0, failure: 0 }
+    const tokens = await this.fetchTokens(input.companyId, input.userIds);
+    this.logger.log(`[${reqId}] tokens total=${tokens.length} (users distinct=${new Set(tokens.map(t => t.userId)).size})`);
 
-    const now = new Date()
-    const byPlatform = new Map<Platform, string[]>()
-    tokenRows.forEach((t) => {
-      if (!byPlatform.has(t.platform)) byPlatform.set(t.platform, [])
-      byPlatform.get(t.platform)!.push(t.token)
-    })
+    const by = this.groupByPlatform(tokens);
+    const cols = await this.getPushDeliveryColumns();
+    const results = { requested: 0, success: 0, failure: 0 };
 
-    const tokenToUser = new Map<string, string>()
-    tokenRows.forEach((t) => tokenToUser.set(t.token, t.userId))
+    const baseData = { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' };
 
-    const shape = await this.detectPushDeliveryShape()
+    for (const platform of ['android', 'ios', 'web'] as Platform[]) {
+      const rows = by[platform];
+      if (!rows.length) continue;
 
-    let success = 0
-    let failure = 0
-    const deliveries: Array<{
-      companyId: string
-      newsId: string | null
-      userId: string
-      platform: Platform | null
-      token: string
-      messageId: string | null
-      sentAt: Date
-      deliveredAt: Date | null
-    }> = []
+      const chunks = this.split(rows, this.CHUNK);
+      this.logger.log(`[${reqId}] platform=${platform} chunks=${chunks.length} totalTokens=${rows.length}`);
 
-    for (const [platform, list] of byPlatform.entries()) {
-      // batches de até 500
-      for (let i = 0; i < list.length; i += 500) {
-        const batch = list.slice(i, i + 500)
-        const res = await this.fcm.sendEachForMulticast(this.makeMessage(platform, batch, input))
+      for (let i = 0; i < chunks.length; i++) {
+        const lot = chunks[i];
+        const tokensRaw = lot.map((x) => x.token);
+        const multicast: admin.messaging.MulticastMessage = {
+          ...this.buildCrossPlatformMessage(
+            input.title, input.body, input.imageUrl, input.deepLinkMobile, input.webLink, { ...baseData, ...(input.data || {}) },
+          ),
+          tokens: tokensRaw,
+        };
 
-        res.responses.forEach((r, idx) => {
-          const token = batch[idx]
-          const userId = tokenToUser.get(token)
-          if (!userId) return
-          if (r.success) {
-            success++
-            deliveries.push({
-              companyId,
-              newsId: (kind === 'NEWS' ? (entityId || null) : null) as string | null,
-              userId,
-              platform,
-              token,
-              messageId: r.messageId || null,
-              sentAt: now,
-              deliveredAt: now,
-            })
-          } else {
-            failure++
-          }
-        })
+        if (this.DEBUG_PAYLOAD) {
+          this.logger.debug(
+            `[${reqId}] payload[${platform}#${i + 1}/${chunks.length}] tokens=${tokensRaw.map(this.maskToken.bind(this)).join(',')}`,
+          );
+        }
 
-        const invalidTokens: string[] = []
-        res.responses.forEach((r, idx) => {
-          if (!r.success) {
-            const code = (r.error && (r.error as any).code) || ''
-            if (
-              code.includes('registration-token-not-registered') ||
-              code.includes('invalid-argument') ||
-              code.includes('invalid-registration-token')
-            ) {
-              invalidTokens.push(batch[idx])
+        try {
+          results.requested += tokensRaw.length;
+          const resp = await admin.messaging().sendEachForMulticast(multicast);
+          this.logger.log(`[${reqId}] FCM resp platform=${platform}#${i + 1} success=${resp.successCount} failure=${resp.failureCount}`);
+
+          // registrar entregas (dinâmico)
+          for (let idx = 0; idx < lot.length; idx++) {
+            const t = lot[idx];
+            const r = resp.responses[idx];
+            const ok = !!r?.success;
+            const err = r?.error as any;
+            const code = err?.errorInfo?.code || err?.code || '';
+            const msgId = r?.messageId;
+
+            try {
+              if (cols) {
+                await this.insertPushDeliveryDynamic(cols, {
+                  companyId: input.companyId,
+                  userId: t.userId,
+                  platform,
+                  token: t.token,
+                  provider: 'fcm',
+                  channel: 'notify',
+                  status: ok ? 'delivered' : 'failed',
+                  sentAt: new Date(),
+                  deliveredAt: ok ? new Date() : null,
+                  meta: { mid: msgId },
+                  error: ok ? null : (code || String(err || '')).slice(0, 512),
+                  kind: input.kind,
+                  entityId: input.entityId || null,
+                });
+              }
+            } catch (e: any) {
+              this.logger.error(`[${reqId}] push_delivery insert error: ${e?.message || e}`);
+            }
+
+            if (!ok) {
+              results.failure++;
+              this.logger.warn(`[${reqId}] fail token=${this.maskToken(t.token)} code=${code || 'unknown'} platform=${platform}`);
+            } else {
+              results.success++;
             }
           }
-        })
-        if (invalidTokens.length) {
-          await this.ds.query(
-            `UPDATE user_device SET enabled=false, "disabledAt"=NOW() WHERE "companyId"=$1 AND token = ANY($2::text[])`,
-            [companyId, invalidTokens],
-          )
+        } catch (e: any) {
+          this.logger.error(`[${reqId}] FCM error platform=${platform}#${i + 1}: ${e?.message || e}`);
+          for (const t of lot) {
+            try {
+              if (cols) {
+                await this.insertPushDeliveryDynamic(cols, {
+                  companyId: input.companyId,
+                  userId: t.userId,
+                  platform,
+                  token: t.token,
+                  provider: 'fcm',
+                  channel: 'notify',
+                  status: 'failed',
+                  sentAt: new Date(),
+                  deliveredAt: null,
+                  meta: {},
+                  error: (e?.message || String(e || '')).slice(0, 512),
+                  kind: input.kind,
+                  entityId: input.entityId || null,
+                });
+              }
+            } catch {}
+            results.failure++;
+          }
         }
       }
     }
 
-    await this.persistDeliveries(shape, deliveries)
-    return { requested: tokenRows.length, success, failure }
+    this.logger.log(
+      `[${reqId}] done kind=${input.kind} entityId=${input.entityId} requested=${results.requested} success=${results.success} failure=${results.failure}`,
+    );
+    return results;
   }
 
-  async sendNewsPush(args: {
-    companyId: string
-    newsId: string
-    userIds: string[]
-    title: string
-    body: string
-    imageUrl?: string | null
-    deepLink?: string | null
+  // envio para notícia
+  async sendNewsPush(input: {
+    companyId: string;
+    newsId: string;
+    userIds: string[];
+    title: string;
+    body: string;
+    imageUrl?: string;
+    deepLinkMobile?: string;
+    webLink?: string;
   }) {
     return this.sendPush({
-      companyId: args.companyId,
-      userIds: args.userIds,
-      title: args.title,
-      body: args.body,
-      imageUrl: args.imageUrl,
-      deepLink: args.deepLink,
+      companyId: input.companyId,
+      userIds: input.userIds,
+      title: input.title,
+      body: input.body,
+      imageUrl: input.imageUrl,
+      deepLinkMobile: input.deepLinkMobile,
+      webLink: input.webLink,
       kind: 'NEWS',
-      entityId: args.newsId,
-      data: { newsId: args.newsId },
-    })
+      entityId: input.newsId,
+    });
+  }
+
+  // opcional: modo teste por tokens diretos (usado no NewsPushServiceV2)
+  async sendDirectTokens(input: {
+    companyId: string;
+    tokens: string[];
+    title: string;
+    body: string;
+    imageUrl?: string;
+    deepLinkMobile?: string;
+    webLink?: string;
+    kind: string;
+    entityId?: string;
+  }) {
+    const reqId = Math.random().toString(36).slice(2, 10);
+    const by: Record<Platform, string[]> = { android: [], ios: [], web: [] };
+    // sem saber a plataforma, manda como android (comum para FCM)
+    by.android = input.tokens;
+
+    const cols = await this.getPushDeliveryColumns();
+    const results = { requested: 0, success: 0, failure: 0 };
+
+    for (const platform of ['android'] as Platform[]) {
+      const tokens = by[platform];
+      if (!tokens.length) continue;
+      const chunks = this.split(tokens, this.CHUNK);
+
+      for (let i = 0; i < chunks.length; i++) {
+        const lot = chunks[i];
+        const msg: admin.messaging.MulticastMessage = {
+          ...this.buildCrossPlatformMessage(
+            input.title, input.body, input.imageUrl, input.deepLinkMobile, input.webLink,
+            { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' },
+          ),
+          tokens: lot,
+        };
+        try {
+          results.requested += lot.length;
+          const resp = await admin.messaging().sendEachForMulticast(msg);
+          this.logger.log(`[${reqId}] TEST resp success=${resp.successCount} failure=${resp.failureCount}`);
+          for (let idx = 0; idx < lot.length; idx++) {
+            const tok = lot[idx];
+            const r = resp.responses[idx];
+            const ok = !!r?.success;
+            if (cols) {
+              try {
+                await this.insertPushDeliveryDynamic(cols, {
+                  companyId: input.companyId,
+                  userId: null,
+                  platform,
+                  token: tok,
+                  provider: 'fcm',
+                  channel: 'notify',
+                  status: ok ? 'delivered' : 'failed',
+                  sentAt: new Date(),
+                  deliveredAt: ok ? new Date() : null,
+                  meta: { mid: r?.messageId },
+                  error: ok ? null : (r?.error?.code || '').slice(0, 512),
+                  kind: input.kind,
+                  entityId: input.entityId || null,
+                });
+              } catch {}
+            }
+            ok ? results.success++ : results.failure++;
+          }
+        } catch (e: any) {
+          this.logger.error(`[${reqId}] TEST send error: ${e?.message || e}`);
+          results.failure += lot.length;
+        }
+      }
+    }
+    return results;
   }
 }

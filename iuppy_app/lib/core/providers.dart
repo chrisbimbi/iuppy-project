@@ -203,11 +203,11 @@ final dioProvider = Provider<Dio>((ref) {
         );
 
         final router = GoRouter.of(ctx);
-// Pega a rota atual de forma compatível com versões antigas do go_router
+        // Pega a rota atual de forma compatível com versões antigas do go_router
         final routeInfo = router.routeInformationProvider.value;
         final currentLocation = (routeInfo.location ?? '/home');
 
-// Monta o destino preservando ?from=
+        // Monta o destino preservando ?from=
         final from = Uri.encodeComponent(currentLocation);
         final target = currentLocation.startsWith('/login')
             ? '/login'
@@ -232,10 +232,10 @@ final localNewsStoreProvider = Provider<LocalNewsStore>((ref) {
   return LocalNewsStore();
 });
 
-/// Bumps when a news is marked as opened locally.
+/// Bumps quando marca news como aberta localmente
 final newsSeenVersionProvider = StateProvider<int>((_) => 0);
 
-/// Bumps when the home feed should be refreshed (e.g. after reacting, sharing, commenting).
+/// Bumps quando o feed deve ser atualizado
 final feedVersionProvider = StateProvider<int>((_) => 0);
 
 /// Auth controller usa um Dio SEM interceptor de auth, mas COM CookieJar compartilhado
@@ -307,8 +307,8 @@ class UserProfile {
 }
 
 final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
-  // Evita chamar /auth/me se não houver token
-  final token = ref.read(authControllerProvider).accessToken;
+  // Reage a mudanças de token (login/refresh)
+  final token = ref.watch(authControllerProvider).accessToken;
   if (token == null || token.isEmpty) return null;
 
   final api = ref.read(apiClientProvider);
@@ -409,24 +409,7 @@ final companySettingsProvider =
   );
   ref.read(appThemeProvider.notifier).state = theme;
 
-  // Bootstrap de Push quando autenticado
-  try {
-    final token = ref.read(authControllerProvider).accessToken;
-    if (token != null && token.isNotEmpty) {
-      final me = await ref.read(userProfileProvider.future);
-      final env = ref.read(envProvider);
-      if (me?.id != null && (env.companyId.isNotEmpty)) {
-        await PushService.instance.init();
-        await PushService.instance.askPermissionAndRegister(
-          userId: me!.id!,
-          companyId: env.companyId,
-          apiBaseUrl: env.apiBaseUrl,
-          appVersion: null,
-          locale: null,
-        );
-      }
-    }
-  } catch (_) {}
+  // ❌ REMOVIDO: bootstrap de push daqui (agora é centralizado no pushBootstrapProvider)
 
   return CompanySettingsState(branding, enabled);
 });
@@ -796,8 +779,6 @@ class HomeBadges {
   const HomeBadges({this.newsNew = 0, this.surveysPending = 0});
 }
 
-// Home badges are derived from the unread counters (news) and surveys. By deriving from providers,
-// the badge values automatically update when the underlying counters change.
 final homeBadgesProvider = Provider<HomeBadges>((ref) {
   final counters = ref.watch(unreadCountersProvider);
   final newsNew = counters.maybeWhen(
@@ -809,20 +790,52 @@ final homeBadgesProvider = Provider<HomeBadges>((ref) {
   return HomeBadges(newsNew: newsNew, surveysPending: surveysPending);
 });
 
-/// Contadores por space/channel (Drawer)
 final unreadCountersProvider = FutureProvider<UnreadCounters>((ref) async {
-  // Recompute when local seen version changes
   ref.watch(newsSeenVersionProvider);
   return ref.read(newsRepoProvider).unreadCounters();
 });
 
-/// Provides the home feed filtered by [spaceId]. Recomputes whenever [feedVersionProvider] changes.
 final homeFeedProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String?>(
         (ref, String? spaceId) async {
-  // depend on the feed version so that the feed refreshes when users interact with news
   ref.watch(feedVersionProvider);
   return ref.read(newsRepoProvider).homeFeedRemoteFirst(spaceId: spaceId);
+});
+
+/// ========= PUSH BOOTSTRAP =========
+/// Observa (1) o token de backend pra manter o Bearer no PushService
+/// e (2) o /auth/me pra registrar o FCM assim que o usuário estiver resolvido.
+final pushBootstrapProvider = Provider<void>((ref) {
+  // 1) mantém o Bearer em sincronia com o PushService
+  ref.listen<AuthState>(authControllerProvider, (prev, next) async {
+    final tok = next.accessToken;
+    await PushService.instance.init();
+    PushService.instance.updateBackendAuthToken(tok);
+    // opcional: imprimir token FCM pra debug
+    await PushService.instance.printDebugToken();
+  });
+
+  // 2) quando /auth/me resolve com ID -> registra o dispositivo
+  ref.listen<AsyncValue<UserProfile?>>(userProfileProvider, (prev, next) async {
+    if (!next.hasValue) return;
+    final me = next.value;
+    if (me?.id == null || me!.id!.isEmpty) return;
+
+    final env = ref.read(envProvider);
+    final auth = ref.read(authControllerProvider);
+
+    await PushService.instance.init();
+    PushService.instance.updateBackendAuthToken(auth.accessToken);
+
+    await PushService.instance.askPermissionAndRegister(
+      userId: me.id!,
+      companyId: env.companyId,
+      apiBaseUrl: env.apiBaseUrl,
+      accessToken: auth.accessToken,
+      appVersion: null,
+      locale: null,
+    );
+  });
 });
 
 /// ========= Utils =========

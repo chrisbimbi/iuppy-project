@@ -22,8 +22,16 @@ export const createNewSchema = Yup.object().shape({
     allowReactions: Yup.boolean().required(),
     notifyUsers: Yup.boolean().required(),
     pushNotification: Yup.boolean().required(),
-    pushTitle: Yup.string(),
-    pushContent: Yup.string(),
+    pushTitle: Yup.string().when('pushNotification', {
+      is: true,
+      then: (s) => s.trim().required('Título do push é obrigatório'),
+      otherwise: (s) => s.notRequired(),
+    }),
+    pushContent: Yup.string().when('pushNotification', {
+      is: true,
+      then: (s) => s.trim().required('Conteúdo do push é obrigatório'),
+      otherwise: (s) => s.notRequired(),
+    }),
     emailNotification: Yup.boolean().required(),
     allowSharing: Yup.boolean().required(),
     showAuthor: Yup.boolean().required(),

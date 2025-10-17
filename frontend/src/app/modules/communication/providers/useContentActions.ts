@@ -9,20 +9,23 @@ import {
 
 export const useContentActions = (refetch: () => void) => {
   const createItem = useCallback(
-    async (dto: CreateContentDto) => {
-      await ContentService.create(dto)
+    async (dto: CreateContentDto): Promise<News> => {
+      const created = await ContentService.create(dto)
       refetch()
+      return created
     },
     [refetch]
   )
 
   const editItem = useCallback(
-    async (id: string, dto: UpdateContentDto) => {
-      await ContentService.update(id, dto)
+    async (id: string, dto: UpdateContentDto): Promise<News> => {
+      const updated = await ContentService.update(id, dto)
       refetch()
+      return updated
     },
     [refetch]
   )
+
 
   const duplicateItem = useCallback(
     async (id: string) => {

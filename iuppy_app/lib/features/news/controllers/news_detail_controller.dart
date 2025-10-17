@@ -172,7 +172,6 @@ class NewsDetailController extends ChangeNotifier {
   final String newsId;
 
   NewsDetailVM? _vm;
-  bool _openedOnceGuard = false;
   NewsDetailVM? get vm => _vm;
   bool get loading => _vm == null;
 
@@ -222,8 +221,6 @@ class NewsDetailController extends ChangeNotifier {
         u.startsWith('data:image')) {
       return u;
     }
-    if (u.startsWith('//')) return 'https:$u';
-    // tenta baseUrl do ApiClient/env
     final base = (api.baseUrl.isNotEmpty ? api.baseUrl : null) ??
         (env is Map ? (env['apiBaseUrl'] ?? env['baseUrl']) : null) ??
         (env?.apiBaseUrl) ??
@@ -501,32 +498,21 @@ class NewsDetailController extends ChangeNotifier {
       shareText: shareText,
     );
 
-    // LOG
-    if (kDebugMode) {
-      debugPrint('[NEWS:$newsId] load()');
-      debugPrint(
-          '  me="${_meName}" avatarUrl="${_meAvatar.isNotEmpty}" -> ${_meAvatar}');
-      debugPrint('  myReaction(from API)=$myReaction');
-      debugPrint('  reactsByType=$reactsByType total=$totalReacts');
-      debugPrint('  hasMeInReactorsSample=${_listHasMe(reactorsSample)}');
-      debugPrint('  commentersShown=$commentsShown shares=$sharesTotal');
-      debugPrint('  ackRequired=$ackRequired user.acknowledged=$acknowledged');
-    }
-
+    // apenas carrega; o /open inicial é responsabilidade da página
     notifyListeners();
+  }
 
-    // Marca OPEN uma única vez (local + server)
-    if (!_openedOnceGuard) {
-      _openedOnceGuard = true;
-      try {
-        onOpen?.call(); // local store + badges bump
-      } catch (_) {}
-      try {
-        await api.openNews(newsId, meta: {'origin': 'app'}); // server truth
-      } catch (_) {
-        if (kDebugMode) {
-          debugPrint('[NEWS:$newsId] openNews failed (best-effort)');
-        }
+  /// Envia OPEN sob-demanda
+  Future<void> sendOpen({Map<String, dynamic>? meta}) async {
+    try {
+      onOpen?.call(); // atualiza badges/local store
+      await api.openNews(newsId, meta: meta ?? const {'origin': 'app'});
+      if (kDebugMode) {
+        debugPrint('[NEWS:$newsId] open → 201 meta=$meta');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[NEWS:$newsId] open ERROR: $e (best-effort)');
       }
     }
   }
@@ -754,7 +740,6 @@ class NewsDetailController extends ChangeNotifier {
     }
   }
 
-  // “ver mais” para listas completas
   Future<List<({String name, String avatar})>> loadReactorsMore(
       {int limit = 50}) async {
     final rows = await api.getReactors(newsId, limit: limit);

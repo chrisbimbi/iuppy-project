@@ -5,7 +5,7 @@ import { NewsPushServiceV2 } from './news-push.service'
 @UseGuards(AuthGuard('jwt'))
 @Controller('v2/news')
 export class NewsPushControllerV2 {
-  constructor(private readonly svc: NewsPushServiceV2) {}
+  constructor(private readonly svc: NewsPushServiceV2) { }
 
   /**
    * Dispara push imediato da notícia.
@@ -14,6 +14,8 @@ export class NewsPushControllerV2 {
    *  - testUserId?: string
    *  - overrideTitle?: string
    *  - overrideBody?: string
+   *  - testToken?: string               // modo teste (ignora audiência/tokens do backend)
+   *  - testTokens?: string[]            // modo teste (lista)
    */
   @Post(':id/push')
   async push(@Param('id') id: string, @Body() body: any, @Req() req: any) {
@@ -23,6 +25,10 @@ export class NewsPushControllerV2 {
       testUserId: body?.testUserId || undefined,
       overrideTitle: body?.overrideTitle || undefined,
       overrideBody: body?.overrideBody || undefined,
+
+      // modo teste — opcional
+      testToken: body?.testToken || undefined,
+      testTokens: Array.isArray(body?.testTokens) ? body.testTokens : undefined,
     })
   }
 }

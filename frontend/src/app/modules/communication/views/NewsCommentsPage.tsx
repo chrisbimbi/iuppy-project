@@ -4,6 +4,7 @@ import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
 import { PageTitle } from 'src/layout/core'
 import { CommentsService, CommentRow } from '../services/comments.service'
+import { api } from 'src/app/api'
 
 type Filters = {
     q: string
@@ -43,6 +44,24 @@ const NewsCommentsPage = () => {
     const [items, setItems] = useState<CommentRow[]>([])
     const [totalRows, setTotalRows] = useState(0)
 
+    // 🔎 detectar se a notícia exige moderação
+    const [commentsModerated, setCommentsModerated] = useState<boolean>(true)
+    useEffect(() => {
+        let alive = true
+        if (!newsId) return
+            ; (async () => {
+                try {
+                    const r = await api.get(`/v2/news/${newsId}`)
+                    const s = r.data?.settings ?? {}
+                    const moderated = !!(s.commentsModerated ?? s.requireModeration ?? s.commentsRequireModeration)
+                    if (alive) setCommentsModerated(moderated)
+                } catch {
+                    if (alive) setCommentsModerated(true) // por segurança, mantém comport. antigo
+                }
+            })()
+        return () => { alive = false }
+    }, [newsId])
+
     const periodBadge = useMemo(() => {
         const from = new Date(filters.from); const to = new Date(filters.to)
         const diff = Math.round((+to - +from) / (1000 * 60 * 60 * 24))
@@ -53,11 +72,16 @@ const NewsCommentsPage = () => {
         if (!newsId) return
         setLoading(true); setError(null)
         try {
-            // counters (sem status — queremos o panorama geral, mas com q/from/to)
+            // counters
             const [sum, list] = await Promise.all([
-                CommentsService.summary(newsId, { q: filters.q || undefined, from: filters.from, to: filters.to }),
+                CommentsService.summary(newsId, {
+                    q: filters.q || undefined,
+                    from: filters.from,
+                    to: filters.to,
+                    // mesmo com moderação desativada, o summary pode existir — backend ignora status
+                }),
                 CommentsService.list(newsId, {
-                    status: filters.status, // ✅ sempre enviado
+                    status: commentsModerated ? filters.status : 'all', // ✅ sem moderação → sempre 'all'
                     q: filters.q || undefined,
                     from: filters.from,
                     to: filters.to,
@@ -78,10 +102,9 @@ const NewsCommentsPage = () => {
     useEffect(() => {
         fetchAll()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [newsId, filters.status, filters.from, filters.to, filters.page, filters.pageSize])
+    }, [newsId, commentsModerated, filters.status, filters.from, filters.to, filters.page, filters.pageSize])
 
-    // quando mudar o texto de busca, reseta para página 1
-    useEffect(() => { const t = setTimeout(() => { setFilters(f => ({ ...f, page: 1 })); fetchAll() }, 350); return () => clearTimeout(t) }, [filters.q])
+    useEffect(() => { const t = setTimeout(() => { setFilters(f => ({ ...f, page: 1 })); fetchAll() }, 350); return () => clearTimeout(t) }, [filters.q]) // eslint-disable-line
 
     const statusLabel = (v: boolean | null | undefined) =>
         v === true ? 'Aprovado' : v === false ? 'Rejeitado' : 'Pendente'
@@ -111,19 +134,24 @@ const NewsCommentsPage = () => {
                                 />
                                 <div className='text-muted fs-8 mt-2'>{periodBadge}</div>
                             </div>
-                            <div className='col-lg-3'>
-                                <label className='form-label'>Status</label>
-                                <select
-                                    className='form-select'
-                                    value={filters.status}
-                                    onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as any, page: 1 }))}
-                                >
-                                    <option value='all'>Todos</option>
-                                    <option value='pending'>Pendentes</option>
-                                    <option value='approved'>Aprovados</option>
-                                    <option value='rejected'>Rejeitados</option>
-                                </select>
-                            </div>
+
+                            {/* ⚙️ só exibe o filtro de status se a moderação estiver ativa */}
+                            {commentsModerated && (
+                                <div className='col-lg-3'>
+                                    <label className='form-label'>Status</label>
+                                    <select
+                                        className='form-select'
+                                        value={filters.status}
+                                        onChange={(e) => setFilters(f => ({ ...f, status: e.target.value as any, page: 1 }))}
+                                    >
+                                        <option value='all'>Todos</option>
+                                        <option value='pending'>Pendentes</option>
+                                        <option value='approved'>Aprovados</option>
+                                        <option value='rejected'>Rejeitados</option>
+                                    </select>
+                                </div>
+                            )}
+
                             <div className='col-lg-2'>
                                 <label className='form-label'>De</label>
                                 <input
@@ -148,9 +176,15 @@ const NewsCommentsPage = () => {
                     {/* KPIs */}
                     <div className='row g-6 mb-6'>
                         <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Total</div><div className='fs-1 fw-bold'>{summary.total}</div></div></div>
-                        <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Pendentes</div><div className='fs-1 fw-bold'>{summary.pending}</div></div></div>
-                        <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Aprovados</div><div className='fs-1 fw-bold'>{summary.approved}</div></div></div>
-                        <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Rejeitados</div><div className='fs-1 fw-bold'>{summary.rejected}</div></div></div>
+
+                        {/* ⚙️ KPIs por status apenas com moderação */}
+                        {commentsModerated && (
+                            <>
+                                <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Pendentes</div><div className='fs-1 fw-bold'>{summary.pending}</div></div></div>
+                                <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Aprovados</div><div className='fs-1 fw-bold'>{summary.approved}</div></div></div>
+                                <div className='col-md-3'><div className='card card-body'><div className='text-muted'>Rejeitados</div><div className='fs-1 fw-bold'>{summary.rejected}</div></div></div>
+                            </>
+                        )}
                     </div>
 
                     {/* Tabela */}
@@ -163,13 +197,15 @@ const NewsCommentsPage = () => {
                                             <th>Usuário</th>
                                             <th>Comentário</th>
                                             <th>Data</th>
-                                            <th>Status</th>
-                                            <th className='text-end'>Ações</th>
+                                            {/* ⚙️ esconder coluna de status quando não há moderação */}
+                                            {commentsModerated && <th>Status</th>}
+                                            {/* ⚙️ esconder ações quando não há moderação */}
+                                            {commentsModerated && <th className='text-end'>Ações</th>}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {!loading && items.length === 0 && (
-                                            <tr><td colSpan={5} className='text-center text-muted py-10'>Nenhum comentário encontrado.</td></tr>
+                                            <tr><td colSpan={commentsModerated ? 5 : 3} className='text-center text-muted py-10'>Nenhum comentário encontrado.</td></tr>
                                         )}
                                         {items.map((c) => (
                                             <tr key={c.id}>
@@ -187,20 +223,24 @@ const NewsCommentsPage = () => {
                                                 </td>
                                                 <td style={{ maxWidth: 520 }}><div className='text-wrap'>{c.text}</div></td>
                                                 <td>{fmtDateTime(c.createdAt ?? '')}</td>
-                                                <td>{statusLabel(c.approved ?? null)}</td>
-                                                <td className='text-end'>
-                                                    <div className='btn-group'>
-                                                        <button className='btn btn-light btn-sm' onClick={async () => { await CommentsService.approve(newsId, c.id); fetchAll() }}>Aprovar</button>
-                                                        <button className='btn btn-light-danger btn-sm' onClick={async () => { await CommentsService.reject(newsId, c.id); fetchAll() }}>Rejeitar</button>
-                                                    </div>
-                                                </td>
+
+                                                {commentsModerated && <td>{statusLabel(c.approved ?? null)}</td>}
+
+                                                {commentsModerated && (
+                                                    <td className='text-end'>
+                                                        <div className='btn-group'>
+                                                            <button className='btn btn-light btn-sm' onClick={async () => { await CommentsService.approve(newsId, c.id); fetchAll() }}>Aprovar</button>
+                                                            <button className='btn btn-light-danger btn-sm' onClick={async () => { await CommentsService.reject(newsId, c.id); fetchAll() }}>Rejeitar</button>
+                                                        </div>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
 
-                            {/* paginação simplificada */}
+                            {/* paginação */}
                             <div className='d-flex justify-content-between align-items-center px-6 py-4 text-muted'>
                                 <div>Página {filters.page} — {totalRows} registros</div>
                                 <div className='btn-group'>

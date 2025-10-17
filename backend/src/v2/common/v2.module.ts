@@ -13,6 +13,9 @@ import { NewsReactionEntity } from '../interactions/entities/news-reaction.entit
 import { NewsCommentEntity } from '../interactions/entities/news-comment.entity'
 import { NewsShareEntity } from '../interactions/entities/news-share.entity'
 import { NewsAudienceEntity } from '../interactions/entities/news-audience.entity'
+import { NewsMetricsDailyEntity } from '../interactions/entities/news-metrics-daily.entity'
+import { UserMetricsDailyEntity } from '../interactions/entities/user-metrics-daily.entity'
+import { SearchMetricsDailyEntity } from '../interactions/entities/search-metrics-daily.entity'
 
 // CONTROLLERS
 import { NewsV2Controller } from '../news/news.controller'
@@ -48,6 +51,7 @@ import { NewsPushServiceV2 } from '../news/news-push.service'
 
 // NOTIFICATIONS (para CommunicationsService)
 import { NotificationsModule } from 'src/notifications/notifications.module'
+import { PushDeliveryEntity } from '../push/entities/push-delivery.entity'
 
 @Module({
   imports: [
@@ -57,17 +61,21 @@ import { NotificationsModule } from 'src/notifications/notifications.module'
       Channel,
       SpaceEntity,
       UserEntity,
+      NewsMetricsDailyEntity,
+      UserMetricsDailyEntity,
+      SearchMetricsDailyEntity,
+      PushDeliveryEntity,
 
-      // interactions (necessário para os repositories injetados em NewsV2Service e InteractionsService)
+      // interactions
       InteractionEventEntity,
       NewsReactionEntity,
       NewsCommentEntity,
       NewsShareEntity,
 
-      // audience (usado por AudienceService e NewsV2Service)
+      // audience
       NewsAudienceEntity,
     ]),
-    NotificationsModule, // para injetar CommunicationsService no NewsPushServiceV2
+    NotificationsModule,
   ],
   controllers: [
     NewsV2Controller,
@@ -82,7 +90,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module'
     NewsPushControllerV2,
   ],
   providers: [
-    // core services
+    // core
     NewsV2Service,
     InteractionsService,
     AnalyticsV2Service,

@@ -1,4 +1,3 @@
-// src/v2/analytics/analytics.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, DataSource } from 'typeorm';
@@ -10,10 +9,10 @@ import { NewsShareEntity } from 'src/v2/interactions/entities/news-share.entity'
 import { NewsMetricsDailyEntity } from 'src/v2/interactions/entities/news-metrics-daily.entity';
 import { UserMetricsDailyEntity } from 'src/v2/interactions/entities/user-metrics-daily.entity';
 import { SearchMetricsDailyEntity } from 'src/v2/interactions/entities/search-metrics-daily.entity';
-import { PushDeliveryEntity } from 'src/v2/interactions/entities/push-delivery.entity';
 import { NewsAudienceEntity } from 'src/v2/interactions/entities/news-audience.entity';
 
 import { SchemaIntrospectorV2 } from '../common/schema-introspector.v2';
+import { PushDeliveryEntity } from '../push/entities/push-delivery.entity';
 
 type NewsOverviewParams = {
   from?: string
@@ -29,6 +28,11 @@ function toDateISO(d?: string): string | undefined {
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return undefined;
   return dt.toISOString().slice(0, 10);
+}
+
+// 🔐 helper para citar identificadores (colunas) com segurança
+function q(ident: string) {
+  return `"${String(ident).replace(/"/g, '""')}"`;
 }
 
 @Injectable()
@@ -55,6 +59,7 @@ export class AnalyticsV2Service {
     newsRef: string;
     userIdCol: string;
     createdAtCol: string;
+    metaCol?: string | null;
   } | null> {
     const r = await this.newsRepo.query(
       `SELECT to_regclass('public.news_interaction_event') AS nie, to_regclass('public.interaction_event') AS ie`,
@@ -75,22 +80,10 @@ export class AnalyticsV2Service {
     const newsRef = names.includes('newsId') ? 'newsId' : names.includes('objectId') ? 'objectId' : null;
     const userIdCol = names.includes('userId') ? 'userId' : null;
     const createdAtCol = names.includes('createdAt') ? 'createdAt' : names.includes('created_at') ? 'created_at' : null;
+    const metaCol = names.includes('meta') ? 'meta' : null;
 
     if (!typeCol || !newsRef || !userIdCol || !createdAtCol) return null;
-    return { table, typeCol, newsRef, userIdCol, createdAtCol };
-  }
-
-  // Mantida (pode ser útil em outros pontos), mas não é mais usada no fallback.
-  private async spaceIdsIsUuidArray(): Promise<boolean> {
-    const q = `
-      SELECT udt_name
-        FROM information_schema.columns
-       WHERE table_schema='public'
-         AND table_name='channel'
-         AND column_name='space_ids'
-       LIMIT 1`;
-    const r = await this.ds.query(q);
-    return (r?.[0]?.udt_name ?? '') === '_uuid';
+    return { table, typeCol, newsRef, userIdCol, createdAtCol, metaCol };
   }
 
   private buildBetweenClause(
@@ -136,13 +129,30 @@ export class AnalyticsV2Service {
   }
 
   // =========================
-  //     /v2/news/:id
+  //     /v2/news/:id/metrics
   // =========================
   async newsMetrics(companyId: string, newsId: string, from?: string, to?: string) {
-    // recebíveis via snapshot
-    const recebivel = await this.audienceRepo.count({ where: { companyId, newsId } });
+    // recebível = audiência ∩ tokens habilitados (fallback: conta audiência)
+    let recebivel = 0;
+    try {
+      const r = await this.ds.query(
+        `
+        SELECT COUNT(DISTINCT ud."userId")::int AS c
+          FROM news_audience a
+          JOIN user_device ud
+            ON ud."companyId"=a."companyId"
+           AND ud."userId"=a."userId"
+           AND ud."enabled"=true
+         WHERE a."companyId"=$1 AND a."newsId"=$2
+        `,
+        [companyId, newsId],
+      );
+      recebivel = Number(r?.[0]?.c || 0);
+    } catch {
+      recebivel = await this.audienceRepo.count({ where: { companyId, newsId } });
+    }
 
-    // quantos push (se a tabela existir)
+    // quantos push (se tabela existir)
     let recebeuPush = 0;
     try {
       recebeuPush = await this.pushRepo.count({ where: { companyId, newsId } });
@@ -166,7 +176,7 @@ export class AnalyticsV2Service {
       if (key in reactionsByType) reactionsByType[key] = Number(row.c || 0);
     }
 
-    // --------- comentários (compatível com status/approved) ----------
+    // comentários (compat status/approved)
     let comments = { total: 0, pending: 0, approved: 0, rejected: 0 };
     try {
       const col = await this.detectCommentModerationColumn();
@@ -198,10 +208,7 @@ export class AnalyticsV2Service {
         approved: Number(agg[0].approved || 0),
         rejected: Number(agg[0].rejected || 0),
       } : comments;
-    } catch {
-      // ignora e mantém zeros
-    }
-    // -----------------------------------------------------------------
+    } catch { /* noop */ }
 
     // opens/unique/acks
     let totalOpens = 0, uniqueOpens = 0, acks = 0;
@@ -211,34 +218,34 @@ export class AnalyticsV2Service {
 
       {
         const baseParams = [companyId, newsId];
-        const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+        const between = this.buildBetweenClause(q(createdAtCol), 3, from, to);
         const sql =
           `SELECT COUNT(*)::int AS c
            FROM ${table}
-           WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (UPPER("${typeCol}"::text) = 'OPEN')` + between.sql;
+           WHERE "companyId"=$1 AND ${q(newsRef)}=$2
+             AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
         totalOpens = rows?.[0]?.c ?? 0;
       }
       {
         const baseParams = [companyId, newsId];
-        const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+        const between = this.buildBetweenClause(q(createdAtCol), 3, from, to);
         const sql =
-          `SELECT COUNT(DISTINCT "${userIdCol}")::int AS c
+          `SELECT COUNT(DISTINCT ${q(userIdCol)})::int AS c
            FROM ${table}
-           WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (UPPER("${typeCol}"::text) = 'OPEN')` + between.sql;
+           WHERE "companyId"=$1 AND ${q(newsRef)}=$2
+             AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
         uniqueOpens = rows?.[0]?.c ?? 0;
       }
       {
         const baseParams = [companyId, newsId];
-        const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+        const between = this.buildBetweenClause(q(createdAtCol), 3, from, to);
         const sql =
-          `SELECT COUNT(DISTINCT "${userIdCol}")::int AS c
+          `SELECT COUNT(DISTINCT ${q(userIdCol)})::int AS c
            FROM ${table}
-           WHERE "companyId"=$1 AND "${newsRef}"=$2
-             AND (UPPER("${typeCol}"::text) = 'ACK')` + between.sql;
+           WHERE "companyId"=$1 AND ${q(newsRef)}=$2
+             AND (UPPER(${q(typeCol)}::text) = 'ACK')` + between.sql;
         const rows = await this.newsRepo.query(sql, baseParams.concat(between.params));
         acks = rows?.[0]?.c ?? 0;
       }
@@ -267,56 +274,87 @@ export class AnalyticsV2Service {
     sql += ` ORDER BY d."date" ASC`;
     const seriesDaily = await this.nDailyRepo.query(sql, params);
 
-    // heatmap por hora/dia (OPEN)
+    // heatmap por hora/dia — ajustado por tz local (meta.tzOffsetMinutes) quando disponível
     let heatmap: Array<{ hour: number; dow: number; count: number }> = [];
-    if (meta) {
-      const { table, typeCol, createdAtCol, newsRef } = meta;
-      const p: any[] = [companyId, newsId];
-      let hsql =
-        `SELECT EXTRACT(HOUR FROM "${createdAtCol}")::int AS hour,
-                EXTRACT(DOW  FROM "${createdAtCol}")::int AS dow,
-                COUNT(*)::int AS count
-         FROM ${table}
-         WHERE "companyId"=$1 AND "${newsRef}"=$2
-           AND (UPPER("${typeCol}"::text) = 'OPEN')`;
-      const between = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
-      hsql += between.sql + ` GROUP BY 1,2 ORDER BY 2,1`;
-      heatmap = await this.newsRepo.query(hsql, p.concat(between.params));
+    const metaEv = await this.detectEventMeta();
+    if (metaEv) {
+      const { table, typeCol, createdAtCol, newsRef } = metaEv;
+
+      // existe coluna 'meta'?
+      const hasMetaColRows = await this.ds.query(
+        `SELECT 1
+           FROM information_schema.columns
+          WHERE table_schema='public' AND table_name=$1 AND column_name='meta'
+          LIMIT 1`,
+        [table],
+      );
+      const hasMetaCol = !!hasMetaColRows?.length;
+
+      const baseParams = [companyId, newsId];
+      const between = this.buildBetweenClause(q(createdAtCol), 3, from, to);
+
+      let hsql: string;
+      if (hasMetaCol) {
+        hsql =
+          `SELECT
+             EXTRACT(HOUR FROM (${q(createdAtCol)} + make_interval(mins => COALESCE((meta->>'tzOffsetMinutes')::int,0))))::int AS hour,
+             EXTRACT(DOW  FROM (${q(createdAtCol)} + make_interval(mins => COALESCE((meta->>'tzOffsetMinutes')::int,0))))::int AS dow,
+             COUNT(*)::int AS count
+           FROM ${table}
+           WHERE "companyId"=$1 AND ${q(newsRef)}=$2
+             AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + between.sql + ` GROUP BY 1,2 ORDER BY 2,1`;
+      } else {
+        // fallback: UTC
+        hsql =
+          `SELECT EXTRACT(HOUR FROM ${q(createdAtCol)})::int AS hour,
+                  EXTRACT(DOW  FROM ${q(createdAtCol)})::int AS dow,
+                  COUNT(*)::int AS count
+           FROM ${table}
+           WHERE "companyId"=$1 AND ${q(newsRef)}=$2
+             AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + between.sql + ` GROUP BY 1,2 ORDER BY 2,1`;
+      }
+      heatmap = await this.newsRepo.query(hsql, baseParams.concat(between.params));
     }
 
-    // % que abriram em até 24h após push
-    let opens24hAposPushPct = 0;
+    // LATÊNCIAS (push_delivery + primeiro OPEN)
+    let latency: any = {
+      sentToDelivered: { avgMs: null, p50Ms: null, p95Ms: null },
+      sentToOpen: { avgMs: null, p50Ms: null, p95Ms: null },
+    };
     try {
-      const pushed = await this.pushRepo.query(
-        `SELECT "userId", COALESCE("deliveredAt","createdAt") AS t
-         FROM push_delivery
-         WHERE "companyId"=$1 AND "newsId"=$2`,
-        [companyId, newsId],
-      );
-      const meta3 = await this.detectEventMeta();
-      if (pushed?.length && meta3) {
-        const { table, typeCol, newsRef, userIdCol, createdAtCol } = meta3;
-        let matched = 0;
-        for (const p of pushed) {
-          const start = new Date(p.t);
-          const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-          const rows = await this.newsRepo.query(
-            `SELECT 1
-             FROM ${table}
-             WHERE "companyId"=$1 AND "${newsRef}"=$2
-               AND "${userIdCol}"=$3
-               AND (UPPER("${typeCol}"::text) = 'OPEN')
-               AND "${createdAtCol}" >= $4 AND "${createdAtCol}" < $5
-             LIMIT 1`,
-            [companyId, newsId, p.userId, start.toISOString(), end.toISOString()],
-          );
-          if (rows?.length) matched++;
-        }
-        opens24hAposPushPct = pushed.length ? Math.round((matched / pushed.length) * 100) : 0;
-      }
-    } catch {
-      // ignore
-    }
+      const qlat =
+        `WITH first_open AS (
+           SELECT e."companyId", e."newsId", e."userId", MIN(e."createdAt") AS openedAt
+             FROM news_interaction_event e
+            WHERE e."companyId"=$1 AND e."newsId"=$2 AND UPPER(e."type"::text)='OPEN'
+            GROUP BY 1,2,3
+         ),
+         base AS (
+           SELECT d."createdAt" AS sentAt,
+                  COALESCE(d."deliveredAt", d."createdAt") AS deliveredAt,
+                  fo.openedAt AS openedAt
+             FROM push_delivery d
+        LEFT JOIN first_open fo
+               ON fo."companyId"=d."companyId" AND fo."newsId"=d."newsId" AND fo."userId"=d."userId"
+            WHERE d."companyId"=$1 AND d."newsId"=$2
+         )
+         SELECT
+           AVG(EXTRACT(EPOCH FROM (deliveredAt - sentAt))*1000) AS sent_delivered_avg,
+           percentile_disc(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (deliveredAt - sentAt))*1000) AS sent_delivered_p50,
+           percentile_disc(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (deliveredAt - sentAt))*1000) AS sent_delivered_p95,
+           AVG(EXTRACT(EPOCH FROM (openedAt - sentAt))*1000) AS sent_open_avg,
+           percentile_disc(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (openedAt - sentAt))*1000) AS sent_open_p50,
+           percentile_disc(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (openedAt - sentAt))*1000) AS sent_open_p95
+         FROM base
+         WHERE sentAt IS NOT NULL`;
+      const r = await this.ds.query(qlat, [companyId, newsId]);
+      const row = r?.[0] || {};
+      const num = (v: any) => (v == null ? null : Math.round(Number(v)));
+      latency = {
+        sentToDelivered: { avgMs: num(row.sent_delivered_avg), p50Ms: num(row.sent_delivered_p50), p95Ms: num(row.sent_delivered_p95) },
+        sentToOpen: { avgMs: num(row.sent_open_avg), p50Ms: num(row.sent_open_p50), p95Ms: num(row.sent_open_p95) },
+      };
+    } catch { /* noop */ }
 
     const reactionsTotal = Object.values(reactionsByType).reduce((s, v) => s + (v || 0), 0);
 
@@ -329,10 +367,9 @@ export class AnalyticsV2Service {
       acks,
       reactionsByType,
       comments,
-      opens24hAposPushPct,
       seriesDaily,
       heatmap,
-      // extras úteis para o card
+      latency,
       reactionsTotal,
       commentsTotal: Number(comments.total || 0),
       sharesTotal: await this.shareRepo.count({ where: { companyId, newsId } }),
@@ -340,7 +377,6 @@ export class AnalyticsV2Service {
   }
 
   // =========================
-  //   NOVO: batch por ids
   //   /v2/news/metrics?ids=a,b,c
   // =========================
   async batchNewsMetrics(
@@ -350,12 +386,9 @@ export class AnalyticsV2Service {
     to?: string,
   ): Promise<Record<string, any>> {
     if (!ids.length) return {};
-    // limitar para evitar SQL gigantes
     const newsIds = ids.slice(0, 200);
-
     const meta = await this.detectEventMeta();
 
-    // recebível (snapshot)
     const recebivelRows = await this.audienceRepo.query(
       `SELECT "newsId", COUNT(*)::int AS c
          FROM news_audience
@@ -364,7 +397,6 @@ export class AnalyticsV2Service {
       [companyId, newsIds],
     );
 
-    // push enviados
     let pushRows: any[] = [];
     try {
       pushRows = await this.pushRepo.query(
@@ -376,7 +408,6 @@ export class AnalyticsV2Service {
       );
     } catch { /* ignore */ }
 
-    // reactions por tipo
     const reactsRows = await this.reactionRepo.query(
       `SELECT "newsId", reaction, COUNT(*)::int AS c
          FROM news_reaction
@@ -385,7 +416,6 @@ export class AnalyticsV2Service {
       [companyId, newsIds],
     );
 
-    // comments total
     const commentsRows = await this.commentRepo.query(
       `SELECT "newsId", COUNT(*)::int AS c
          FROM news_comment
@@ -394,7 +424,6 @@ export class AnalyticsV2Service {
       [companyId, newsIds],
     );
 
-    // shares total
     const sharesRows = await this.shareRepo.query(
       `SELECT "newsId", COUNT(*)::int AS c
          FROM news_share
@@ -403,48 +432,43 @@ export class AnalyticsV2Service {
       [companyId, newsIds],
     );
 
-    // opens/unique/acks via eventos (com período)
     let opensRows: any[] = [];
     let uniqueRows: any[] = [];
     let acksRows: any[] = [];
 
     if (meta) {
       const { table, typeCol, newsRef, userIdCol, createdAtCol } = meta;
-      const betweenOpen = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
-      const betweenAck = this.buildBetweenClause(`"${createdAtCol}"`, 3, from, to);
+      const betweenOpen = this.buildBetweenClause(q(createdAtCol), 3, from, to);
+      const betweenAck = this.buildBetweenClause(q(createdAtCol), 3, from, to);
 
-      // total opens
       {
         const sql =
-          `SELECT "${newsRef}" AS "newsId", COUNT(*)::int AS c
+          `SELECT ${q(newsRef)} AS "newsId", COUNT(*)::int AS c
              FROM ${table}
-            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
-              AND (UPPER("${typeCol}"::text) = 'OPEN')` + betweenOpen.sql +
-          ` GROUP BY "${newsRef}"`;
+            WHERE "companyId"=$1 AND ${q(newsRef)} = ANY($2)
+              AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + betweenOpen.sql +
+          ` GROUP BY ${q(newsRef)}`;
         opensRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenOpen.params));
       }
-      // unique opens
       {
         const sql =
-          `SELECT "${newsRef}" AS "newsId", COUNT(DISTINCT "${userIdCol}")::int AS c
+          `SELECT ${q(newsRef)} AS "newsId", COUNT(DISTINCT ${q(userIdCol)})::int AS c
              FROM ${table}
-            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
-              AND (UPPER("${typeCol}"::text) = 'OPEN')` + betweenOpen.sql +
-          ` GROUP BY "${newsRef}"`;
+            WHERE "companyId"=$1 AND ${q(newsRef)} = ANY($2)
+              AND (UPPER(${q(typeCol)}::text) = 'OPEN')` + betweenOpen.sql +
+          ` GROUP BY ${q(newsRef)}`;
         uniqueRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenOpen.params));
       }
-      // acks (unique)
       {
         const sql =
-          `SELECT "${newsRef}" AS "newsId", COUNT(DISTINCT "${userIdCol}")::int AS c
+          `SELECT ${q(newsRef)} AS "newsId", COUNT(DISTINCT ${q(userIdCol)})::int AS c
              FROM ${table}
-            WHERE "companyId"=$1 AND "${newsRef}" = ANY($2)
-              AND (UPPER("${typeCol}"::text) = 'ACK')` + betweenAck.sql +
-          ` GROUP BY "${newsRef}"`;
+            WHERE "companyId"=$1 AND ${q(newsRef)} = ANY($2)
+              AND (UPPER(${q(typeCol)}::text) = 'ACK')` + betweenAck.sql +
+          ` GROUP BY ${q(newsRef)}`;
         acksRows = await this.newsRepo.query(sql, [companyId, newsIds].concat(betweenAck.params));
       }
     } else {
-      // fallback diário (sem filtro de período)
       const daily = await this.nDailyRepo.find({ where: { newsId: In(newsIds) } });
       const byId = new Map<string, { opens: number; unique: number; acks: number }>();
       for (const r of daily) {
@@ -460,7 +484,6 @@ export class AnalyticsV2Service {
       acksRows = Array.from(byId.entries()).map(([newsId, v]) => ({ newsId, c: v.acks }));
     }
 
-    // montar saída
     const out: Record<string, any> = {};
     for (const id of newsIds) {
       out[id] = {
@@ -603,12 +626,11 @@ export class AnalyticsV2Service {
   // =========================
   //   /analytics/news/overview
   // =========================
-
   async newsOverview(
     companyId: string,
     { from, to, spaceId, channelId, groupId }: NewsOverviewParams,
   ) {
-    const q = (s: string) => (s.includes('"') ? s : `"${s}"`);
+    const qq = (s: string) => (s.includes('"') ? s : `"${s}"`);
     const hasNewsSpaceId = await this.schema.hasColumn('news_entity', 'spaceId');
     const hasStatusCol = await this.schema.hasColumn('news_entity', 'status');
     const hasIsPublishedCol = await this.schema.hasColumn('news_entity', 'isPublished');
@@ -619,7 +641,6 @@ export class AnalyticsV2Service {
     if (hasStatusCol) {
       where.push(`n.status = 'published'`);
     } else if (hasIsPublishedCol) {
-      // alguns schemas usam booleano isPublished em vez de enum status
       where.push(`COALESCE(n."isPublished", true) = true`);
     }
     const params: any[] = [companyId];
@@ -640,15 +661,10 @@ export class AnalyticsV2Service {
         where.push(`n."spaceId" = $${i++}`);
         params.push(spaceId);
       } else {
-        // Fallback via channel.space_ids (robusto p/ uuid[] OU varchar[])
         fromClause += ` JOIN channel c ON c.id::text = n."channelId"::text`;
-
-        // 1) placeholder do SELECT (apenas para retornar "spaceId" no payload)
         const selIdx = i++;
         select += `, CAST($${selIdx} AS uuid) AS "spaceId"`;
         params.push(spaceId);
-
-        // 2) placeholder do WHERE (comparação como texto contra o array convertido p/ text[])
         const whereIdx = i++;
         where.push(`CAST($${whereIdx} AS text) = ANY(c."space_ids"::text[])`);
         params.push(spaceId);
@@ -682,23 +698,21 @@ WHERE ${where.join(' AND ')}`;
       };
     }
 
-    // ------ métricas por ID ------
     const ids = newsRows.map(r => r.id);
     const ph = ids.map((_, idx) => `$${idx + 1}`).join(',');
     const baseParams = [...ids];
 
-    // Eventos (open/ack)
     const evMap = await this.schema.detectEventMap();
     let opensById = new Map<string, number>();
     let acksById = new Map<string, number>();
     if (evMap) {
       const evSql = `
-        SELECT ${q(evMap.newsIdCol)} AS nid, LOWER(${q(evMap.typeCol)}::text) AS etype, COUNT(1)::int AS cnt
+        SELECT ${qq(evMap.newsIdCol)} AS nid, LOWER(${qq(evMap.typeCol)}::text) AS etype, COUNT(1)::int AS cnt
           FROM ${evMap.table}
-         WHERE ${q(evMap.newsIdCol)} IN (${ph})
+         WHERE ${qq(evMap.newsIdCol)} IN (${ph})
            AND "companyId" = $${baseParams.length + 1}
-           ${from ? `AND ${q(evMap.createdAtCol)} >= $${baseParams.length + 2}` : ''}
-           ${to ? `AND ${q(evMap.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
+           ${from ? `AND ${qq(evMap.createdAtCol)} >= $${baseParams.length + 2}` : ''}
+           ${to ? `AND ${qq(evMap.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
          GROUP BY 1,2
       `;
       const evParams = [
@@ -712,7 +726,6 @@ WHERE ${where.join(' AND ')}`;
       acksById = new Map(evRows.filter(r => r.etype === 'ack' || r.etype === 'acknowledge').map(r => [r.nid, r.cnt]));
     }
 
-    // Reações
     let reactsById = new Map<string, number>();
     if (await this.schema.hasTable('news_reaction')) {
       const rSql = `
@@ -734,7 +747,6 @@ WHERE ${where.join(' AND ')}`;
       reactsById = new Map(rRows.map(r => [r.nid, r.cnt]));
     }
 
-    // Comentários
     let commentsById = new Map<string, number>();
     if (await this.schema.hasTable('news_comment')) {
       const cm = await this.schema.detectCommentMap();
@@ -743,8 +755,8 @@ WHERE ${where.join(' AND ')}`;
           FROM ${cm!.table}
          WHERE "newsId" IN (${ph})
            AND "companyId" = $${baseParams.length + 1}
-           ${from ? `AND ${q(cm!.createdAtCol)} >= $${baseParams.length + 2}` : ''}
-           ${to ? `AND ${q(cm!.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
+           ${from ? `AND ${qq(cm!.createdAtCol)} >= $${baseParams.length + 2}` : ''}
+           ${to ? `AND ${qq(cm!.createdAtCol)} < ($${baseParams.length + (from ? 3 : 2)}::date + INTERVAL '1 day')` : ''}
          GROUP BY "newsId"
       `;
       const cParams = [
@@ -772,7 +784,6 @@ WHERE ${where.join(' AND ')}`;
       },
     }));
 
-    // KPIs simples (placeholder)
     const base = items.length || 1;
     const openRate30d = (items.reduce((s, it) => s + it.metrics.open, 0) / base) / 100;
     const ackRate30d = (items.reduce((s, it) => s + it.metrics.ack, 0) / base) / 100;

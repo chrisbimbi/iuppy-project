@@ -1,60 +1,72 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  Index,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm'
 
 /**
- * Registros de envios de push/lembrança por notícia.
- * Usado por AnalyticsV2Service e PushV2Service.
+ * Registros de envio/entrega/abertura de push por usuário e notícia.
+ * Fonte para funil: solicitado (tokens), entregue (users), abriu via push (users).
  */
 @Entity('push_delivery')
 @Index(['companyId', 'newsId'])
 @Index(['companyId', 'status'])
 @Index(['companyId', 'createdAt'])
 export class PushDeliveryEntity {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string
 
-    @Column({ type: 'text' })
-    companyId!: string;
+  @Column({ type: 'text' })
+  companyId!: string
 
-    @Column({ type: 'text' })
-    newsId!: string;
+  @Column({ type: 'text' })
+  newsId!: string
 
-    @Column({ type: 'text', nullable: true })
-    userId!: string | null;
+  @Column({ type: 'text', nullable: true })
+  userId!: string | null
 
-    /** canal lógico do envio (ex: 'remind', 'notify', 'bulk') */
-    @Column({ type: 'text', default: 'remind' })
-    channel!: string;
+  /** canal lógico do envio (ex: 'remind', 'notify', 'bulk') */
+  @Column({ type: 'text', default: 'remind' })
+  channel!: string
 
-    /** provedor tecnológico (ex: 'fcm', 'apns', 'expo', 'webpush') */
-    @Column({ type: 'text', nullable: true })
-    provider!: string | null;
+  /** provedor tecnológico (ex: 'fcm', 'apns', 'expo', 'webpush') */
+  @Column({ type: 'text', nullable: true })
+  provider!: string | null
 
-    /** token/endpoint (quando aplicável) */
-    @Column({ type: 'text', nullable: true })
-    token!: string | null;
+  /** id de mensagem retornado pelo provider (ex.: FCM messageId) */
+  @Column({ type: 'text', nullable: true })
+  messageId!: string | null
 
-    /** 'queued' | 'sent' | 'delivered' | 'failed' */
-    @Column({ type: 'text', default: 'queued' })
-    status!: string;
+  /** token/endpoint (quando aplicável) */
+  @Column({ type: 'text', nullable: true })
+  token!: string | null
 
-    @Column({ type: 'timestamptz', nullable: true })
-    sentAt!: Date | null;
+  /** 'queued' | 'sent' | 'delivered' | 'failed' */
+  @Column({ type: 'text', default: 'queued' })
+  status!: string
 
-    @Column({ type: 'timestamptz', nullable: true })
-    deliveredAt!: Date | null;
+  @Column({ type: 'timestamptz', nullable: true })
+  sentAt!: Date | null
 
-    @Column({ type: 'timestamptz', nullable: true })
-    openedAt!: Date | null;
+  @Column({ type: 'timestamptz', nullable: true })
+  deliveredAt!: Date | null
 
-    @Column({ type: 'jsonb', nullable: true })
-    meta!: Record<string, any> | null;
+  /** primeira abertura da notícia vinda do push (quando identificado) */
+  @Column({ type: 'timestamptz', nullable: true })
+  openedAt!: Date | null
 
-    @Column({ type: 'text', nullable: true })
-    error!: string | null;
+  @Column({ type: 'jsonb', nullable: true })
+  meta!: Record<string, any> | null
 
-    @CreateDateColumn({ type: 'timestamptz' })
-    createdAt!: Date;
+  @Column({ type: 'text', nullable: true })
+  error!: string | null
 
-    @UpdateDateColumn({ type: 'timestamptz' })
-    updatedAt!: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date
 }

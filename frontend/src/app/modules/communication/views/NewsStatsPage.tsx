@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
@@ -13,6 +13,7 @@ import {
   formatPercent,
 } from 'src/app/core/utils/exporter'
 import WordCloudCanvas from 'src/app/modules/surveys/components/WordCloudCanvas'
+import { CommentsService } from '../services/comments.service' // ✅ usar listagem direta
 
 type Filters = { from: string; to: string }
 const PANEL_ID = 'news-metrics-panel'
@@ -41,6 +42,13 @@ const NewsStatsPage = () => {
   })
   const loading = loadingNews || loadingMetrics
   const error = errorNews || errorMetrics
+
+  // 🔎 moderacao desligada?
+  const commentsModerated: boolean = !!(
+    news?.settings?.commentsModerated ??
+    news?.settings?.requireModeration ??
+    news?.settings?.commentsRequireModeration
+  )
 
   const recebivel = Number(metrics?.recebivel || 0)
   const totalOpens = Number(metrics?.totalOpens ?? metrics?.opensTotal ?? metrics?.opens ?? 0)
@@ -86,8 +94,37 @@ const NewsStatsPage = () => {
     return out
   }, [hasBase, openRate, reactionRate, metrics])
 
-  // PREVIEWS vindos do /v2/news/:id (detail)
-  const recentComments = Array.isArray(news?.previewComments) ? news.previewComments : []
+  // ——— Comentários recentes ———
+  // 1) o detalhe da notícia pode trazer "previewComments" (normalmente aprovados)
+  const previewFromDetail = Array.isArray(news?.previewComments) ? news.previewComments : []
+
+  // 2) se NÃO houver moderação, buscamos a lista direta (sem filtrar por status)
+  const [recentCommentsAll, setRecentCommentsAll] = useState<any[]>([])
+  useEffect(() => {
+    let alive = true
+    if (!newsId) return
+    if (commentsModerated === false) {
+      CommentsService.list(newsId, {
+        status: 'all', // ✅ ignora status
+        page: 1,
+        pageSize: 20,
+        from: filters.from,
+        to: filters.to,
+      })
+        .then((res) => {
+          if (!alive) return
+          setRecentCommentsAll(res.items ?? [])
+        })
+        .catch(() => setRecentCommentsAll([]))
+    } else {
+      setRecentCommentsAll([])
+    }
+    return () => { alive = false }
+  }, [newsId, commentsModerated, filters.from, filters.to])
+
+  const recentComments = commentsModerated ? previewFromDetail : recentCommentsAll
+
+  // Previews “quem” (vêm do detail)
   const recentReactions = Array.isArray(news?.reactorsPreview) ? news.reactorsPreview : []
   const recentShares = Array.isArray(news?.sharersPreview) ? news.sharersPreview : []
 
@@ -193,7 +230,6 @@ const NewsStatsPage = () => {
     title: { text: 'Aberturas por dia × hora' }, xaxis: { title: { text: 'Hora do dia' } }, yaxis: { title: { text: 'Dia da semana' } },
   }
 
-  // helpers de UI p/ cabeçalho
   const fmt = (s: string) => new Date(s).toLocaleString('pt-BR')
   const days = Math.max(1, Math.round((new Date(filters.to).getTime() - new Date(filters.from).getTime()) / (1000 * 60 * 60 * 24)))
 
@@ -219,7 +255,7 @@ const NewsStatsPage = () => {
             </div>
           </div>
 
-          {/* Filtros de período */}
+          {/* Filtros */}
           <form className='card card-body mb-6' onSubmit={(e) => e.preventDefault()}>
             <div className='row g-4 align-items-end'>
               <div className='col-md-3'>
@@ -251,14 +287,14 @@ const NewsStatsPage = () => {
             </div>
           </form>
 
-          {/* Painel exportável */}
+          {/* Painel */}
           <div id={PANEL_ID}>
             {loading && <div className='alert alert-info'>Carregando…</div>}
             {error && <div className='alert alert-danger'>Erro: {String(error)}</div>}
 
             {!loading && !error && (
               <>
-                {/* 0) TOTAIS */}
+                {/* TOTAIS */}
                 <section data-pdf-section className='mb-6'>
                   <div className='row g-6'>
                     <div className='col-md-2'><div className='card card-body'><div className='fs-7 text-muted'>Aberturas únicas</div><div className='fs-1 fw-bold'>{uniqueOpens}</div></div></div>
@@ -270,7 +306,7 @@ const NewsStatsPage = () => {
                   </div>
                 </section>
 
-                {/* 1) KPIs % */}
+                {/* KPIs % */}
                 <section data-pdf-section className='mb-6'>
                   <div className='row g-6'>
                     <div className='col-md-2'><div className='card card-body'><div className='fs-7 text-muted'>Reach (recebível)</div><div className='fs-1 fw-bold'>{recebivel}</div></div></div>
@@ -282,7 +318,7 @@ const NewsStatsPage = () => {
                   </div>
                 </section>
 
-                {/* 2) Funil */}
+                {/* Funil */}
                 <section data-pdf-section className='card card-body mb-6'>
                   <h5 className='mb-4'>Funil</h5>
                   <ReactApexChart
@@ -295,7 +331,7 @@ const NewsStatsPage = () => {
                   </div>
                 </section>
 
-                {/* 3) Reações */}
+                {/* Reações */}
                 <section data-pdf-section className='row g-6 mb-6'>
                   <div className='col-lg-6'>
                     <div className='card card-body h-100'>
@@ -319,7 +355,7 @@ const NewsStatsPage = () => {
                   </div>
                 </section>
 
-                {/* 4) Tendências */}
+                {/* Tendências */}
                 <section data-pdf-section className='card card-body mb-6'>
                   <h5 className='mb-4'>Tendências diárias</h5>
                   {seriesDaily.length ? (
@@ -336,7 +372,7 @@ const NewsStatsPage = () => {
                   ) : <div className='text-center text-muted'>Sem dados no período</div>}
                 </section>
 
-                {/* 5) Recentes (comentários, reações, shares) */}
+                {/* Recentes */}
                 <section data-pdf-section className='row g-6 mb-6'>
                   {/* Comentários recentes */}
                   <div className='col-lg-4'>
@@ -345,9 +381,9 @@ const NewsStatsPage = () => {
                       {recentComments.length ? (
                         <ul className='list-unstyled m-0'>
                           {recentComments.slice(0, 8).map((it: any, idx: number) => {
-                            const name = it?.name || 'Usuário'
-                            const avatar = it?.avatar || ''
-                            const text = it?.text || ''
+                            const name = it?.name || it?.userName || 'Usuário'
+                            const avatar = it?.avatar || it?.avatarUrl || ''
+                            const text = it?.text || it?.content || ''
                             const initials = String(name).split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
                             return (
                               <li className='d-flex align-items-start py-3' key={idx}>
@@ -366,11 +402,11 @@ const NewsStatsPage = () => {
                     </div>
                   </div>
 
-                  {/* Reações recentes (preview de perfis) */}
+                  {/* Reações recentes */}
                   <div className='col-lg-4'>
                     <div className='card card-body h-100'>
                       <h5 className='mb-3'>Reações recentes</h5>
-                      {recentReactions.length ? (
+                      {Array.isArray(recentReactions) && recentReactions.length ? (
                         <ul className='list-unstyled m-0'>
                           {recentReactions.slice(0, 8).map((it: any, idx: number) => {
                             const name = it?.name || 'Usuário'
@@ -392,11 +428,11 @@ const NewsStatsPage = () => {
                     </div>
                   </div>
 
-                  {/* Shares recentes (preview de perfis) */}
+                  {/* Shares recentes */}
                   <div className='col-lg-4'>
                     <div className='card card-body h-100'>
                       <h5 className='mb-3'>Shares recentes</h5>
-                      {recentShares.length ? (
+                      {Array.isArray(recentShares) && recentShares.length ? (
                         <ul className='list-unstyled m-0'>
                           {recentShares.slice(0, 8).map((it: any, idx: number) => {
                             const name = it?.name || 'Usuário'
@@ -419,13 +455,13 @@ const NewsStatsPage = () => {
                   </div>
                 </section>
 
-                {/* 6) Insights */}
+                {/* Insights */}
                 <section data-pdf-section className='card card-body mb-6'>
                   <h5 className='mb-3'>Insights</h5>
                   {insights.length ? <ul className='mb-0'>{insights.map((msg, i) => <li key={i}>{msg}</li>)}</ul> : <div className='text-muted'>Nenhum insight específico para este período.</div>}
                 </section>
 
-                {/* 7) Comentários resumo + CTA (com cores claras) */}
+                {/* Comentários resumo + CTA */}
                 <section data-pdf-section className='card card-body mb-6'>
                   <div className='d-flex justify-content-between align-items-center mb-3'>
                     <h5 className='mb-0'>Comentários</h5>
@@ -438,28 +474,33 @@ const NewsStatsPage = () => {
                         <div className='fs-2 fw-bold'>{metrics?.comments?.total ?? 0}</div>
                       </div>
                     </div>
-                    <div className='col-md-3'>
-                      <div className='rounded p-3 bg-light-warning'>
-                        <div className='text-warning fs-8'>Pendentes</div>
-                        <div className='fs-2 fw-bold text-warning'>{metrics?.comments?.pending ?? 0}</div>
-                      </div>
-                    </div>
-                    <div className='col-md-3'>
-                      <div className='rounded p-3 bg-light-success'>
-                        <div className='text-success fs-8'>Aprovados</div>
-                        <div className='fs-2 fw-bold text-success'>{metrics?.comments?.approved ?? 0}</div>
-                      </div>
-                    </div>
-                    <div className='col-md-3'>
-                      <div className='rounded p-3 bg-light-danger'>
-                        <div className='text-danger fs-8'>Rejeitados</div>
-                        <div className='fs-2 fw-bold text-danger'>{metrics?.comments?.rejected ?? 0}</div>
-                      </div>
-                    </div>
+                    {/* Quando moderação está desligada, omitimos pendentes/aprovados/rejeitados */}
+                    {commentsModerated && (
+                      <>
+                        <div className='col-md-3'>
+                          <div className='rounded p-3 bg-light-warning'>
+                            <div className='text-warning fs-8'>Pendentes</div>
+                            <div className='fs-2 fw-bold text-warning'>{metrics?.comments?.pending ?? 0}</div>
+                          </div>
+                        </div>
+                        <div className='col-md-3'>
+                          <div className='rounded p-3 bg-light-success'>
+                            <div className='text-success fs-8'>Aprovados</div>
+                            <div className='fs-2 fw-bold text-success'>{metrics?.comments?.approved ?? 0}</div>
+                          </div>
+                        </div>
+                        <div className='col-md-3'>
+                          <div className='rounded p-3 bg-light-danger'>
+                            <div className='text-danger fs-8'>Rejeitados</div>
+                            <div className='fs-2 fw-bold text-danger'>{metrics?.comments?.rejected ?? 0}</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </section>
 
-                {/* 8) Nuvem de palavras */}
+                {/* Nuvem */}
                 {(news?.commentTopWords?.length || metrics?.commentTopWords?.length) ? (
                   <section data-pdf-section className='card card-body mb-6'>
                     <h5 className='mb-3'>Palavras mais citadas nos comentários</h5>
@@ -472,7 +513,7 @@ const NewsStatsPage = () => {
                   </section>
                 ) : null}
 
-                {/* 9) HeatMap */}
+                {/* Heatmap */}
                 {heatmapSeries?.length ? (
                   <section data-pdf-section className='card card-body mb-6'>
                     <ReactApexChart options={heatmapOptions} series={heatmapSeries as any} type='heatmap' height={360} />

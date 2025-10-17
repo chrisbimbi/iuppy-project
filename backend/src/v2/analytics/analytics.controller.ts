@@ -11,7 +11,7 @@ export class AnalyticsV2Controller {
   constructor(
     private readonly svc: AnalyticsV2Service,
     private readonly schema: SchemaIntrospectorV2,
-  ) {}
+  ) { }
 
   private makeEtag(companyId: string, route: string, params: Record<string, any>, last: string) {
     const key = JSON.stringify({ companyId, route, params, last })
