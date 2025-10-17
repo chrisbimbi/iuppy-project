@@ -1,0 +1,62 @@
+.company-phone {
+    width: 320px;
+    height: 640px;
+    border-radius: 36px;
+    border: 10px solid #111;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .15);
+}
+
+.company-phone .notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 32px;
+    width: 160px;
+    background: #111;
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    z-index: 5;
+}
+
+.company-phone .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.company-phone .screen-header {
+    padding-top: 44px;
+    /* espaço notch */
+    padding-bottom: 12px;
+    text-align: center;
+}
+
+.company-phone .screen-body {
+    flex: 1;
+    padding: 16px;
+    overflow: auto;
+}
+
+.company-phone .logo {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    object-fit: contain;
+    display: block;
+    margin: 12px auto;
+    background: #fff;
+}
+
+.company-phone .title {
+    font-weight: 700;
+    margin: 8px 0 2px 0;
+}
+
+.company-phone .subtitle {
+    opacity: .85;
+}

@@ -1,0 +1,91 @@
+plugins {
+    id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
+    id "org.jetbrains.kotlin.android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) { flutterVersionCode = "1" }
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) { flutterVersionName = "0.1.0" }
+
+android {
+    namespace "com.iuppy.app"
+    compileSdkVersion flutter.compileSdkVersion
+
+    // NDK alinhado com os plugins
+    ndkVersion "27.0.12077973"
+
+    defaultConfig {
+        applicationId "com.iuppy.app"
+        minSdkVersion 24
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        // Debug usa o keystore padrão (~/.android/debug.keystore)
+        release {
+            // Configure quando for assinar para loja
+        }
+    }
+
+    flavorDimensions "env"
+    productFlavors {
+        dev {
+            dimension "env"
+            applicationIdSuffix ".dev"
+            resValue "string", "app_name", "Iuppy DEV"
+            // 🔗 scheme do DEV (para deeplinks)
+            manifestPlaceholders = [ appAuthRedirectScheme: "iuppydev" ]
+        }
+        prod {
+            dimension "env"
+            resValue "string", "app_name", "Iuppy"
+            // 🔗 scheme de PRODUÇÃO (para deeplinks)
+            manifestPlaceholders = [ appAuthRedirectScheme: "iuppy" ]
+        }
+    }
+
+    buildTypes {
+        debug {
+            // Sem signingConfig explícita — usa o padrão
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    // ✅ Unificado em 11 para compatibilidade com plugins
+    kotlinOptions { jvmTarget = "11" }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+
+        // 🔑 Necessário p/ flutter_local_notifications (Java 8 APIs)
+        coreLibraryDesugaringEnabled true
+    }
+}
+
+flutter { source "../.." }
+
+// 👇 ÚNICO acréscimo de dependency para resolver o erro de AAR/desugaring
+dependencies {
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
+}

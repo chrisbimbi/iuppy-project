@@ -1,0 +1,84 @@
+name: iuppy_app
+description: Iuppy white-label mobile app (Flutter) — Riverpod + Dio + GoRouter + Drift
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_hooks: ^0.20.5
+  hooks_riverpod: ^2.5.1
+  dio: ^5.7.0
+  dio_cookie_manager: ^3.3.0        # ✅ atualizado (compatível com cookie_jar ^4)
+  cookie_jar: ^4.0.8                # ✅ você importa no provider
+  go_router: ^14.2.0
+  google_fonts: ^6.2.1
+  drift: ^2.18.0
+  drift_flutter: ^0.2.2
+  sqlite3_flutter_libs: ^0.5.24
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  intl: ^0.19.0
+  flutter_widget_from_html_core: ^0.16.1
+  webview_flutter: ^4.13.0
+  youtube_player_iframe: ^5.2.2
+  photo_view: ^0.15.0
+  cached_network_image: ^3.4.1
+  share_plus: ^11.1.0
+  url_launcher: ^6.3.2
+  shared_preferences: ^2.5.3
+  firebase_core: ^2.31.1
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications: ^17.2.1
+  http: ^1.2.2
+  device_info_plus: ^10.1.0
+  image_gallery_saver_plus: ^4.0.1
+  flutter_reaction_button: ^3.0.0
+  visibility_detector: ^0.4.0+2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  drift_dev: ^2.18.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: 2.4.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/reactions_icons/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  image_path: assets/icons/prod.png
+  flavors:
+    dev:
+      image_path: assets/icons/dev.png
+    prod:
+      image_path: assets/icons/prod.png
+    acme:
+      image_path: assets/icons/acme.png
+
+flutter_native_splash:
+  android: true
+  ios: true
+  web: false
+  color: "#FFFFFF"
+  color_dark: "#0B0F1A"
+  android_gravity: center
+  ios_content_mode: center
+  image: assets/splash/prod.png
+  branding: assets/splash/branding.png
+  android_12:
+    image: assets/splash/prod.png
+    icon_background_color: "#FFFFFF"
+    icon_background_color_dark: "#0B0F1A"

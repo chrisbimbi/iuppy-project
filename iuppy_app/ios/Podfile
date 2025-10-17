@@ -1,0 +1,42 @@
+platform :ios, '13.0'
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# 👇 Adicione isto (gera module maps p/ pods que não definem módulos)
+use_modular_headers!
+
+# Descobre FLUTTER_ROOT a partir do Generated.xcconfig
+def flutter_root
+  generated = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  raise "#{generated} not found. Run `flutter pub get`." unless File.exist?(generated)
+  File.foreach(generated) do |line|
+    m = line.match(/FLUTTER_ROOT\=(.*)/)
+    return m[1].strip if m
+  end
+  raise "FLUTTER_ROOT not set. Run `flutter pub get`."
+end
+
+# Helpers do Flutter
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+target 'Runner' do
+  # ⚠️ Nada de use_frameworks! aqui
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # (Opcional) Se quiser ser explícito só nesses pods:
+  # pod 'GoogleUtilities', :modular_headers => true
+  # pod 'sqlite3', :modular_headers => true
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

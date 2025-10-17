@@ -1,0 +1,96 @@
+// android/build.gradle (root)
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
+rootProject.buildDir = "../build"
+
+subprojects { project ->
+  project.buildDir = "${rootProject.buildDir}/${project.name}"
+  project.evaluationDependsOn(":app")
+}
+
+/**
+ * ✅ Nivelamento global para Java/Kotlin 11
+ *   - Corrige "Inconsistent JVM-target compatibility detected (... 11) vs (... 17)"
+ * ✅ Patch do image_gallery_saver: remove package="..." do manifest (AGP 8+)
+ */
+gradle.beforeProject { sub ->
+  // 1) Todas as compilações Java -> 11
+  sub.tasks.withType(JavaCompile).configureEach {
+    sourceCompatibility = JavaVersion.VERSION_11.toString()
+    targetCompatibility = JavaVersion.VERSION_11.toString()
+  }
+
+  // 2) Todas as compilações Kotlin -> 11
+  sub.plugins.withId("org.jetbrains.kotlin.android") {
+    sub.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+      kotlinOptions { jvmTarget = "11" }
+    }
+  }
+  sub.plugins.withId("kotlin-android") {
+    sub.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+      kotlinOptions { jvmTarget = "11" }
+    }
+  }
+
+  // 3) Em módulos Android, garante compileOptions 11
+  sub.plugins.withId("com.android.application") {
+    def androidExt = sub.extensions.findByName("android")
+    if (androidExt != null) {
+      androidExt.compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+      }
+    }
+  }
+  sub.plugins.withId("com.android.library") {
+    def androidExt = sub.extensions.findByName("android")
+    if (androidExt != null) {
+      androidExt.compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+      }
+
+      // Se faltar namespace (plugins antigos), cria um sintético
+      def hasNs = androidExt.hasProperty("namespace") && androidExt.namespace != null
+      if (!hasNs) {
+        androidExt.namespace = "fix" + sub.path.replace(":", ".").replace("-", "_")
+      }
+    }
+  }
+}
+
+// 4) PATCH: remove package="..." do manifest do image_gallery_saver (AGP 8+)
+gradle.projectsEvaluated {
+  subprojects { sub ->
+    if (sub.name == "image_gallery_saver") {
+      sub.plugins.withId("com.android.library") {
+        def mf = sub.file("src/main/AndroidManifest.xml")
+        if (mf.exists()) {
+          def txt = mf.getText("UTF-8")
+          if (txt.contains('package="')) {
+            println("⚙️ Patching ${sub.path} manifest: removing package attribute")
+            def patched = txt.replaceFirst(/\s+package="[^"]*"/, "")
+            mf.write(patched, "UTF-8")
+          }
+        }
+      }
+    }
+  }
+}
+
+tasks.register("clean", Delete) {
+  delete rootProject.buildDir
+}

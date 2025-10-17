@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: iuppy_user
+      POSTGRES_PASSWORD: Iuppy2025
+      POSTGRES_DB: iuppy_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./:/usr/src/app
+      - ../shared:/usr/src/shared
+      - /usr/src/app/node_modules
+
+volumes:
+  postgres_data:

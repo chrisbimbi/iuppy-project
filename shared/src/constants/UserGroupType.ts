@@ -1,0 +1,6 @@
+export enum UserGroupType {
+  OPEN = 'OPEN',
+  INTERNAL = 'INTERNAL',
+  CONDITIONAL = 'CONDITIONAL',
+  MANDATORY = 'MANDATORY',
+}

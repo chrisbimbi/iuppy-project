@@ -1,0 +1,46 @@
+
+pluginManagement {
+    // Descobre o caminho do Flutter SDK via local.properties
+    def flutterSdkPath = null
+    File localPropertiesFile = new File(settingsDir, "local.properties")
+    if (localPropertiesFile.exists()) {
+        Properties properties = new Properties()
+        localPropertiesFile.withReader("UTF-8") { reader ->
+            properties.load(reader)
+        }
+        flutterSdkPath = properties.getProperty("flutter.sdk")
+        // Se veio relativo (ex.: .fvm/flutter_sdk), resolve pra absoluto
+        if (flutterSdkPath != null && !new File(flutterSdkPath).isAbsolute()) {
+            flutterSdkPath = new File(settingsDir, flutterSdkPath).getCanonicalPath()
+        }
+    }
+
+    if (flutterSdkPath == null || flutterSdkPath.trim().isEmpty()) {
+                       assert flutterSdkPath : "flutter.sdk not set in local.properties"
+
+    }
+
+    // Carrega o build do Flutter (plugin loader)
+    includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
+
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    // Sobe o AGP e Kotlin para compatibilidade com Kotlin 2.1
+    id "com.android.application" version "8.7.2" apply false
+    // START: FlutterFire Configuration
+    id "com.google.gms.google-services" version "4.3.15" apply false
+    // END: FlutterFire Configuration
+    id "org.jetbrains.kotlin.android" version "2.1.10" apply false
+}
+
+// IMPORTANTE: não declare dependencyResolutionManagement aqui.
+// O Flutter injeta os repositórios necessários (inclui o engine).
+
+include(":app")

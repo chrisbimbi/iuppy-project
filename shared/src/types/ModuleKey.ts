@@ -1,0 +1,18 @@
+// shared/src/types/ModuleKey.ts
+export type ModuleKey =
+    | 'news'
+    | 'channels'
+    | 'groups'
+    | 'surveys'
+    | 'forms'
+    | 'onboarding'
+    | 'training'
+    | 'jobs'
+    | 'birthdays'
+    | 'recognition'
+    | 'quicklinks'
+    | 'benefits'
+    | 'vacations'
+    | 'podcasts'
+    | 'analytics'
+    | 'chat'
