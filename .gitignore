@@ -72,3 +72,5 @@ yarn-error.log*
 
 # FVM Version Cache
 .fvm/
+# Secrets
+backend/creds/firebase-admin.json
