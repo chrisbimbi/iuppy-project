@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
+import { PageTitle } from 'src/layout/core'
 import { useETaggedFetch } from 'src/app/core/hooks/useETaggedFetch'
 import ReactApexChart from 'react-apexcharts'
 import {
@@ -13,7 +13,8 @@ import {
   formatPercent,
 } from 'src/app/core/utils/exporter'
 import WordCloudCanvas from 'src/app/modules/surveys/components/WordCloudCanvas'
-import { CommentsService } from '../services/comments.service' // ✅ usar listagem direta
+import { CommentsService } from '../services/comments.service'
+import { NewsAudienceService, UnopenedUserRow } from '../services/news-audience.service'
 
 type Filters = { from: string; to: string }
 const PANEL_ID = 'news-metrics-panel'
@@ -43,7 +44,6 @@ const NewsStatsPage = () => {
   const loading = loadingNews || loadingMetrics
   const error = errorNews || errorMetrics
 
-  // 🔎 moderacao desligada?
   const commentsModerated: boolean = !!(
     news?.settings?.commentsModerated ??
     news?.settings?.requireModeration ??
@@ -64,6 +64,9 @@ const NewsStatsPage = () => {
   const reactionRate = hasBase ? clamp01(reactionsTotal / recebivel) : 0
   const commentRate = hasBase ? clamp01(commentsTotal / recebivel) : 0
   const shareRate = hasBase ? clamp01(sharesTotal / recebivel) : 0
+
+  // 🔒 regra do botão: desabilitar se TODOS abriram
+  const allOpened = hasBase && recebivel === uniqueOpens
 
   const seriesDaily = useMemo(() => metrics?.seriesDaily ?? [], [metrics])
 
@@ -95,26 +98,20 @@ const NewsStatsPage = () => {
   }, [hasBase, openRate, reactionRate, metrics])
 
   // ——— Comentários recentes ———
-  // 1) o detalhe da notícia pode trazer "previewComments" (normalmente aprovados)
   const previewFromDetail = Array.isArray(news?.previewComments) ? news.previewComments : []
-
-  // 2) se NÃO houver moderação, buscamos a lista direta (sem filtrar por status)
   const [recentCommentsAll, setRecentCommentsAll] = useState<any[]>([])
   useEffect(() => {
     let alive = true
     if (!newsId) return
     if (commentsModerated === false) {
       CommentsService.list(newsId, {
-        status: 'all', // ✅ ignora status
+        status: 'all',
         page: 1,
         pageSize: 20,
         from: filters.from,
         to: filters.to,
       })
-        .then((res) => {
-          if (!alive) return
-          setRecentCommentsAll(res.items ?? [])
-        })
+        .then((res) => { if (alive) setRecentCommentsAll(res.items ?? []) })
         .catch(() => setRecentCommentsAll([]))
     } else {
       setRecentCommentsAll([])
@@ -123,8 +120,6 @@ const NewsStatsPage = () => {
   }, [newsId, commentsModerated, filters.from, filters.to])
 
   const recentComments = commentsModerated ? previewFromDetail : recentCommentsAll
-
-  // Previews “quem” (vêm do detail)
   const recentReactions = Array.isArray(news?.reactorsPreview) ? news.reactorsPreview : []
   const recentShares = Array.isArray(news?.sharersPreview) ? news.sharersPreview : []
 
@@ -212,7 +207,53 @@ const NewsStatsPage = () => {
   }
 
   const handleExportPdf = async () => { await exportSectionsAsPdf(PANEL_ID, `news-${newsId}-painel.pdf`) }
-  const handleResendPush = () => { alert('Reenvio de push (não abertos): em breve.') }
+
+  // ===== Reenvio com MODAL =====
+  const [showResend, setShowResend] = useState(false)
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushContent, setPushContent] = useState('')
+
+  useEffect(() => {
+    setPushTitle(news?.settings?.pushTitle ?? news?.title ?? '')
+    setPushContent(news?.settings?.pushContent ?? news?.subtitle ?? '')
+  }, [newsId, news])
+
+  const openResendModal = () => setShowResend(true)
+  const closeResendModal = () => setShowResend(false)
+
+  const confirmResend = async () => {
+    try {
+      await NewsAudienceService.resendToUnopened(newsId, {
+        pushTitle,
+        pushContent,
+      })
+      alert('Reenvio de push disparado para quem NÃO abriu.')
+      closeResendModal()
+    } catch (e) {
+      console.error(e)
+      alert('Falha ao reenviar push.')
+    }
+  }
+
+  const handleExportUnopenedCsv = async () => {
+    try {
+      const rows: UnopenedUserRow[] = await NewsAudienceService.getUnopenedUsers(newsId)
+      const header = 'ID,Nome,Email'
+      const body = rows
+        .map((u: UnopenedUserRow) =>
+          `${u.id},${String(u.name || '').replace(/,/g, ' ')},${u.email || ''}`,
+        )
+        .join('\n')
+      const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `news-${newsId}-nao-abriu.csv`; a.click()
+    } catch (e) {
+      console.error(e)
+      alert('Erro ao exportar CSV de não abertos.')
+    }
+  }
+
   const goToComments = () => navigate(`/contents/${newsId}/comments`)
 
   const donutOptions = (title: string): ApexCharts.ApexOptions => ({
@@ -249,7 +290,11 @@ const NewsStatsPage = () => {
               <button className='btn btn-light' onClick={handleExportCsv} disabled={loading || !!error}>Exportar CSV</button>
               <button className='btn btn-light' onClick={handleExportXlsx} disabled={loading || !!error}>Exportar XLSX</button>
               <button className='btn btn-light' onClick={handleExportPdf} disabled={loading || !!error}>Exportar PDF</button>
-              <button className='btn btn-light-primary' onClick={handleResendPush} disabled={loading || !!error}>
+              {/* 🔥 novos */}
+              <button className='btn btn-light' onClick={handleExportUnopenedCsv} disabled={loading || !!error || allOpened}>
+                Exportar “não abertos” (CSV)
+              </button>
+              <button className='btn btn-light-primary' onClick={openResendModal} disabled={loading || !!error || allOpened}>
                 Reenviar push (não abertos)
               </button>
             </div>
@@ -461,45 +506,6 @@ const NewsStatsPage = () => {
                   {insights.length ? <ul className='mb-0'>{insights.map((msg, i) => <li key={i}>{msg}</li>)}</ul> : <div className='text-muted'>Nenhum insight específico para este período.</div>}
                 </section>
 
-                {/* Comentários resumo + CTA */}
-                <section data-pdf-section className='card card-body mb-6'>
-                  <div className='d-flex justify-content-between align-items-center mb-3'>
-                    <h5 className='mb-0'>Comentários</h5>
-                    <button className='btn btn-sm btn-light' onClick={goToComments}>Ver comentários</button>
-                  </div>
-                  <div className='row g-6'>
-                    <div className='col-md-3'>
-                      <div className='bg-light rounded p-3'>
-                        <div className='text-muted fs-8'>Total</div>
-                        <div className='fs-2 fw-bold'>{metrics?.comments?.total ?? 0}</div>
-                      </div>
-                    </div>
-                    {/* Quando moderação está desligada, omitimos pendentes/aprovados/rejeitados */}
-                    {commentsModerated && (
-                      <>
-                        <div className='col-md-3'>
-                          <div className='rounded p-3 bg-light-warning'>
-                            <div className='text-warning fs-8'>Pendentes</div>
-                            <div className='fs-2 fw-bold text-warning'>{metrics?.comments?.pending ?? 0}</div>
-                          </div>
-                        </div>
-                        <div className='col-md-3'>
-                          <div className='rounded p-3 bg-light-success'>
-                            <div className='text-success fs-8'>Aprovados</div>
-                            <div className='fs-2 fw-bold text-success'>{metrics?.comments?.approved ?? 0}</div>
-                          </div>
-                        </div>
-                        <div className='col-md-3'>
-                          <div className='rounded p-3 bg-light-danger'>
-                            <div className='text-danger fs-8'>Rejeitados</div>
-                            <div className='fs-2 fw-bold text-danger'>{metrics?.comments?.rejected ?? 0}</div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </section>
-
                 {/* Nuvem */}
                 {(news?.commentTopWords?.length || metrics?.commentTopWords?.length) ? (
                   <section data-pdf-section className='card card-body mb-6'>
@@ -524,6 +530,47 @@ const NewsStatsPage = () => {
           </div>
         </Content>
       </div>
+
+      {/* Modal de Reenvio de Push */}
+      {showResend && (
+        <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+          <div className="modal-dialog">
+            <div className="modal-content p-4">
+              <div className="modal-header">
+                <h5 className="modal-title">Configurar Notificação Push</h5>
+                <button type="button" className="btn-close" onClick={closeResendModal} />
+              </div>
+              <div className="modal-body">
+                <div className="mb-10">
+                  <label className="form-label">Título do Push</label>
+                  <input
+                    type="text"
+                    className="form-control form-control-solid"
+                    value={pushTitle}
+                    onChange={e => setPushTitle(e.target.value)}
+                  />
+                </div>
+                <div className="mb-10">
+                  <label className="form-label">Conteúdo do Push</label>
+                  <textarea
+                    className="form-control form-control-solid"
+                    rows={3}
+                    value={pushContent}
+                    onChange={e => setPushContent(e.target.value)}
+                  />
+                </div>
+                <small className="text-muted">
+                  O app abrirá a notícia pelo deeplink interno.
+                </small>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-light" onClick={closeResendModal}>Cancelar</button>
+                <button type="button" className="btn btn-primary" onClick={confirmResend}>Reenviar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

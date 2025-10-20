@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+// src/app/modules/communication/pages/create/steps/Step2.tsx
+import React, { useEffect, useMemo, useState } from 'react'
 import { ErrorMessage, FormikErrors, FormikTouched } from 'formik'
 import { useIntl } from 'react-intl'
 import { Modal } from 'bootstrap'
@@ -6,6 +7,8 @@ import { CreateNewsDto } from '@shared/types'
 import { useAuth } from 'src/app/modules/auth'
 import { useGroups } from 'src/app/modules/groups/provider/useGroups'
 import { useUsers } from 'src/app/modules/groups/provider/useUsers'
+import { AudienceMode } from '@shared/types/NewsSettings'
+import { AudienceProbeResponse, NewsAudienceService } from 'src/app/modules/communication/services/news-audience.service'
 
 interface Step2Props {
   data: CreateNewsDto
@@ -27,18 +30,24 @@ export const Step2: React.FC<Step2Props> = ({
   const { groups } = useGroups({ companyId: currentUser!.companyId })
   const { users } = useUsers(currentUser!.companyId)
 
+  // modais
   const [pushModal, setPushModal] = useState<Modal | null>(null)
   const [groupsModal, setGroupsModal] = useState<Modal | null>(null)
   const [shareModal, setShareModal] = useState<Modal | null>(null)
   const [authorModal, setAuthorModal] = useState<Modal | null>(null)
 
+  // seleção local de grupos (quando modo = GROUPS)
   const [selectedGroups, setSelectedGroups] = useState<string[]>(data.settings.targetAudience || [])
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(data.authorId || null)
 
-  // Prefixos de deeplink e web podem vir do .env
+  // preview da audiência
+  const [audLoading, setAudLoading] = useState(false)
+  const [audError, setAudError] = useState<string | null>(null)
+  const [aud, setAud] = useState<AudienceProbeResponse | null>(null)
+
+  // deeplink/web (inalterado)
   const DL_PREFIX = import.meta.env.VITE_APP_DEEPLINK_PREFIX || 'iuppy://content'
   const WEB_URL = import.meta.env.VITE_APP_WEBAPP_URL || window.location.origin
-
   const deeplinkFor = (id?: string) => (id ? `${DL_PREFIX}/news/${id}` : '')
   const webUrlFor = (id?: string) => (id ? `${WEB_URL}/news/${id}` : '')
 
@@ -49,47 +58,169 @@ export const Step2: React.FC<Step2Props> = ({
     setAuthorModal(new Modal(document.getElementById('kt_modal_select_author')!))
   }, [])
 
-  const handle = (field: keyof CreateNewsDto['settings'], value: any) => {
-    setFieldValue(`settings.${field}`, value)
+  // define/normaliza o modo atual
+  const mode: AudienceMode = useMemo(
+    () => data.settings.audienceMode || AudienceMode.COMPANY,
+    [data.settings.audienceMode]
+  )
+
+  // aplica modo no form e zera campos irrelevantes
+  const setAudienceMode = (m: AudienceMode) => {
+    setFieldValue('settings.audienceMode', m)
+    if (m === AudienceMode.GROUPS) {
+      if (!selectedGroups.length) groupsModal?.show()
+      setFieldValue('settings.visibility', 'specific_groups')
+      setFieldValue('settings.targetAudience', selectedGroups)
+      setFieldValue('settings.audienceGroupIds', selectedGroups)
+    } else {
+      setFieldValue('settings.audienceGroupIds', [])
+      setFieldValue('settings.targetAudience', [])
+      if (data.settings.visibility === 'specific_groups') {
+        setFieldValue('settings.visibility', 'public')
+      }
+    }
+    // limpar ids auxiliares (preview)
+    if (m !== AudienceMode.GROUPS) {
+      setFieldValue('settings.audienceGroupIds', [])
+    }
   }
 
-  const commitGroups = () => { setFieldValue('settings.targetAudience', selectedGroups); groupsModal?.hide() }
+  const handleAudienceSelect = (value: string) => {
+    switch (value) {
+      case 'COMPANY': setAudienceMode(AudienceMode.COMPANY); break
+      case 'SPACE': setAudienceMode(AudienceMode.SPACE); break
+      case 'CHANNEL': setAudienceMode(AudienceMode.CHANNEL); break
+      case 'GROUPS': setAudienceMode(AudienceMode.GROUPS); break
+      default: setAudienceMode(AudienceMode.COMPANY)
+    }
+  }
+
+  // commit/cancel modais
+  const commitGroups = () => {
+    setFieldValue('settings.targetAudience', selectedGroups)
+    setFieldValue('settings.audienceGroupIds', selectedGroups)
+    setFieldValue('settings.visibility', selectedGroups.length ? 'specific_groups' : 'public')
+    if (selectedGroups.length > 0) {
+      setFieldValue('settings.audienceMode', AudienceMode.GROUPS)
+    }
+    groupsModal?.hide()
+  }
   const cancelGroups = () => { setSelectedGroups(data.settings.targetAudience || []); groupsModal?.hide() }
 
   const commitAuthor = () => { setFieldValue('authorId', selectedAuthor); authorModal?.hide() }
   const cancelAuthor = () => { setSelectedAuthor(null); setFieldValue('settings.showAuthor', false); authorModal?.hide() }
-
   const commitPush = () => pushModal?.hide()
   const cancelPush = () => { setFieldValue('settings.pushNotification', false); pushModal?.hide() }
-
   const commitShare = () => shareModal?.hide()
   const cancelShare = () => { setFieldValue('settings.allowSharing', false); shareModal?.hide() }
 
+  /**
+   * Carrega spaceId a partir do channel (se necessário) para o modo SPACE em rascunho.
+   * Se o seu endpoint devolver `spaceIds`, pega o primeiro.
+   */
+  const deriveSpaceIdFromChannel = async (channelId?: string): Promise<string | undefined> => {
+    if (!channelId) return undefined
+    try {
+      const ch = await NewsAudienceService.getChannel(channelId)
+      const sids: string[] = ch?.spaceIds || ch?.spaces?.map((s: any) => s.id) || []
+      return sids[0]
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * Calcula a audiência (preview):
+   * - Se há `editingId`: usa `probeForNews` (o backend deriva SPACE/CHANNEL pelo próprio newsId)
+   * - Se ainda é rascunho:
+   *    COMPANY → {mode: COMPANY}
+   *    CHANNEL → {mode: CHANNEL, channelIds: [data.channelId]}
+   *    SPACE   → {mode: SPACE, spaceId: (derivado do canal atual)}
+   *    GROUPS  → {mode: GROUPS, groupIds: selectedGroups}
+   */
+  const refreshAudience = async () => {
+    setAudError(null)
+    setAudLoading(true)
+    try {
+      let res: AudienceProbeResponse | null = null
+
+      // 👇 evita 400 e mostra mensagem clara
+      if (!editingId && mode === AudienceMode.GROUPS && selectedGroups.length === 0) {
+        setAud(null)
+        setAudError('Nenhum público selecionado. Por favor escolha um grupo para calcular a audiência.')
+        return
+      }
+
+      if (editingId) {
+        if (mode === AudienceMode.GROUPS) {
+          res = await NewsAudienceService.probeForNews(editingId, { mode, groupIds: selectedGroups })
+        } else {
+          res = await NewsAudienceService.probeForNews(editingId, { mode })
+        }
+      } else {
+        if (mode === AudienceMode.COMPANY) {
+          res = await NewsAudienceService.probeForDraft({ mode })
+        } else if (mode === AudienceMode.CHANNEL) {
+          if (data.channelId) {
+            res = await NewsAudienceService.probeForDraft({ mode, channelIds: [data.channelId] })
+          } else {
+            throw new Error('Selecione um canal no passo 1 para estimar este público.')
+          }
+        } else if (mode === AudienceMode.SPACE) {
+          const spaceId = data.settings.audienceSpaceId || await deriveSpaceIdFromChannel(data.channelId)
+          if (!spaceId) throw new Error('Não foi possível determinar o espaço. Selecione um canal (passo 1) pertencente a um espaço.')
+          res = await NewsAudienceService.probeForDraft({ mode, spaceId })
+        } else if (mode === AudienceMode.GROUPS) {
+          res = await NewsAudienceService.probeForDraft({ mode, groupIds: selectedGroups })
+        }
+      }
+
+      setAud(res)
+      if (res) setFieldValue('settings.audienceSnapshot', { totalUsuarios: res.totalUsuarios, comTokenAtivo: res.comTokenAtivo })
+    } catch (e: any) {
+      setAud(null)
+      setAudError(e?.message || 'Falha ao calcular audiência.')
+    } finally {
+      setAudLoading(false)
+    }
+  }
+
+  // dispara cálculo quando modo/grupos/canal mudarem
+  useEffect(() => {
+    refreshAudience()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedGroups.join(','), data.channelId, editingId])
+
   return (
     <div className="w-100">
-      {/* Section 1: Visibility */}
+      {/* === Audiência Unificada === */}
       <div className="pb-5">
-        <h2 className="fw-bolder text-dark">Visibilidade de Publicação</h2>
-        <div className="text-gray-400 fw-bold fs-6">Defina quem pode ver este conteúdo e envio de notificações</div>
+        <h2 className="fw-bolder text-dark">Escolher públicos</h2>
+        <div className="text-gray-400 fw-bold fs-6">
+          Selecione quem deve receber/ver este conteúdo.
+        </div>
       </div>
-      <div className="row mb-10">
+
+      <div className="row mb-6">
         <div className="col-md-6">
-          <label className="form-label required">Definir públicos</label>
+          <label className="form-label required">Público</label>
           <select
             className="form-select form-select-lg form-select-solid"
-            value={data.settings.visibility}
-            onChange={e => handle('visibility', e.target.value)}
+            value={mode}
+            onChange={(e) => handleAudienceSelect(e.target.value)}
           >
-            <option value="public">Público</option>
-            <option value="private">Privado</option>
-            <option value="specific_groups">Grupos Específicos</option>
+            <option value="COMPANY">Enviar para a empresa inteira</option>
+            <option value="SPACE">Todos os canais deste espaço</option>
+            <option value="CHANNEL">Este canal</option>
+            <option value="GROUPS">Grupos específicos</option>
           </select>
         </div>
-        {data.settings.visibility === 'specific_groups' && (
+
+        {mode === AudienceMode.GROUPS && (
           <div className="col-md-6">
-            <label className="form-label required">Público Alvo</label>
+            <label className="form-label required">Grupos</label>
             <button type="button" className="btn btn-outline-primary" onClick={() => groupsModal?.show()}>
-              {selectedGroups.length > 0 ? 'Editar grupos selecionados...' : 'Selecionar Grupos...'}
+              {selectedGroups.length > 0 ? 'Editar grupos selecionados…' : 'Selecionar Grupos…'}
             </button>
             <ErrorMessage name="settings.targetAudience" component="div" className="invalid-feedback" />
             {selectedGroups.length > 0 && (
@@ -103,8 +234,35 @@ export const Step2: React.FC<Step2Props> = ({
         )}
       </div>
 
-      {/* Section 2: Engagement */}
-      <div className="pb-5">
+      {/* 🔍 Preview de audiência */}
+      <div className="card shadow-sm mb-10">
+        <div className="card-body d-flex flex-column flex-sm-row gap-6 align-items-start align-items-sm-center">
+          <div className="flex-grow-1">
+            <div className="fw-bold">Estimativa de audiência</div>
+            <div className="text-muted fs-7">
+              Atualiza automaticamente conforme você muda o público.
+            </div>
+            {audError && <div className="text-danger mt-2">{audError}</div>}
+          </div>
+          <div className="d-flex gap-6 align-items-center">
+            <div className="text-center">
+              <div className="fs-1 fw-bolder">{audLoading ? '…' : (aud?.totalUsuarios ?? '—')}</div>
+              <div className="text-muted fs-8">Total</div>
+            </div>
+            <div className="vr" />
+            <div className="text-center">
+              <div className="fs-1 fw-bolder">{audLoading ? '…' : (aud?.comTokenAtivo ?? '—')}</div>
+              <div className="text-muted fs-8">Entregável (com token)</div>
+            </div>
+            <button type="button" className="btn btn-light btn-sm" onClick={refreshAudience} disabled={audLoading}>
+              Recalcular
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* === Engajamento === */}
+      <div className="pb-5 mt-2">
         <h3 className="fw-bolder text-dark">Engajamento</h3>
         <div className="text-gray-400 fw-bold fs-6">Compartilhamento, comentários e reações</div>
       </div>
@@ -116,7 +274,7 @@ export const Step2: React.FC<Step2Props> = ({
               type="checkbox"
               checked={data.settings.allowSharing}
               onChange={e => {
-                handle('allowSharing', e.target.checked)
+                setFieldValue('settings.allowSharing', e.target.checked)
                 if (e.target.checked) shareModal?.show()
               }}
             />
@@ -131,27 +289,27 @@ export const Step2: React.FC<Step2Props> = ({
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.allowReactions}
-              onChange={e => handle('allowReactions', e.target.checked)} />
+              onChange={e => setFieldValue('settings.allowReactions', e.target.checked)} />
             <label className="form-check-label">Permitir reações</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.allowComments}
-              onChange={e => handle('allowComments', e.target.checked)} />
+              onChange={e => setFieldValue('settings.allowComments', e.target.checked)} />
             <label className="form-check-label">Permitir comentários</label>
           </div>
           {data.settings.allowComments && (
             <div className="form-check form-switch form-switch-custom form-switch-solid mt-2">
               <input className="form-check-input" type="checkbox" checked={data.settings.moderateComments}
-                onChange={e => handle('moderateComments', e.target.checked)} />
+                onChange={e => setFieldValue('settings.moderateComments', e.target.checked)} />
               <label className="form-check-label">Moderar comentários</label>
             </div>
           )}
         </div>
       </div>
 
-      {/* Section 3: Notifications */}
+      {/* === Notificações === */}
       <div className="pb-5">
         <h3 className="fw-bolder text-dark">Notificações</h3>
         <div className="text-gray-400 fw-bold fs-6">Push, e-mail e in-app</div>
@@ -160,7 +318,7 @@ export const Step2: React.FC<Step2Props> = ({
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid d-flex align-items-center">
             <input className="form-check-input" type="checkbox" checked={data.settings.pushNotification}
-              onChange={e => { handle('pushNotification', e.target.checked); if (e.target.checked) pushModal?.show() }} />
+              onChange={e => { setFieldValue('settings.pushNotification', e.target.checked); if (e.target.checked) pushModal?.show() }} />
             <label className="form-check-label">&nbsp;Enviar notificação push</label>
             {data.settings.pushNotification && (
               <button type="button" className="btn btn-link btn-sm ms-2 p-0" onClick={() => pushModal?.show()}>
@@ -172,20 +330,20 @@ export const Step2: React.FC<Step2Props> = ({
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.emailNotification}
-              onChange={e => handle('emailNotification', e.target.checked)} />
+              onChange={e => setFieldValue('settings.emailNotification', e.target.checked)} />
             <label className="form-check-label">Enviar notificação por e-mail</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.inAppNotification}
-              onChange={e => handle('inAppNotification', e.target.checked)} />
+              onChange={e => setFieldValue('settings.inAppNotification', e.target.checked)} />
             <label className="form-check-label">Notificação in-app</label>
           </div>
         </div>
       </div>
 
-      {/* Section 4: Scheduling */}
+      {/* === Publicação === */}
       <div className="pb-5">
         <h3 className="fw-bold text-dark">Datas de Publicação</h3>
         <div className="text-gray-400 fw-bold fs-6">Imediato, agendar e expirar</div>
@@ -193,7 +351,7 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="row mb-10">
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
-            <input className="form-check-input" type="checkbox" checked={data.isPublished}
+            <input className="form-check-input" type="checkbox" checked={data.isPublished ?? data.isPublished}
               onChange={e => setFieldValue('isPublished', e.target.checked)} />
             <label className="form-check-label">Publicar imediatamente</label>
           </div>
@@ -203,7 +361,7 @@ export const Step2: React.FC<Step2Props> = ({
             <div className="col-md-4">
               <div className="form-check form-switch form-switch-custom form-switch-solid">
                 <input className="form-check-input" type="checkbox" checked={data.settings.schedulePublication}
-                  onChange={e => handle('schedulePublication', e.target.checked)} />
+                  onChange={e => setFieldValue('settings.schedulePublication', e.target.checked)} />
                 <label className="form-check-label">Agendar publicação</label>
               </div>
               {data.settings.schedulePublication && (
@@ -213,14 +371,14 @@ export const Step2: React.FC<Step2Props> = ({
                   value={data.settings.schedulePublishDate
                     ? new Date(data.settings.schedulePublishDate).toISOString().slice(0, 16)
                     : ''}
-                  onChange={e => handle('schedulePublishDate', e.target.value)}
+                  onChange={e => setFieldValue('settings.schedulePublishDate', e.target.value)}
                 />
               )}
             </div>
             <div className="col-md-4">
               <div className="form-check form-switch form-switch-custom form-switch-solid">
                 <input className="form-check-input" type="checkbox" checked={data.settings.expirePublication}
-                  onChange={e => handle('expirePublication', e.target.checked)} />
+                  onChange={e => setFieldValue('settings.expirePublication', e.target.checked)} />
                 <label className="form-check-label">Expirar publicação</label>
               </div>
               {data.settings.expirePublication && (
@@ -230,7 +388,7 @@ export const Step2: React.FC<Step2Props> = ({
                   value={data.settings.expirationDate
                     ? new Date(data.settings.expirationDate).toISOString().slice(0, 16)
                     : ''}
-                  onChange={e => handle('expirationDate', e.target.value)}
+                  onChange={e => setFieldValue('settings.expirationDate', e.target.value)}
                 />
               )}
             </div>
@@ -238,7 +396,7 @@ export const Step2: React.FC<Step2Props> = ({
         )}
       </div>
 
-      {/* Section 5: Additional */}
+      {/* === Outras Opções === */}
       <div className="pb-5">
         <h3 className="fw-bolder text-dark">Outras Opções</h3>
         <div className="text-gray-400 fw-bold fs-6">Autor, pinagem e confirmação de leitura</div>
@@ -251,7 +409,7 @@ export const Step2: React.FC<Step2Props> = ({
               type="checkbox"
               checked={data.settings.showAuthor}
               onChange={e => {
-                handle('showAuthor', e.target.checked)
+                setFieldValue('settings.showAuthor', e.target.checked)
                 if (e.target.checked) { setSelectedAuthor(null); authorModal?.show() }
               }}
             />
@@ -279,14 +437,14 @@ export const Step2: React.FC<Step2Props> = ({
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.pinToTop}
-              onChange={e => handle('pinToTop', e.target.checked)} />
+              onChange={e => setFieldValue('settings.pinToTop', e.target.checked)} />
             <label className="form-check-label">Fixar no topo</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.acknowledgementRequired}
-              onChange={e => handle('acknowledgementRequired', e.target.checked)} />
+              onChange={e => setFieldValue('settings.acknowledgementRequired', e.target.checked)} />
             <label className="form-check-label">Para confirmação do colaborador</label>
           </div>
         </div>
@@ -303,12 +461,12 @@ export const Step2: React.FC<Step2Props> = ({
             <div className="mb-10">
               <label className="form-label">Título do Push</label>
               <input type="text" className="form-control form-control-solid"
-                value={data.settings.pushTitle || ''} onChange={e => handle('pushTitle', e.target.value)} />
+                value={data.settings.pushTitle || ''} onChange={e => setFieldValue('settings.pushTitle', e.target.value)} />
             </div>
             <div className="mb-10">
               <label className="form-label">Conteúdo do Push</label>
               <textarea className="form-control form-control-solid" rows={3}
-                value={data.settings.pushContent || ''} onChange={e => handle('pushContent', e.target.value)} />
+                value={data.settings.pushContent || ''} onChange={e => setFieldValue('settings.pushContent', e.target.value)} />
             </div>
           </div>
           <div className="modal-footer">
@@ -330,7 +488,11 @@ export const Step2: React.FC<Step2Props> = ({
               <div key={g.id} className="form-check form-check-sm form-check-custom form-check-solid">
                 <input className="form-check-input" type="checkbox" id={`grp_${g.id}`}
                   checked={selectedGroups.includes(g.id)}
-                  onChange={e => setSelectedGroups(e.target.checked ? [...selectedGroups, g.id] : selectedGroups.filter(x => x !== g.id))} />
+                  onChange={(e) => {
+                    setSelectedGroups(e.target.checked
+                      ? [...selectedGroups, g.id]
+                      : selectedGroups.filter(x => x !== g.id))
+                  }} />
                 <label className="form-check-label" htmlFor={`grp_${g.id}`}>{g.name}</label>
               </div>
             ))}
@@ -356,7 +518,7 @@ export const Step2: React.FC<Step2Props> = ({
                 type="text"
                 className="form-control form-control-solid"
                 value={data.settings.shareUrl || ''}
-                onChange={e => handle('shareUrl', e.target.value)}
+                onChange={e => setFieldValue('settings.shareUrl', e.target.value)}
                 placeholder="Cole um link ou use os botões abaixo"
               />
               <div className="d-flex gap-2 mt-3">
@@ -365,7 +527,7 @@ export const Step2: React.FC<Step2Props> = ({
                   className="btn btn-light"
                   disabled={!editingId}
                   title={editingId ? '' : 'Disponível após salvar'}
-                  onClick={() => handle('shareUrl', deeplinkFor(editingId))}
+                  onClick={() => setFieldValue('settings.shareUrl', deeplinkFor(editingId))}
                 >
                   Preencher com Deeplink
                 </button>
@@ -374,7 +536,7 @@ export const Step2: React.FC<Step2Props> = ({
                   className="btn btn-light"
                   disabled={!editingId}
                   title={editingId ? '' : 'Disponível após salvar'}
-                  onClick={() => handle('shareUrl', webUrlFor(editingId))}
+                  onClick={() => setFieldValue('settings.shareUrl', webUrlFor(editingId))}
                 >
                   Preencher com URL Web
                 </button>
@@ -391,7 +553,7 @@ export const Step2: React.FC<Step2Props> = ({
                 className="form-control form-control-solid"
                 rows={2}
                 value={data.settings.shareText || ''}
-                onChange={e => handle('shareText', e.target.value)}
+                onChange={e => setFieldValue('settings.shareText', e.target.value)}
               />
             </div>
           </div>
@@ -427,3 +589,5 @@ export const Step2: React.FC<Step2Props> = ({
     </div>
   )
 }
+
+export default Step2

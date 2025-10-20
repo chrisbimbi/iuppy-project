@@ -3,12 +3,14 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 import { AuthModel, UserModel } from './_models'
 import * as authHelper from './AuthHelpers'
 
-const API_BASE = (import.meta.env.VITE_APP_API_URL || 'http://localhost:4000').replace(/\/$/, '')
+// ✅ Alinha com a porta real do backend (3000 por padrão)
+const API_BASE = (import.meta.env.VITE_APP_API_URL || 'http://localhost:3000').replace(/\/$/, '')
 const AUTH_BASE = `${API_BASE}/auth`
 
 /** Client geral (usa Authorization: Bearer ...) */
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
+  withCredentials: true, // ← garante envio/recebimento de cookies quando necessário
 })
 
 /** Interceptor p/ anexar Authorization em TODAS as requisições do client geral */
@@ -16,7 +18,7 @@ api.interceptors.request.use((config) => {
   const auth = authHelper.getAuth()
   if (auth?.api_token) {
     config.headers = config.headers || {}
-    config.headers.Authorization = `Bearer ${auth.api_token}`
+    ;(config.headers as any).Authorization = `Bearer ${auth.api_token}`
   }
   return config
 })
@@ -24,19 +26,15 @@ api.interceptors.request.use((config) => {
 /** Controle de concorrência p/ refresh */
 let refreshing: Promise<string> | null = null
 
-/** Faz refresh enviando o refreshToken NO BODY (modelo A) */
+/** ✅ Refresh via COOKIE httpOnly (modelo B). Nada de body. */
 async function doRefresh(): Promise<string> {
-  const saved = authHelper.getAuth()
-  const currentRt = saved?.refreshToken
-  if (!currentRt) throw new Error('NO_REFRESH_TOKEN')
-
-  const { data } = await axios.post(`${AUTH_BASE}/refresh`, { refreshToken: currentRt })
+  // precisa de withCredentials: true para o cookie 'rt' ir no request
+  const { data } = await axios.post(`${AUTH_BASE}/refresh`, null, { withCredentials: true })
   const newAccess = data?.accessToken as string | undefined
-  const newRt = (data?.refreshToken as string | undefined) ?? currentRt
   if (!newAccess) throw new Error('REFRESH_WITHOUT_ACCESS_TOKEN')
 
-  // persiste ambos
-  authHelper.setAuth({ api_token: newAccess, refreshToken: newRt })
+  // Só persistimos o access token; o refresh fica no cookie httpOnly
+  authHelper.setAuth({ api_token: newAccess })
   return newAccess
 }
 
@@ -64,22 +62,23 @@ api.interceptors.response.use(
   }
 )
 
-/** LOGIN — backend deve retornar { accessToken, refreshToken } */
+/** ✅ LOGIN — precisa aceitar Set-Cookie do refresh → withCredentials: true */
 export async function login(email: string, password: string) {
-  const { data } = await axios.post(`${AUTH_BASE}/login`, { email, password })
+  const { data } = await axios.post(
+    `${AUTH_BASE}/login`,
+    { email, password },
+    { withCredentials: true } // ← recebe o cookie 'rt' httpOnly
+  )
   const accessToken = data?.accessToken as string | undefined
-  const refreshToken = data?.refreshToken as string | undefined
   if (!accessToken) throw new Error('LOGIN_WITHOUT_ACCESS_TOKEN')
 
-  const auth: AuthModel = { api_token: accessToken, refreshToken }
-  // não forçamos setAuth aqui; quem chama decide (o Login.tsx já usa saveAuth)
+  const auth: AuthModel = { api_token: accessToken }
   return { data: auth }
 }
 
 /** Busca o usuário autenticado (usa o client `api` com Bearer + refresh automático) */
 export async function getUserByToken(_token: string) {
   const { data } = await api.get('/auth/me')
-  // garante id
   const mapped = { ...data, id: (data as any).id ?? (data as any).sub }
   return { data: mapped as UserModel }
 }
@@ -92,7 +91,8 @@ export async function refreshAccessToken(): Promise<string> {
 /** Logout — limpa local e (opcional) avisa backend se houver endpoint */
 export async function logout() {
   try {
-    await axios.post(`${AUTH_BASE}/logout`)
+    // se o backend invalidar o cookie no /logout melhor ainda (clearCookie)
+    await axios.post(`${AUTH_BASE}/logout`, null, { withCredentials: true })
   } catch {
     // ignore
   } finally {

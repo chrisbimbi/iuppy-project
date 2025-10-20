@@ -35,6 +35,10 @@ export class UserEntity implements User {
   @Column()
   companyId: string;
 
+  // 🔹 Flag de atividade do usuário (necessária pro Audience COMPANY)
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
   groups: string[];
 
@@ -49,7 +53,7 @@ export class UserEntity implements User {
   phone?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  avatarUrl?: string | null; // ← novo campo (opcional)
+  avatarUrl?: string | null;
 
   @Column({ type: 'text', nullable: true })
   locale?: string | null;

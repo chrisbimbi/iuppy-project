@@ -1,4 +1,17 @@
+// shared/src/types/NewsSettings.ts
+export enum AudienceMode {
+  COMPANY = 'COMPANY',
+  SPACE = 'SPACE',
+  CHANNEL = 'CHANNEL',
+  GROUPS = 'GROUPS',
+}
+
 export interface NewsSettings {
+  audienceMode?: AudienceMode;
+  audienceSpaceId?: string;
+  audienceChannelIds?: string[];
+  audienceGroupIds?: string[];
+
   visibility: 'public' | 'private' | 'specific_groups';
   targetAudience: string[];
 
@@ -12,6 +25,9 @@ export interface NewsSettings {
   pushTitle?: string;
   emailNotification: boolean;
   inAppNotification: boolean;
+
+  // 🔸 REMOVIDO: publishedAt não pertence ao settings
+  // publishedAt?: string | Date;  ← remover
 
   allowSharing: boolean;
   shareUrl?: string;
@@ -29,5 +45,13 @@ export interface NewsSettings {
 
   acknowledgementRequired: boolean;
   maxAudienceSize?: number;
+
+  audienceSnapshot?: {
+    totalUsuarios: number;
+    comTokenAtivo: number;
+    mode: AudienceMode;
+    identifiers: Record<string, any>;
+  };
+
   restrictAccess?: boolean;
 }

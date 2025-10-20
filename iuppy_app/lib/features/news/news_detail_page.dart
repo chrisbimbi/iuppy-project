@@ -1,3 +1,4 @@
+// lib/features/news/news_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,6 +16,7 @@ import './widgets/avatar_stack.dart';
 import './widgets/chips.dart';
 import './widgets/html_content.dart';
 import './widgets/reaction_action.dart';
+import 'package:iuppy_app/features/news/providers/news_interaction_provider.dart';
 
 class NewsDetailPage extends ConsumerStatefulWidget {
   const NewsDetailPage({
@@ -34,32 +36,27 @@ class NewsDetailPage extends ConsumerStatefulWidget {
 
 class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   bool _ackedNow = false; // marcação local imediata após sucesso
-  DateTime? _lastOpenSentAt; // de-bounce p/ /open
-  bool _firstOpenSent = false; // garante “push-open-once”
 
   @override
   void initState() {
     super.initState();
     // primeiro OPEN decidido pela origem do deep link
     Future.microtask(() async {
-      final ctrl = ref.read(newsDetailControllerProvider(widget.id));
-      if (_firstOpenSent) return;
+      final newsInteraction =
+          ref.read(newsInteractionProvider(widget.id).notifier);
 
-      final tz = DateTime.now().timeZoneOffset.inMinutes;
       if (widget.cameFromPush) {
-        await ctrl.sendOpen(meta: {
-          'origin': 'push',
-          'tzOffsetMinutes': tz,
-          if (widget.pushMessageId != null && widget.pushMessageId!.isNotEmpty)
-            'mid': widget.pushMessageId,
-        });
+        await newsInteraction.sendOpen(
+          meta: {
+            'origin': 'push',
+            if (widget.pushMessageId != null &&
+                widget.pushMessageId!.isNotEmpty)
+              'mid': widget.pushMessageId,
+          },
+        );
       } else {
-        await ctrl.sendOpen(meta: {
-          'origin': 'app',
-          'tzOffsetMinutes': tz,
-        });
+        await newsInteraction.sendOpen(meta: {'origin': 'app'});
       }
-      _firstOpenSent = true;
     });
   }
 
@@ -143,20 +140,9 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   }
 
   void _onVisiblePing() {
-    final now = DateTime.now();
-    if (_lastOpenSentAt != null &&
-        now.difference(_lastOpenSentAt!).inSeconds < 2) {
-      debugPrint('[NEWS:${widget.id}] onVisible skipped (debounced)');
-      return;
-    }
-    _lastOpenSentAt = now;
-
-    final ctrl = ref.read(newsDetailControllerProvider(widget.id));
-    debugPrint('[NEWS:${widget.id}] onVisible → POST /open');
-    ctrl.sendOpen(meta: {
-      'origin': 'app',
-      'tzOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
-    });
+    final newsInteraction =
+        ref.read(newsInteractionProvider(widget.id).notifier);
+    newsInteraction.sendOpen(meta: {'origin': 'app'});
   }
 
   @override
@@ -484,7 +470,7 @@ class _CircleActionButtonPlain extends StatelessWidget {
 
   final IconData icon;
   final VoidCallback onTap;
-  final Color? bg; // se quiser pintar, passe uma cor; null = só ícone
+  final Color? bg;
   final double iconSize;
 
   @override

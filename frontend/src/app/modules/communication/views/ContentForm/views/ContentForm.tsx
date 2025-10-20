@@ -1,4 +1,3 @@
-// frontend/src/app/modules/communication/views/ContentForm.tsx
 import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Formik, Form, FormikHelpers } from 'formik';
@@ -17,22 +16,22 @@ import {
 import { useAuth } from 'src/app/modules/auth';
 import { useContentActions } from '../../../providers/useContentActions';
 import { uploadArrayOfFiles } from 'src/utils/fileUtils';
+import { AudienceMode } from '@shared/types/NewsSettings';
+import { NewsAudienceService } from '../../../services/news-audience.service';
 
 interface ContentFormProps {
   initialValues: CreateContentDto;
   editingId?: string;
+  contextSpaceId?: string | null;      // ⬅ novo
+  contextChannelId?: string | null;    // ⬅ novo
   onSaved: () => void;
 }
 
 type LocalFileLike = { name: string; url: string; file?: File };
 
-/**
- * Faz upload dos arrays (highlightImages e attachments) com progresso agregado (0..1).
- * Usa o uploadArrayOfFiles duas vezes e pondera o progresso por quantidade de arquivos.
- */
 async function uploadAllAssets(
   companyId: string,
-  authorId: string, // reservado para evoluções futuras (ex.: compor prefixos por autor)
+  authorId: string,
   highlightImages: LocalFileLike[] = [],
   attachments: LocalFileLike[] = [],
   onProgress?: (fraction01: number) => void
@@ -46,7 +45,6 @@ async function uploadAllAssets(
 
   const emit = (n: number) => onProgress?.(Math.max(0, Math.min(1, n)));
 
-  // nada para subir
   if (total === 0) {
     emit(1);
     const hi = await uploadArrayOfFiles(highlightImages || [], companyId, 'highlight');
@@ -54,7 +52,6 @@ async function uploadAllAssets(
     return { highlightImages: hi, attachments: at };
   }
 
-  // 1) Highlight images
   let uploadedHighlight: Array<{ name: string; url: string }> = [];
   if (hiToUpload > 0) {
     uploadedHighlight = await uploadArrayOfFiles(
@@ -62,17 +59,15 @@ async function uploadAllAssets(
       companyId,
       'highlight',
       (p) => {
-        // p.percent vai de 0..100 na lib; pondera pelo peso dos highlights
         const part = (hiToUpload / total) * (p.percent / 100);
-        emit(part); // 0.. (hi/total)
+        emit(part);
       }
     );
   } else {
     uploadedHighlight = await uploadArrayOfFiles(highlightImages || [], companyId, 'highlight');
-    emit(hiToUpload / total); // 0 se hiToUpload=0
+    emit(hiToUpload / total);
   }
 
-  // 2) Attachments
   let uploadedAttachments: Array<{ name: string; url: string }> = [];
   if (atToUpload > 0) {
     uploadedAttachments = await uploadArrayOfFiles(
@@ -80,10 +75,9 @@ async function uploadAllAssets(
       companyId,
       'attachment',
       (p) => {
-        // parte já concluída pelos highlights
         const base = hiToUpload / total;
         const part = (atToUpload / total) * (p.percent / 100);
-        emit(base + part); // base .. 1
+        emit(base + part);
       }
     );
   } else {
@@ -95,9 +89,31 @@ async function uploadAllAssets(
   return { highlightImages: uploadedHighlight, attachments: uploadedAttachments };
 }
 
+/** Normaliza settings apenas para coerência visual/legado. */
+function normalizeSettingsForLegacy(input: any) {
+  const {
+    audienceMode,
+    audienceGroupIds,
+    ...rest
+  } = input || {}
+
+  const out: any = { ...rest }
+
+  if (audienceMode === AudienceMode.GROUPS) {
+    out.visibility = 'specific_groups'
+    out.targetAudience = Array.isArray(audienceGroupIds) ? audienceGroupIds : []
+  } else {
+    out.targetAudience = []
+    if (out.visibility === 'specific_groups') out.visibility = 'public'
+  }
+  return out
+}
+
 const ContentForm: React.FC<ContentFormProps> = ({
   initialValues,
   editingId,
+  contextSpaceId,        // ⬅ novo
+  contextChannelId,      // ⬅ novo
   onSaved,
 }) => {
   const intl = useIntl();
@@ -106,14 +122,11 @@ const ContentForm: React.FC<ContentFormProps> = ({
   const [step, setStep] = useState(1);
   const [err, setErr] = useState(false);
 
-  // estágios do fluxo
   const [stage, setStage] = useState<'idle' | 'upload' | 'save'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // nosso hook dispara onSaved() após criar/editar.
   const { createItem, editItem } = useContentActions(onSaved);
 
-  // popula authorId e companyId
   useEffect(() => {
     if (currentUser) {
       setValues(v => ({
@@ -148,6 +161,44 @@ const ContentForm: React.FC<ContentFormProps> = ({
     });
   };
 
+  const buildAudienceSelection = (dto: CreateContentDto) => {
+    const mode: AudienceMode | undefined = dto.settings?.audienceMode
+    if (!mode) return null
+
+    if (mode === AudienceMode.GROUPS) {
+      return {
+        mode,
+        groupIds: dto.settings?.audienceGroupIds || dto.settings?.targetAudience || []
+      }
+    }
+
+    // Para SPACE / CHANNEL vamos deixar o backend derivar do newsId
+    return { mode }
+  }
+
+  const applyAudienceIfAny = async (newsId: string, dto: CreateContentDto) => {
+    const selection = buildAudienceSelection(dto)
+    if (!selection) return
+    try {
+      await NewsAudienceService.applyAudience(newsId, selection as any)
+    } catch (e) {
+      console.warn('[audience.apply] falha ao aplicar audiência', e)
+    }
+  }
+
+  const maybePush = async (newsId: string, dto: CreateContentDto) => {
+    const shouldPush =
+      (dto?.settings?.pushNotification === true) &&
+      (dto?.isPublished === true)
+
+    if (!shouldPush) return
+    try {
+      await api.post(`/v2/news/${newsId}/push`, { onlyNotOpened: false })
+    } catch (err) {
+      console.warn('[push] falha ao disparar', err)
+    }
+  }
+
   const onSubmit = async (
     dto: CreateContentDto,
     helpers: FormikHelpers<CreateContentDto>
@@ -159,7 +210,6 @@ const ContentForm: React.FC<ContentFormProps> = ({
     try {
       setErr(false);
 
-      // 1) Upload
       setStage('upload');
       setUploadProgress(0);
 
@@ -170,7 +220,9 @@ const ContentForm: React.FC<ContentFormProps> = ({
         (fraction) => setUploadProgress(fraction)
       );
 
-      // 2) Salvar
+      // Apenas coerência visual/legado:
+      const normalizedSettings = normalizeSettingsForLegacy(dto.settings || {})
+
       setStage('save');
 
       const updateDto: UpdateContentDto = {
@@ -188,46 +240,29 @@ const ContentForm: React.FC<ContentFormProps> = ({
           url: i.url,
           altText: i.name,
         })),
-        settings: { ...dto.settings },
+        // ⚠️ enviar somente campos aceitos pelo backend
+        settings: { ...normalizedSettings },
       };
 
       if (editingId) {
         const updated = await editItem(editingId, updateDto)
-        const shouldPush =
-          (updated?.settings?.pushNotification ?? updateDto?.settings?.pushNotification ?? dto?.settings?.pushNotification) === true
-          && (updated?.isPublished ?? updateDto?.isPublished ?? dto?.isPublished) === true
 
-        if (shouldPush) {
-          try {
-            const r = await api.post(`/v2/news/${editingId}/push`, { onlyNotOpened: false })
-            console.log('[push] disparo edição ok', r.data)
-            // TODO (opcional): mostrar toast com r.data.requested/success/failure/receivable
-          } catch (err) {
-            console.warn('[push] falha ao disparar após edição', err)
-          }
-        }
+        await applyAudienceIfAny(editingId, dto)
+        await maybePush(editingId, dto)
+
       } else {
         const created = await createItem({
           ...dto,
+          settings: { ...normalizedSettings },
           attachments: uploaded.attachments,
           highlightImages: uploaded.highlightImages as any,
         } as any)
 
-        const shouldPush =
-          (created?.settings?.pushNotification ?? dto?.settings?.pushNotification) === true
-          && (created?.isPublished ?? dto?.isPublished) === true
-
-        if (shouldPush && created?.id) {
-          try {
-            const r = await api.post(`/v2/news/${created.id}/push`, { onlyNotOpened: false })
-            console.log('[push] disparo criação ok', r.data)
-            // TODO (opcional): mostrar toast com r.data.requested/success/failure/receivable
-          } catch (err) {
-            console.warn('[push] falha ao disparar após criação', err)
-          }
+        if (created?.id) {
+          await applyAudienceIfAny(created.id, dto)
+          await maybePush(created.id, dto)
         }
       }
-      // sucesso — o modal fecha via onSaved()
     } catch (error) {
       console.error('Erro ao salvar conteúdo:', error);
       setErr(true);
@@ -242,6 +277,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
       <PageTitle>
         {intl.formatMessage({
           id: editingId ? 'MENU.EDIT_COMUNICADO' : 'MENU.CREATE_COMUNICADO',
+          defaultMessage: editingId ? 'Editar comunicado' : 'Criar comunicado',
         })}
       </PageTitle>
       <Content>
@@ -292,12 +328,11 @@ const ContentForm: React.FC<ContentFormProps> = ({
                   <Step2
                     data={values}
                     setFieldValue={(f, v) => {
-                      formik.setFieldValue(f, v);
-                      handleChange(f, v);
+                      formik.setFieldValue(f, v)
+                      handleChange(f, v)
                     }}
                     errors={formik.errors}
                     touched={formik.touched}
-                    // Passe se o seu Step2 aceitar; caso não aceite, pode remover a prop abaixo.
                     editingId={editingId}
                   />
                 )}
@@ -313,7 +348,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                         path="../media/icons/duotune/arrows/arr063.svg"
                         className="svg-icon-2 me-0"
                       />
-                      {intl.formatMessage({ id: 'BUTTON.BACK' })}
+                      {intl.formatMessage({ id: 'BUTTON.BACK', defaultMessage: 'Voltar' })}
                     </button>
                   )}
                   {step < 2 ? (
@@ -322,7 +357,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                       className="btn btn-primary"
                       onClick={next}
                     >
-                      {intl.formatMessage({ id: 'BUTTON.NEXT' })}
+                      {intl.formatMessage({ id: 'BUTTON.NEXT', defaultMessage: 'Avançar' })}
                       <KTSVG
                         path="../media/icons/duotune/arrows/arr064.svg"
                         className="svg-icon-2 ms-0"
@@ -338,8 +373,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
                       onClick={() => submitForm()}
                     >
                       {isSubmitting || stage !== 'idle'
-                        ? intl.formatMessage({ id: 'BUTTON.SAVING' })
-                        : intl.formatMessage({ id: 'BUTTON.SAVE' })}
+                        ? intl.formatMessage({ id: 'BUTTON.SAVING', defaultMessage: 'Salvando…' })
+                        : intl.formatMessage({ id: 'BUTTON.SAVE', defaultMessage: 'Salvar' })}
                     </button>
                   )}
                 </div>

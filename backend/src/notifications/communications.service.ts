@@ -14,7 +14,7 @@ type SendPushInput = {
   webLink?: string;        // webpush.fcmOptions.link (web)
   data?: Record<string, string | number | boolean | null | undefined>;
   kind: 'NEWS' | string;
-  entityId?: string;
+  entityId?: string;       // <- para NEWS, é o newsId
 };
 
 type TokenRow = { userId: string; platform: Platform; token: string; id: string };
@@ -67,6 +67,7 @@ export class CommunicationsService {
     status?: 'queued' | 'delivered' | 'failed';
     sentAt?: Date | null; deliveredAt?: Date | null; openedAt?: Date | null;
     meta?: any; error?: string | null; kind?: string | null; entityId?: string | null;
+    newsId?: string | null; // <- novo
   }) {
     const fields: string[] = [];
     const values: any[] = [];
@@ -78,6 +79,10 @@ export class CommunicationsService {
       values.push(value);
       placeholders.push(`$${values.length}`);
     };
+
+    // mapeia NEWS → newsId quando a coluna existir
+    const finalNewsId =
+      row.newsId ?? (row.kind === 'NEWS' ? (row.entityId ?? null) : null);
 
     put('companyId', row.companyId ?? null);
     put('userId', row.userId ?? null);
@@ -93,10 +98,24 @@ export class CommunicationsService {
     put('error', row.error ?? null);
     put('kind', row.kind ?? null);
     put('entityId', row.entityId ?? null);
+    put('newsId', finalNewsId); // <- essencial p/ NOT NULL
 
     if (!fields.length) return;
     const sql = `INSERT INTO push_delivery (${fields.join(',')}) VALUES (${placeholders.join(',')})`;
     await this.ds.query(sql, values);
+  }
+
+  private renderTemplate(tpl?: string, params: Record<string, string> = {}): string | undefined {
+    if (!tpl) return undefined;
+    return tpl.replace(/:([a-zA-Z0-9_]+)/g, (_m, k) => params[k] ?? '');
+  }
+
+  private buildNewsLinks(newsId: string) {
+    const dlTpl = process.env.APP_NEWS_DEEPLINK_TEMPLATE || '';
+    const wlTpl = process.env.APP_NEWS_WEBLINK_TEMPLATE || '';
+    const deepLinkMobile = this.renderTemplate(dlTpl, { id: newsId });
+    const webLink = this.renderTemplate(wlTpl, { id: newsId });
+    return { deepLinkMobile, webLink };
   }
 
   private buildCrossPlatformMessage(
@@ -142,10 +161,13 @@ export class CommunicationsService {
   }
 
   private async fetchTokens(companyId: string, userIds: string[]): Promise<TokenRow[]> {
+    // aceita devices com companyId=null (multi-tenant permissivo)
     return this.ds.query(
       `SELECT "userId","platform","token","id"
          FROM user_device
-        WHERE "companyId"=$1 AND "userId"=ANY($2::uuid[]) AND "enabled"=true`,
+        WHERE "enabled"=true
+          AND "userId"=ANY($2::uuid[])
+          AND ("companyId"=$1 OR "companyId" IS NULL)`,
       [companyId, userIds],
     );
   }
@@ -159,9 +181,15 @@ export class CommunicationsService {
   }
 
   async sendPush(input: SendPushInput) {
+    // garante deepLink/webLink mesmo se não vierem preenchidos
+    const newsIdForLink = input.kind === 'NEWS' ? (input.entityId || '') : '';
+    const autoLinks = newsIdForLink ? this.buildNewsLinks(newsIdForLink) : { deepLinkMobile: undefined, webLink: undefined };
+    const deepLinkMobile = input.deepLinkMobile ?? autoLinks.deepLinkMobile;
+    const webLink = input.webLink ?? autoLinks.webLink;
+
     const reqId = Math.random().toString(36).slice(2, 10);
     this.logger.log(
-      `[${reqId}] sendPush start kind=${input.kind} entityId=${input.entityId} users=${input.userIds.length} deepLinkMobile=${input.deepLinkMobile} webLink=${input.webLink}`,
+      `[${reqId}] sendPush start kind=${input.kind} entityId=${input.entityId} users=${input.userIds.length} deepLinkMobile=${deepLinkMobile} webLink=${webLink}`,
     );
 
     const tokens = await this.fetchTokens(input.companyId, input.userIds);
@@ -171,7 +199,11 @@ export class CommunicationsService {
     const cols = await this.getPushDeliveryColumns();
     const results = { requested: 0, success: 0, failure: 0 };
 
-    const baseData = { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' };
+    const baseData = {
+      companyId: input.companyId,
+      kind: input.kind,
+      entityId: input.entityId || '',
+    };
 
     for (const platform of ['android', 'ios', 'web'] as Platform[]) {
       const rows = by[platform];
@@ -185,7 +217,12 @@ export class CommunicationsService {
         const tokensRaw = lot.map((x) => x.token);
         const multicast: admin.messaging.MulticastMessage = {
           ...this.buildCrossPlatformMessage(
-            input.title, input.body, input.imageUrl, input.deepLinkMobile, input.webLink, { ...baseData, ...(input.data || {}) },
+            input.title,
+            input.body,
+            input.imageUrl,
+            deepLinkMobile,
+            webLink,
+            { ...baseData, ...(input.data || {}) },
           ),
           tokens: tokensRaw,
         };
@@ -222,10 +259,11 @@ export class CommunicationsService {
                   status: ok ? 'delivered' : 'failed',
                   sentAt: new Date(),
                   deliveredAt: ok ? new Date() : null,
-                  meta: { mid: msgId },
+                  meta: { mid: msgId, deepLinkMobile, webLink },
                   error: ok ? null : (code || String(err || '')).slice(0, 512),
                   kind: input.kind,
                   entityId: input.entityId || null,
+                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
                 });
               }
             } catch (e: any) {
@@ -254,10 +292,11 @@ export class CommunicationsService {
                   status: 'failed',
                   sentAt: new Date(),
                   deliveredAt: null,
-                  meta: {},
+                  meta: { deepLinkMobile, webLink },
                   error: (e?.message || String(e || '')).slice(0, 512),
                   kind: input.kind,
                   entityId: input.entityId || null,
+                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
                 });
               }
             } catch {}
@@ -297,7 +336,7 @@ export class CommunicationsService {
     });
   }
 
-  // opcional: modo teste por tokens diretos (usado no NewsPushServiceV2)
+  // teste por tokens diretos
   async sendDirectTokens(input: {
     companyId: string;
     tokens: string[];
@@ -311,7 +350,6 @@ export class CommunicationsService {
   }) {
     const reqId = Math.random().toString(36).slice(2, 10);
     const by: Record<Platform, string[]> = { android: [], ios: [], web: [] };
-    // sem saber a plataforma, manda como android (comum para FCM)
     by.android = input.tokens;
 
     const cols = await this.getPushDeliveryColumns();
@@ -351,10 +389,11 @@ export class CommunicationsService {
                   status: ok ? 'delivered' : 'failed',
                   sentAt: new Date(),
                   deliveredAt: ok ? new Date() : null,
-                  meta: { mid: r?.messageId },
+                  meta: { mid: r?.messageId, deepLinkMobile: input.deepLinkMobile, webLink: input.webLink },
                   error: ok ? null : (r?.error?.code || '').slice(0, 512),
                   kind: input.kind,
                   entityId: input.entityId || null,
+                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
                 });
               } catch {}
             }

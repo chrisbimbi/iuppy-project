@@ -15,4 +15,7 @@ export class NewsAudienceEntity {
 
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt: Date;
+
+    @Column({ type: 'text', nullable: true })
+    origemDaRegra?: string;
 }

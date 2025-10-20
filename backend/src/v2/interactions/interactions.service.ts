@@ -1,3 +1,4 @@
+// src/v2/interactions/interactions.service.ts
 import { Injectable, ForbiddenException, BadRequestException, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, DataSource } from 'typeorm'
@@ -29,29 +30,32 @@ export class InteractionsService {
     @InjectRepository(NewsCommentEntity) private comments: Repository<NewsCommentEntity>,
     @InjectRepository(NewsShareEntity) private shares: Repository<NewsShareEntity>,
     private readonly ds: DataSource,
-  ) { }
+  ) {}
 
-  async assertNews(companyId: string, newsId: string) {
+  private async assertNews(companyId: string, newsId: string) {
     const n = await this.news.findOne({ where: { id: newsId } })
     if (!n || (n as any).companyId !== companyId) throw new ForbiddenException('Not allowed')
     return n
   }
 
-  /** ACK continua idempotente */
+  /** ACK idempotente (há índice único parcial p/ ACK) */
   private async upsertAck(companyId: string, newsId: string, userId: string | null | undefined) {
     await this.assertNews(companyId, newsId)
     const table = this.events.metadata.tableName || 'news_interaction_event'
     const params = [companyId, newsId, userId ?? null, 'ACK']
     await this.events.query(
       `INSERT INTO ${table} ("companyId","newsId","userId","type")
-     VALUES ($1,$2,$3,$4)
-     ON CONFLICT DO NOTHING`,
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT DO NOTHING`,
       params,
     )
     this.logger.debug(`[ACK] company=${companyId} news=${newsId} user=${userId}`)
   }
 
-  /** OPEN registra todas as aberturas — com META; se origin='push', marca push_delivery.openedAt */
+  /**
+   * OPEN registra TODAS as aberturas (após migração não há unicidade de OPEN).
+   * Se meta.origin='push' e houver userId, marca openedAt em push_delivery (primeira vez).
+   */
   private async insertOpen(
     companyId: string,
     newsId: string,
@@ -61,13 +65,14 @@ export class InteractionsService {
     await this.assertNews(companyId, newsId)
     const table = this.events.metadata.tableName || 'news_interaction_event'
     const params = [companyId, newsId, userId ?? null, 'OPEN', meta ?? null]
+
+    // ⇨ sem ON CONFLICT aqui: queremos múltiplos OPENs
     await this.events.query(
       `INSERT INTO ${table} ("companyId","newsId","userId","type","meta")
        VALUES ($1,$2,$3,$4,$5)`,
       params,
     )
 
-    // Se origin='push', marcar openedAt no push_delivery (primeira vez)
     const origin = String(meta?.origin || '').toLowerCase()
     if (origin === 'push' && userId) {
       await this.ds.query(
@@ -98,7 +103,7 @@ export class InteractionsService {
       where: { companyId, newsId, userId: userId || null },
     })
     if (existing) {
-      ; (existing as any).reaction = reaction
+      ;(existing as any).reaction = reaction
       return this.reactions.save(existing)
     }
     const row = this.reactions.create({
@@ -148,7 +153,7 @@ export class InteractionsService {
     const row = await this.comments.findOne({ where: { id: commentId, newsId, companyId } })
     if (!row) throw new ForbiddenException('Comment not found')
     row.approved = approve
-      ; (row as any).approvedBy = adminId
+    ;(row as any).approvedBy = adminId
     row.approvedAt = new Date()
     return this.comments.save(row)
   }

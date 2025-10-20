@@ -80,21 +80,21 @@ const normalizeOverview = (raw: any) => {
 
   // base mapping (keeps backward compatibility)
   const totals = {
-    recebiveis:     toNum(t.recebiveis ?? t.base ?? t.totalBase),
-    uniqueOpens:    toNum(t.uniqueOpens ?? t.unique_opens ?? t.opensUnique),
-    acks:           toNum(t.acks ?? t.acknowledgements ?? t.ack_count),
-    reactions:      toNum(t.reactions ?? t.reacts ?? t.reactions_count),
-    comments:       toNum(t.comments ?? t.comment_count),
-    shares:         toNum(t.shares ?? t.share_count),
+    recebiveis: toNum(t.recebiveis ?? t.base ?? t.totalBase),
+    uniqueOpens: toNum(t.uniqueOpens ?? t.unique_opens ?? t.opensUnique),
+    acks: toNum(t.acks ?? t.acknowledgements ?? t.ack_count),
+    reactions: toNum(t.reactions ?? t.reacts ?? t.reactions_count),
+    comments: toNum(t.comments ?? t.comment_count),
+    shares: toNum(t.shares ?? t.share_count),
     publishedCount: toNum(t.publishedCount ?? t.published_count ?? t.posts ?? raw?.publishedCount),
   }
 
   const rates = {
-    avgOpenRate:      toNum(r.avgOpenRate ?? r.openRate ?? r.open_rate),
-    avgAckRate:       toNum(r.avgAckRate ?? r.ackRate ?? r.ack_rate),
-    avgReactionRate:  toNum(r.avgReactionRate ?? r.reactionRate ?? r.reaction_rate),
-    avgCommentRate:   toNum(r.avgCommentRate ?? r.commentRate ?? r.comment_rate),
-    avgShareRate:     toNum(r.avgShareRate ?? r.shareRate ?? r.share_rate),
+    avgOpenRate: toNum(r.avgOpenRate ?? r.openRate ?? r.open_rate),
+    avgAckRate: toNum(r.avgAckRate ?? r.ackRate ?? r.ack_rate),
+    avgReactionRate: toNum(r.avgReactionRate ?? r.reactionRate ?? r.reaction_rate),
+    avgCommentRate: toNum(r.avgCommentRate ?? r.commentRate ?? r.comment_rate),
+    avgShareRate: toNum(r.avgShareRate ?? r.shareRate ?? r.share_rate),
   }
 
   // NEW: support for flat v2 overview shape
@@ -131,7 +131,7 @@ const normalizeOverview = (raw: any) => {
 
   return {
     totals: { ...EMPTY_TOTALS, ...totals },
-    rates:  { ...EMPTY_RATES,  ...rates  },
+    rates: { ...EMPTY_RATES, ...rates },
     meta: { hasTotals, baseProvided, source },
   }
 }
@@ -504,7 +504,7 @@ const ContentPage: React.FC = () => {
     console.log('hasTotals', hasTotals)
     console.log('displayRates', displayRates)
     console.groupEnd()
-  } catch {}
+  } catch { }
 
   return (
     <div className="app-container container-xxl">
@@ -604,9 +604,9 @@ const ContentPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="row">
+              <div className="row g-5">
                 {/* coluna canais */}
-                <div className="col-lg-4">
+                <div className="col-12 col-lg-4 col-xl-3">
                   <ChannelsList
                     channels={channels}
                     selectedChannelId={channelId}
@@ -620,7 +620,7 @@ const ContentPage: React.FC = () => {
                 </div>
 
                 {/* coluna conteúdos */}
-                <div className="col-lg-8">
+                <div className="col-12 col-lg-8 col-xl-9">
                   <ContentList
                     channelName={channels.find((c) => c.id === channelId)?.name ?? null}
                     items={items}
@@ -649,6 +649,8 @@ const ContentPage: React.FC = () => {
                       initialValues={wizardInitialValues}
                       editingId={editingId}
                       onSaved={handleSaved}
+                      contextSpaceId={spaceId}
+                      contextChannelId={channelId}
                     />
                   </div>
                 </div>

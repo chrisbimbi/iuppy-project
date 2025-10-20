@@ -16,6 +16,7 @@ import type { ReactionKind } from '@shared/types/v2/interactions'
 import { AudienceService } from '../audience/audience.service'
 import { SchemaIntrospectorV2 } from '../common/schema-introspector.v2'
 import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter'
+import { AudienceMode } from '@shared/types/NewsSettings'   // ⬅️ novo import
 
 /** State calculado por usuário para uma News */
 export interface UserState {
@@ -203,18 +204,53 @@ export class NewsV2Service {
     }
   }
 
+  /**
+   * Lê o snapshot de audiência salvo na publicação (coluna jsonb) e devolve apenas o total.
+   * Aceita os dois formatos legados:
+   *  - número simples (jsonb numérico)
+   *  - objeto { totalUsuarios, ... }
+   * Fallback: conta a tabela news_audience.
+   */
   private async getAudienceSnapshotAtPublish(companyId: string, newsId: string): Promise<number> {
     const hasFrozen = await this.hasColumn('news_entity', 'audienceSnapshotAtPublish')
     if (hasFrozen) {
-      const r = await this.newsRepo.query(
-        `SELECT COALESCE("audienceSnapshotAtPublish",0)::int AS v
+      const rows = await this.newsRepo.query(
+        `SELECT "audienceSnapshotAtPublish" AS v
            FROM news_entity
           WHERE id=$1 AND "companyId"=$2
           LIMIT 1`,
         [newsId, companyId],
       )
-      if (r && r[0]) return toInt(r[0].v)
+
+      if (rows && rows[0]) {
+        const raw = (rows[0] as any).v
+        if (raw == null) return 0
+
+        // pg já retorna jsonb como objeto/number; mas tratamos string também
+        if (typeof raw === 'number') return toInt(raw, 0)
+        if (typeof raw === 'string') {
+          // pode ser "123" ou '{"totalUsuarios":123,...}'
+          try {
+            const parsed = JSON.parse(raw)
+            if (typeof parsed === 'number') return toInt(parsed, 0)
+            if (parsed && typeof parsed === 'object' && 'totalUsuarios' in parsed) {
+              return toInt((parsed as any).totalUsuarios, 0)
+            }
+          } catch {
+            // não parseou, tenta cast simples
+            return toInt(raw, 0)
+          }
+          return 0
+        }
+        if (raw && typeof raw === 'object') {
+          if ('totalUsuarios' in raw) return toInt((raw as any).totalUsuarios, 0)
+          // não tem a chave esperada — considera 0
+          return 0
+        }
+      }
     }
+
+    // Fallback: contar news_audience
     const hasAudience = await this.hasTable('news_audience')
     if (!hasAudience) return 0
     const r2 = await this.newsRepo.query(
@@ -525,7 +561,7 @@ export class NewsV2Service {
     const sharersPreview = await this.fetchSharersPreview(companyId, id, 3)
 
     const metrics = {
-      audienceSnapshotAtPublish,
+      audienceSnapshotAtPublish, // número total calculado do snapshot/jsonb
 
       // compat
       totalOpens,
@@ -584,10 +620,11 @@ export class NewsV2Service {
 
   async open(companyId: string, newsId: string, userId: string, meta?: Record<string, any>): Promise<{ userState: any }> {
     const n = await this.ensureNews(companyId, newsId)
-    await this.interactions.markOpen(companyId, newsId, userId)
+    await this.interactions.markOpen(companyId, newsId, userId, meta) // ⬅️ mantém meta para origem 'push'
     const userState = await this.getUserState(companyId, newsId, userId)
     return { userState }
   }
+
   async ack(companyId: string, newsId: string, userId: string): Promise<{ userState: UserState }> {
     await this.ensureNews(companyId, newsId)
     await this.interactions.acknowledge(companyId, newsId, userId)
@@ -805,57 +842,13 @@ export class NewsV2Service {
   async snapshotAudience(companyId: string, newsId: string, opts?: { companyWide?: boolean }) {
     await this.ensureNews(companyId, newsId)
 
-    const userIds: string[] = opts?.companyWide
-      ? await this.audience.resolveForScope(companyId, {})
-      : await this.audience.resolveForNews(companyId, newsId)
+    // ⬇️ em vez de resolver userIds aqui, delegamos ao resolver oficial
+    //     que já persiste news_audience + snapshot (jsonb).
+    const mode = opts?.companyWide ? AudienceMode.COMPANY : AudienceMode.CHANNEL
+    await this.audience.applySelectionToNews(companyId, newsId, { mode })
 
-    if (!userIds || userIds.length === 0) {
-      if (await this.hasColumn('news_entity', 'audienceSnapshotAtPublish')) {
-        await this.newsRepo.query(
-          `UPDATE news_entity
-              SET "audienceSnapshotAtPublish"=$1
-            WHERE id=$2 AND "companyId"=$3`,
-          [0, newsId, companyId],
-        )
-      }
-      if (await this.hasTable('news_audience')) {
-        await this.newsRepo.query(
-          `DELETE FROM news_audience
-            WHERE "companyId"=$1 AND "newsId"=$2`,
-          [companyId, newsId],
-        )
-      }
-      return { inserted: 0, audienceSnapshotAtPublish: 0 }
-    }
-
-    if (!(await this.hasTable('news_audience'))) {
-      return { inserted: 0, audienceSnapshotAtPublish: userIds.length }
-    }
-
-    const CHUNK = 1000
-    let inserted = 0
-    for (let i = 0; i < userIds.length; i += CHUNK) {
-      const part = userIds.slice(i, i + CHUNK)
-      const valuesSql = part.map((_, idx) => `($1,$2,$${idx + 3})`).join(',')
-      const params = [companyId, newsId, ...part]
-      await this.newsRepo.query(
-        `INSERT INTO news_audience ("companyId","newsId","userId")
-         VALUES ${valuesSql}
-         ON CONFLICT ("companyId","newsId","userId") DO NOTHING`,
-        params,
-      )
-      inserted += part.length
-    }
-
-    if (await this.hasColumn('news_entity', 'audienceSnapshotAtPublish')) {
-      await this.newsRepo.query(
-        `UPDATE news_entity
-            SET "audienceSnapshotAtPublish"=$1
-          WHERE id=$2 AND "companyId"=$3`,
-        [userIds.length, newsId, companyId],
-      )
-    }
-
-    return { inserted, audienceSnapshotAtPublish: userIds.length }
+    // Garantimos o retorno pedindo o total após a aplicação.
+    const total = await this.getAudienceSnapshotAtPublish(companyId, newsId)
+    return { inserted: total, audienceSnapshotAtPublish: total }
   }
 }

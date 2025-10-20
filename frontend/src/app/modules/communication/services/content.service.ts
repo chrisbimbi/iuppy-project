@@ -1,4 +1,3 @@
-// src/app/modules/communication/services/content.service.ts
 import { api } from 'src/app/api'
 import { News, CreateNewsDto, UpdateNewsDto } from '@shared/types'
 
@@ -6,16 +5,36 @@ import { News, CreateNewsDto, UpdateNewsDto } from '@shared/types'
 type CreatePayload = Omit<CreateNewsDto, 'companyId' | 'authorId'>
 type UpdatePayload = Omit<UpdateNewsDto, 'companyId' | 'authorId'>
 
+/** Remove campos não aceitos pelo backend (class-validator com forbidNonWhitelisted). */
+function sanitizeSettings(input: any) {
+  const {
+    // nunca devem ir em settings
+    authorId: _dropAuthorFromSettings,
+    companyId: _dropCompanyFromSettings,
+
+    // 🎯 novos campos de audiência (não suportados no backend atual)
+    audienceMode: _dropAudMode,
+    audienceSnapshot: _dropAudSnap,
+    audienceSpaceId: _dropSpaceId,
+    audienceChannelIds: _dropChannelIds,
+    audienceGroupIds: _dropGroupIds,
+
+    // demais campos seguem
+    ...rest
+  } = input || {}
+  return rest
+}
+
 export const ContentService = {
   create(dto: CreatePayload): Promise<News> {
     const { settings, ...rest } = dto as any
-    const { authorId: _dropA, companyId: _dropC, ...safeSettings } = settings || {}
+    const safeSettings = sanitizeSettings(settings)
     return api.post<News>('/news', { ...rest, settings: safeSettings }).then(r => r.data)
   },
 
   update(id: string, dto: UpdatePayload & { authorId?: string; companyId?: string }): Promise<News> {
     const { settings, authorId: _a, companyId: _c, ...rest } = dto as any
-    const { authorId: _dropA, companyId: _dropC, ...safeSettings } = settings || {}
+    const safeSettings = sanitizeSettings(settings)
     return api.put<News>(`/news/${id}`, { ...rest, settings: safeSettings }).then(r => r.data)
   },
 

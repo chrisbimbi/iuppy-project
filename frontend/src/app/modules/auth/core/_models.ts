@@ -1,20 +1,18 @@
+// src/app/modules/auth/core/_models.ts
 import { Role } from '@shared/types'
 
 export type AuthModel = {
   /** access token (JWT) */
   api_token: string
-  /** refresh token retornado pelo backend (modelo A: no body) */
+  /** (LEGADO) refreshToken — não usamos mais; refresh vem por cookie httpOnly */
   refreshToken?: string
 }
 
 export interface UserModel {
-  /** mapeia payload.sub do backend */
   id: string
   email: string
   role: Role
   companyId: string
-
-  /** Campos extras opcionais (deixa o app respirar) */
   username?: string
   firstname?: string
   lastname?: string

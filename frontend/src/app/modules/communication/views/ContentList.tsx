@@ -151,7 +151,7 @@ const ContentList: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="card-body p-0">
+      <div className="card-body pt-0 px-3 pb-3">
         {(onDeleteMultiple || onDuplicateMultiple || onTogglePublishMultiple) && selectedIds.length > 0 && (
           <div className="border-bottom p-3 d-flex align-items-center justify-content-between bg-light">
             <div>
@@ -263,64 +263,73 @@ const ContentList: React.FC<Props> = ({
                       <td>{formatDate(i.createdAt)}</td>
                       <td>{formatDate(i.updatedAt)}</td>
                       <td className="text-end">
-                        <div className="btn-group">
-                          {/* Ver estatísticas */}
-                          <Link
-                            to={`/contents/${i.id}/stats`}
-                            className="btn btn-sm btn-light-info"
-                            onClick={() => console.debug?.('[ContentList] stats', { id: i.id })}
+                        <div className="dropdown">
+                          <button
+                            className="btn btn-sm btn-light"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            aria-label="Ações"
                           >
-                            Ver estatísticas
-                          </Link>
+                            <i className="bi bi-three-dots-vertical" />
+                          </button>
 
-                          {onEdit && (
-                            <button
-                              className="btn btn-sm btn-light-primary"
-                              onClick={() => {
-                                console.debug?.('[ContentList] edit', { id: i.id })
-                                onEdit?.(i.id)
-                              }}
-                            >
-                              Editar
-                            </button>
-                          )}
-                          {(onDuplicate || onDelete) && (
-                            <button
-                              className="btn btn-sm btn-light dropdown-toggle dropdown-toggle-split"
-                              data-bs-toggle="dropdown"
-                              aria-expanded="false"
-                            />
-                          )}
-                          {(onDuplicate || onDelete) && (
-                            <ul className="dropdown-menu">
-                              {onDuplicate && (
-                                <li>
-                                  <button
-                                    className="dropdown-item"
-                                    onClick={() => {
-                                      console.debug?.('[ContentList] duplicate', { id: i.id })
-                                      onDuplicate?.(i.id)
-                                    }}
-                                  >
-                                    Duplicar
-                                  </button>
-                                </li>
-                              )}
-                              {onDelete && (
-                                <li>
-                                  <button
-                                    className="dropdown-item text-danger"
-                                    onClick={() => {
-                                      console.debug?.('[ContentList] delete', { id: i.id })
-                                      onDelete?.(i.id)
-                                    }}
-                                  >
-                                    Deletar
-                                  </button>
-                                </li>
-                              )}
-                            </ul>
-                          )}
+                          <ul className="dropdown-menu dropdown-menu-end">
+                            {/* Ver estatísticas */}
+                            <li>
+                              <Link
+                                to={`/contents/${i.id}/stats`}
+                                className="dropdown-item"
+                                onClick={() => console.debug?.('[ContentList] stats', { id: i.id })}
+                              >
+                                Ver estatísticas
+                              </Link>
+                            </li>
+
+                            {/* Editar (se permitido) */}
+                            {onEdit && (
+                              <li>
+                                <button
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    console.debug?.('[ContentList] edit', { id: i.id })
+                                    onEdit?.(i.id)
+                                  }}
+                                >
+                                  Editar
+                                </button>
+                              </li>
+                            )}
+
+                            {/* Duplicar (se disponível) */}
+                            {onDuplicate && (
+                              <li>
+                                <button
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    console.debug?.('[ContentList] duplicate', { id: i.id })
+                                    onDuplicate?.(i.id)
+                                  }}
+                                >
+                                  Duplicar
+                                </button>
+                              </li>
+                            )}
+
+                            {/* Deletar (se disponível) */}
+                            {onDelete && (
+                              <li>
+                                <button
+                                  className="dropdown-item text-danger"
+                                  onClick={() => {
+                                    console.debug?.('[ContentList] delete', { id: i.id })
+                                    onDelete?.(i.id)
+                                  }}
+                                >
+                                  Deletar
+                                </button>
+                              </li>
+                            )}
+                          </ul>
                         </div>
                       </td>
                     </tr>

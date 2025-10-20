@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common'
+// src/v2/common/v2.module.ts
+import { Module, forwardRef } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
 // ENTITIES base
@@ -6,6 +7,9 @@ import { NewsEntity } from 'src/news/news.entity'
 import { Channel } from 'src/channels/channel.entity'
 import { SpaceEntity } from 'src/spaces/space.entity'
 import { UserEntity } from 'src/users/user.entity'
+import { CompanyEntity } from 'src/companies/company.entity'
+import { GroupEntity } from 'src/groups/group.entity'
+import { UserDeviceEntity } from 'src/notifications/entities/user-device.entity'
 
 // ENTITIES v2 (interactions/audience)
 import { InteractionEventEntity } from '../interactions/entities/interaction-event.entity'
@@ -28,6 +32,7 @@ import { PushV2Controller } from '../push/push.controller'
 import { InteractionsControllerV2 } from '../interactions/interactions.controller'
 import { NewsCommentsControllerV2 } from '../comments/news-comments.controller'
 import { NewsPushControllerV2 } from '../news/news-push.controller'
+import { AudienceV2Controller } from '../audience/audience.controller'
 
 // SERVICES
 import { NewsV2Service } from '../news/news.service'
@@ -53,6 +58,9 @@ import { NewsPushServiceV2 } from '../news/news-push.service'
 import { NotificationsModule } from 'src/notifications/notifications.module'
 import { PushDeliveryEntity } from '../push/entities/push-delivery.entity'
 
+// 🔗 para disponibilizar o AudienceResolverService no contexto do v2
+import { NewsModule } from 'src/news/news.module'
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -61,6 +69,11 @@ import { PushDeliveryEntity } from '../push/entities/push-delivery.entity'
       Channel,
       SpaceEntity,
       UserEntity,
+      CompanyEntity,
+      GroupEntity,
+      UserDeviceEntity,
+
+      // métricas e push
       NewsMetricsDailyEntity,
       UserMetricsDailyEntity,
       SearchMetricsDailyEntity,
@@ -76,6 +89,8 @@ import { PushDeliveryEntity } from '../push/entities/push-delivery.entity'
       NewsAudienceEntity,
     ]),
     NotificationsModule,
+    // ⬇️ garante o provider AudienceResolverService para o AudienceService (v2)
+    forwardRef(() => NewsModule),
   ],
   controllers: [
     NewsV2Controller,
@@ -88,6 +103,7 @@ import { PushDeliveryEntity } from '../push/entities/push-delivery.entity'
     InteractionsControllerV2,
     NewsCommentsControllerV2,
     NewsPushControllerV2,
+    AudienceV2Controller,
   ],
   providers: [
     // core

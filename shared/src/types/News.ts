@@ -17,4 +17,6 @@ export interface News {
   settings: NewsSettings;
   createdAt: Date;
   updatedAt: Date;
+  publishedAt?: string | Date;
+
 }
