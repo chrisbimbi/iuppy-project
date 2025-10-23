@@ -6,9 +6,14 @@ export class NewsShareEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column() companyId!: string;
-  @Column() newsId!: string;
-  @Column({ nullable: true }) userId!: string | null;
+  @Column('uuid')
+  companyId!: string;
+
+  @Column('uuid')
+  newsId!: string;
+
+  @Column('uuid', { nullable: true })
+  userId!: string | null;
 
   @Column({ default: 'app' })
   channel!: 'app' | 'external';
@@ -16,6 +21,6 @@ export class NewsShareEntity {
   @Column({ type: 'jsonb', nullable: true })
   meta?: Record<string, any>;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

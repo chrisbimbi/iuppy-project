@@ -7,13 +7,18 @@ export class NewsReactionEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column() companyId!: string;
-  @Column() newsId!: string;
-  @Column({ nullable: true }) userId!: string | null;
+  @Column('uuid')
+  companyId!: string;
+
+  @Column('uuid')
+  newsId!: string;
+
+  @Column('uuid', { nullable: true })
+  userId!: string | null;
 
   @Column()
   reaction!: 'like' | 'love' | 'clap' | 'smile' | 'neutral' | 'angry';
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

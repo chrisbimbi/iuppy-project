@@ -6,7 +6,6 @@ import { DashboardWrapper } from '../pages/dashboard/DashboardWrapper'
 import { MenuTestPage } from '../pages/MenuTestPage'
 import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 
-import ContentPage from 'src/app/modules/communication/controllers/ContentPage'
 import NewsStatsPage from 'src/app/modules/communication/views/NewsStatsPage'
 import NewsCommentsPage from 'src/app/modules/communication/views/NewsCommentsPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
@@ -23,6 +22,10 @@ import CompanySettingsPage from 'src/app/modules/company/controllers/CompanySett
 import { RequireModule } from 'src/app/components/RequireModule'
 import ModulesLanding from '../pages/ModulesLanding'
 
+// 🔥 Nova visão geral de conteúdos
+import ContentsOverviewPage from 'src/app/modules/analytics/views/ContentsOverviewPage'
+import ContentPage from '../modules/communication/controllers/ContentPage'
+
 const PrivateRoutes: FC = () => {
   return (
     <Suspense fallback={<TopBarProgress />}>
@@ -35,7 +38,10 @@ const PrivateRoutes: FC = () => {
         {/* Conteúdos */}
         <Route path="contents" element={<ContentPage />} />
         <Route path="contents/:newsId/stats" element={<NewsStatsPage />} />
-        <Route path="contents/:newsId/comments" element={<NewsCommentsPage />} /> {/* ✅ nova */}
+        <Route path="contents/:newsId/comments" element={<NewsCommentsPage />} />
+
+        {/* Analytics – visão geral de conteúdos */}
+        <Route path="analytics/contents" element={<ContentsOverviewPage />} />
 
         {/* Grupos */}
         <Route path="groups" element={<GroupsPage />} />
@@ -69,7 +75,6 @@ const PrivateRoutes: FC = () => {
             </RequireModule>
           }
         />
-        {/* results + alias */}
         <Route
           path="surveys/:surveyId/results"
           element={

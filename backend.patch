@@ -1,0 +1,122 @@
+--- analytics/analytics.service.ts
++++ analytics/analytics.service.ts
+@@ -665,7 +665,7 @@
+     }
+ 
+     if (channelId) {
+-      where.push(`n."channelId" = $${i++}`);
++      where.push(`n."channelId"::text = $${i++}::text`);
+       params.push(channelId);
+     }
+ 
+@@ -700,6 +700,38 @@
+     }
+ 
+     const ids = newsRows.map(r => r.id);
++    const hasDailyAgg = await this.schema.hasTable('news_metrics_daily');
++    if (hasDailyAgg) {
++      const ph = ids.map((_, idx) => `$${idx + 2}`).join(',');
++      const p: any[] = [companyId, ...ids];
++      let sql = `
++        SELECT d."newsId" AS nid,
++               SUM(d.opens)::int         AS opens,
++               SUM(d."uniqueOpens")::int AS uniques,
++               SUM(d.acks)::int          AS acks
++          FROM news_metrics_daily d
++          JOIN news_entity n ON n.id = d."newsId" AND n."companyId"=$1
++         WHERE d."newsId" IN (${ph})`;
++      if (from) { sql += ` AND d."date" >= $${p.length + 1}`; p.push(from); }
++      if (to)   { sql += ` AND d."date" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(to); }
++      if (channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(channelId); }
++      if (spaceId) {
++        const hasNewsSpaceId = await this.schema.hasColumn('news_entity', 'spaceId');
++        if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(spaceId); }
++        else { sql += ` AND EXISTS (SELECT 1 FROM channel c WHERE c.id::text = n."channelId"::text AND CAST($${p.length + 1} AS text) = ANY(c."space_ids"::text[]))`; p.push(spaceId); }
++      }
++      if (excludeDeleted) {
++        const delNews = await this.softDeleteFilters('news_entity', 'n');
++        if (delNews.length) sql += ` AND ${delNews.join(' AND ')}`;
++      }
++      sql += ` GROUP BY d."newsId"`;
++      const rows: Array<{ nid: string; opens: number; uniques: number; acks: number }> = await this.ds.query(sql, p);
++      const by = new Map(rows.map(r => [r.nid, r]));
++      opensById = new Map(ids.map(id => [id, by.get(id)?.opens ?? 0]));
++      uniqueOpensById = new Map(ids.map(id => [id, by.get(id)?.uniques ?? 0]));
++      acksUsersById = new Map(ids.map(id => [id, by.get(id)?.acks ?? 0]));
++    } else {
++
+     const ph = ids.map((_, idx) => `$${idx + 1}`).join(',');
+     const baseParams = [...ids];
+ 
+@@ -814,6 +846,8 @@
+       }
+     }
+ 
++        }
++
+     // ===== reactions/comments/shares =====
+     const reactDel = await this.softDeleteFilters('news_reaction', 'r');
+     const commDel = await this.softDeleteFilters('news_comment', 'c');
+@@ -1024,7 +1058,7 @@
+           .map(([d, v]) => ({ date: d, ...v }));
+       }
+       const out = new Map(inMap) as Map<string, any>;
+-      for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
++      for (let d = new Date(fromDate); toDate && d < toDate; d.setDate(d.getDate() + 1)) {
+         const k = d.toISOString().slice(0, 10);
+         if (!out.has(k)) out.set(k, {});
+       }
+@@ -1055,7 +1089,7 @@
+          WHERE 1=1`;
+       if (f) { sql += ` AND d."date" >= $${p.length + 1}`; p.push(f); }
+       if (t) { sql += ` AND d."date" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(t); }
+-      if (opts.channelId) { sql += ` AND n."channelId" = $${p.length + 1}`; p.push(opts.channelId); }
++      if (opts.channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(opts.spaceId); }
+         else {
+@@ -1088,7 +1122,7 @@
+          WHERE n."companyId"=$1 AND n."publishedAt" IS NOT NULL`;
+       if (f) { sql2 += ` AND n."publishedAt" >= $${p2.length + 1}`; p2.push(f); }
+       if (t) { sql2 += ` AND n."publishedAt" < ($${p2.length + 1}::date + INTERVAL '1 day')`; p2.push(t); }
+-      if (opts.channelId) { sql2 += ` AND n."channelId" = $${p2.length + 1}`; p2.push(opts.channelId); }
++      if (opts.channelId) { sql2 += ` AND n."channelId"::text = $${p2.length + 1}::text`; p2.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql2 += ` AND n."spaceId" = $${p2.length + 1}`; p2.push(opts.spaceId); }
+         else {
+@@ -1131,7 +1165,7 @@
+          WHERE n."companyId"=$1 AND n."publishedAt" IS NOT NULL`;
+       if (f) { sql += ` AND n."publishedAt" >= $${p.length + 1}`; p.push(f); }
+       if (t) { sql += ` AND n."publishedAt" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(t); }
+-      if (opts.channelId) { sql += ` AND n."channelId" = $${p.length + 1}`; p.push(opts.channelId); }
++      if (opts.channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(opts.spaceId); }
+         else {
+@@ -1195,7 +1229,7 @@
+       if (opts.excludeDeleted && delReac.length) sql += ` AND ${delReac.join(' AND ')}`;
+       if (f) { sql += ` AND r."createdAt" >= $${p.length + 1}`; p.push(f); }
+       if (t) { sql += ` AND r."createdAt" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(t); }
+-      if (opts.channelId) { sql += ` AND n."channelId" = $${p.length + 1}`; p.push(opts.channelId); }
++      if (opts.channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(opts.spaceId); }
+         else {
+@@ -1220,7 +1254,7 @@
+       if (hasApprovedCol) sql += ` AND COALESCE(c.approved, true) = true`;
+       if (f) { sql += ` AND c."createdAt" >= $${p.length + 1}`; p.push(f); }
+       if (t) { sql += ` AND c."createdAt" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(t); }
+-      if (opts.channelId) { sql += ` AND n."channelId" = $${p.length + 1}`; p.push(opts.channelId); }
++      if (opts.channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(opts.spaceId); }
+         else {
+@@ -1244,7 +1278,7 @@
+       if (opts.excludeDeleted && delShare.length) sql += ` AND ${delShare.join(' AND ')}`;
+       if (f) { sql += ` AND s."createdAt" >= $${p.length + 1}`; p.push(f); }
+       if (t) { sql += ` AND s."createdAt" < ($${p.length + 1}::date + INTERVAL '1 day')`; p.push(t); }
+-      if (opts.channelId) { sql += ` AND n."channelId" = $${p.length + 1}`; p.push(opts.channelId); }
++      if (opts.channelId) { sql += ` AND n."channelId"::text = $${p.length + 1}::text`; p.push(opts.channelId); }
+       if (opts.spaceId) {
+         if (hasNewsSpaceId) { sql += ` AND n."spaceId" = $${p.length + 1}`; p.push(opts.spaceId); }
+         else {

@@ -1,72 +1,56 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  Index,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm'
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
-/**
- * Registros de envio/entrega/abertura de push por usuário e notícia.
- * Fonte para funil: solicitado (tokens), entregue (users), abriu via push (users).
- */
 @Entity('push_delivery')
 @Index(['companyId', 'newsId'])
-@Index(['companyId', 'status'])
-@Index(['companyId', 'createdAt'])
+@Index(['companyId', 'userId'])
 export class PushDeliveryEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
-  @Column({ type: 'text' })
-  companyId!: string
+  // Deixe nullable para não forçar ADD NOT NULL em tabelas já populadas
+  @Column('uuid', { nullable: true })
+  companyId!: string | null;
 
-  @Column({ type: 'text' })
-  newsId!: string
+  @Column('uuid', { nullable: true })
+  newsId!: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  userId!: string | null
-
-  /** canal lógico do envio (ex: 'remind', 'notify', 'bulk') */
-  @Column({ type: 'text', default: 'remind' })
-  channel!: string
-
-  /** provedor tecnológico (ex: 'fcm', 'apns', 'expo', 'webpush') */
-  @Column({ type: 'text', nullable: true })
-  provider!: string | null
-
-  /** id de mensagem retornado pelo provider (ex.: FCM messageId) */
-  @Column({ type: 'text', nullable: true })
-  messageId!: string | null
-
-  /** token/endpoint (quando aplicável) */
-  @Column({ type: 'text', nullable: true })
-  token!: string | null
-
-  /** 'queued' | 'sent' | 'delivered' | 'failed' */
-  @Column({ type: 'text', default: 'queued' })
-  status!: string
-
-  @Column({ type: 'timestamptz', nullable: true })
-  sentAt!: Date | null
-
-  @Column({ type: 'timestamptz', nullable: true })
-  deliveredAt!: Date | null
-
-  /** primeira abertura da notícia vinda do push (quando identificado) */
-  @Column({ type: 'timestamptz', nullable: true })
-  openedAt!: Date | null
-
-  @Column({ type: 'jsonb', nullable: true })
-  meta!: Record<string, any> | null
-
-  @Column({ type: 'text', nullable: true })
-  error!: string | null
+  @Column('uuid', { nullable: true })
+  userId!: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  createdAt!: Date
+  createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt!: Date
+  // Colunas legadas que seus logs mostram existir — ficam todas nullable
+  @Column({ type: 'timestamptz', nullable: true })
+  updatedAt?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  sentAt?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deliveredAt?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  openedAt?: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  status?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  provider?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  channel?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  token?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  error?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  messageId?: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  meta?: Record<string, any>;
 }

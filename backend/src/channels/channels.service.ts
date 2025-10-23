@@ -10,7 +10,7 @@ export class ChannelsService {
   constructor(
     @InjectRepository(Channel) private readonly channelRepository: Repository<Channel>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   create(dto: CreateChannelDto) {
     const channel = this.channelRepository.create(dto);
@@ -30,7 +30,8 @@ export class ChannelsService {
       .andWhere('COALESCE(c."is_published", true) = true');
 
     if (spaceId) {
-      qb.andWhere(':spaceId = ANY(c."space_ids")', { spaceId });
+      // robusto: compara texto com texto e força o array para text[]
+      qb.andWhere(':spaceId::text = ANY(c."space_ids"::text[])', { spaceId });
     }
 
     // Forçar NULLS LAST de forma portável:

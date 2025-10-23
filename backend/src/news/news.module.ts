@@ -24,6 +24,9 @@ import { AudienceResolverService } from './audience-resolver.service';
 // 🔁 Importa o V2Module (que EXPORTA o AudienceService) para o controller poder injetá-lo
 import { V2Module } from '../v2/common/v2.module';
 import { CommunicationsService } from 'src/notifications/communications.service';
+import { NewsUsersController } from './news-users.controller';
+import { NewsMetricsService } from './news-metrics.service';
+
 
 @Module({
   imports: [
@@ -41,8 +44,8 @@ import { CommunicationsService } from 'src/notifications/communications.service'
     ]),
     forwardRef(() => V2Module),
   ],
-  controllers: [NewsController, NewsAudienceController],
-  providers: [NewsService, AudienceResolverService, CommunicationsService],
-  exports: [NewsService, AudienceResolverService, CommunicationsService,],
+  controllers: [NewsController, NewsAudienceController, NewsUsersController],
+  providers: [NewsService, AudienceResolverService, CommunicationsService, NewsMetricsService],
+  exports: [NewsService, AudienceResolverService, CommunicationsService, NewsMetricsService],
 })
 export class NewsModule { }

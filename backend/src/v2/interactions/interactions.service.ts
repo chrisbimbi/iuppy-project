@@ -1,4 +1,3 @@
-// src/v2/interactions/interactions.service.ts
 import { Injectable, ForbiddenException, BadRequestException, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, DataSource } from 'typeorm'

@@ -21,9 +21,9 @@ export class Channel implements ChannelInterface {
   @Column()
   companyId: string;
 
-  @Column('text', { array: true, nullable: true, name: 'space_ids' })
+  @Column('uuid', { array: true, nullable: true, name: 'space_ids' })
   spaceIds?: string[];
-
+  
   @Column('text', { array: true, nullable: true, name: 'group_ids' })
   groupIds?: string[];
 

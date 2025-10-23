@@ -4,18 +4,18 @@ import { Entity, PrimaryColumn, CreateDateColumn, Index, Column } from 'typeorm'
 @Index(['companyId', 'newsId'])
 @Index(['userId'])
 export class NewsAudienceEntity {
-    @PrimaryColumn('uuid')
-    companyId: string;
+  @PrimaryColumn('uuid')
+  companyId!: string;
 
-    @PrimaryColumn('uuid')
-    newsId: string;
+  @PrimaryColumn('uuid')
+  newsId!: string;
 
-    @PrimaryColumn('uuid')
-    userId: string;
+  @PrimaryColumn('uuid')
+  userId!: string;
 
-    @CreateDateColumn({ type: 'timestamptz' })
-    createdAt: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
 
-    @Column({ type: 'text', nullable: true })
-    origemDaRegra?: string;
+  @Column({ type: 'text', nullable: true })
+  origemDaRegra?: string;
 }

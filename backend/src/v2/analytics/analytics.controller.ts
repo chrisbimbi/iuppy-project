@@ -11,7 +11,7 @@ export class AnalyticsV2Controller {
   constructor(
     private readonly svc: AnalyticsV2Service,
     private readonly schema: SchemaIntrospectorV2,
-  ) { }
+  ) {}
 
   private makeEtag(companyId: string, route: string, params: Record<string, any>, last: string) {
     const key = JSON.stringify({ companyId, route, params, last })
@@ -29,20 +29,43 @@ export class AnalyticsV2Controller {
     @Query('spaceId') spaceId: string | undefined,
     @Query('channelId') channelId: string | undefined,
     @Query('groupId') groupId: string | undefined,
+    // novos opcionais (não quebram compat):
+    @Query('excludeDeleted') excludeDeletedStr: string | undefined, // default: true
+    @Query('sortBy') sortBy: 'createdAt' | 'open' | 'ack' | 'reactions' | 'comments' | 'shares' | 'title' | undefined,
+    @Query('sortDir') sortDir: 'asc' | 'desc' | undefined,
+    @Query('page') pageStr: string | undefined,
+    @Query('pageSize') pageSizeStr: string | undefined,
+
     @Req() req: any,
     @Headers('if-none-match') inm: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
     const companyId = req.user.companyId
+
+    const excludeDeleted = excludeDeletedStr === 'false' ? false : true
+    const page = Math.max(1, Number(pageStr ?? 1))
+    const pageSize = Math.max(1, Math.min(500, Number(pageSizeStr ?? 100)))
+
     const last = await this.schema.getLastUpdateMarker(companyId, from, to)
-    const etag = this.makeEtag(companyId, 'news/overview', { from, to, spaceId, channelId, groupId }, last)
+    const etag = this.makeEtag(
+      companyId,
+      'news/overview',
+      { from, to, spaceId, channelId, groupId, excludeDeleted, sortBy, sortDir, page, pageSize },
+      last,
+    )
     if (inm && inm === etag) {
       res.setHeader('ETag', etag)
       res.status(304)
       return
     }
     res.setHeader('ETag', etag)
-    const data = await this.svc.newsOverview(companyId, { from, to, spaceId, channelId, groupId })
+
+    const data = await this.svc.newsOverview(companyId, {
+      from, to, spaceId, channelId, groupId,
+      excludeDeleted,
+      sortBy, sortDir,
+      page, pageSize,
+    })
     return { ...data, etag, serverTime: new Date().toISOString() }
   }
 

@@ -56,7 +56,7 @@ import { NotificationsModule } from './notifications/notifications.module';
           password: cs.get<string>('DB_PASSWORD'),
           database: cs.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: nodeEnv === 'development',
+          synchronize:false,
           logging: nodeEnv === 'development',
         };
       },

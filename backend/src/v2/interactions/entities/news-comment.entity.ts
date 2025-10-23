@@ -6,10 +6,14 @@ export class NewsCommentEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column() companyId!: string;
-  @Column() newsId!: string;
+  @Column('uuid')
+  companyId!: string;
 
-  @Column({ nullable: true }) userId!: string | null;
+  @Column('uuid')
+  newsId!: string;
+
+  @Column('uuid', { nullable: true })
+  userId!: string | null;
 
   @Column('text')
   text!: string;
@@ -17,12 +21,12 @@ export class NewsCommentEntity {
   @Column({ default: false })
   approved!: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   approvedBy?: string;
 
   @Column({ type: 'timestamptz', nullable: true })
   approvedAt?: Date;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

@@ -4,30 +4,30 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 @Index(['userId', 'date'])
 export class UserMetricsDailyEntity {
   @PrimaryColumn('uuid')
-  userId: string;
+  userId!: string;
 
   // YYYY-MM-DD
   @PrimaryColumn('date')
-  date: string;
+  date!: string;
 
   @Column('integer', { default: 0 })
-  appOpens: number;
+  appOpens!: number;
 
   @Column('integer', { default: 0 })
-  newsOpens: number;
+  newsOpens!: number;
 
   @Column('integer', { default: 0 })
-  newsUniqueOpens: number;
+  newsUniqueOpens!: number;
 
   @Column('integer', { default: 0 })
-  reactions: number;
+  reactions!: number;
 
   @Column('integer', { default: 0 })
-  comments: number;
+  comments!: number;
 
   @Column('integer', { default: 0 })
-  shares: number;
+  shares!: number;
 
   @Column('integer', { default: 0 })
-  surveyResponses: number;
+  surveyResponses!: number;
 }

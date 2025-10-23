@@ -4,22 +4,20 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 @Index(['companyId', 'date'])
 export class SearchMetricsDailyEntity {
   @PrimaryColumn('uuid')
-  companyId: string;
+  companyId!: string;
 
-  // YYYY-MM-DD
   @PrimaryColumn('date')
-  date: string;
+  date!: string; // YYYY-MM-DD
 
-  // Hash da consulta (para privacidade)
-  @PrimaryColumn('text')
-  queryHash: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  queryHash!: string;
+
+  @Column({ type: 'text', nullable: true })
+  sampleQuery?: string | null;
 
   @Column('integer', { default: 0 })
-  queries: number;
+  queries!: number;
 
   @Column('integer', { default: 0 })
-  uniqueUsers: number;
-
-  @Column('text', { nullable: true })
-  sampleQuery: string | null;
+  uniqueUsers!: number;
 }

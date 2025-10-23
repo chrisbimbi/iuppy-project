@@ -1,5 +1,7 @@
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
+import 'reflect-metadata';
+
 import { UserEntity } from '../users/user.entity';
 import { Channel } from '../channels/channel.entity';
 import { SpaceEntity } from '../spaces/space.entity';
@@ -11,7 +13,17 @@ import { SurveyResponseEntity } from 'src/modules/surveys/entities/survey-respon
 import { CompanyEntity } from '../companies/company.entity';
 import { CompanySettingsEntity } from 'src/modules/company-settings/company-settings.entity';
 import { CompanyModuleEntity } from 'src/modules/company-modules/company-module.entity';
-import 'reflect-metadata';
+
+// **** novos entities usados pelo AnalyticsV2Service
+import { InteractionEventEntity } from 'src/v2/interactions/entities/interaction-event.entity';
+import { NewsReactionEntity } from 'src/v2/interactions/entities/news-reaction.entity';
+import { NewsCommentEntity } from 'src/v2/interactions/entities/news-comment.entity';
+import { NewsShareEntity } from 'src/v2/interactions/entities/news-share.entity';
+import { NewsMetricsDailyEntity } from 'src/v2/interactions/entities/news-metrics-daily.entity';
+import { UserMetricsDailyEntity } from 'src/v2/interactions/entities/user-metrics-daily.entity';
+import { NewsAudienceEntity } from 'src/v2/interactions/entities/news-audience.entity';
+import { SearchMetricsDailyEntity } from 'src/v2/interactions/entities/search-metrics-daily.entity';
+import { PushDeliveryEntity } from 'src/v2/push/entities/push-delivery.entity';
 
 dotenv.config();
 
@@ -34,7 +46,19 @@ export const AppDataSource = new DataSource({
     CompanySettingsEntity,
     CompanyModuleEntity,
     CompanyEntity,
-  ], migrations: ['src/migrations/*.ts'],
+
+    // **** adicionados
+    InteractionEventEntity,
+    NewsReactionEntity,
+    NewsCommentEntity,
+    NewsShareEntity,
+    NewsMetricsDailyEntity,
+    UserMetricsDailyEntity,
+    NewsAudienceEntity,
+    SearchMetricsDailyEntity,
+    PushDeliveryEntity,
+  ],
+  migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
-  synchronize: false,
+  synchronize: false,   // <<< DESLIGADO
 });

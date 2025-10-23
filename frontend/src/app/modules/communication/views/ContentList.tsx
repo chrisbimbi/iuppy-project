@@ -227,6 +227,8 @@ const ContentList: React.FC<Props> = ({
                   <th>Status</th>
                   <th>Criado</th>
                   <th>Atualizado</th>
+                  <th>Push?</th>
+
                   <th className="text-end">Ações</th>
                 </tr>
               </thead>
@@ -260,8 +262,16 @@ const ContentList: React.FC<Props> = ({
                           <span className="badge badge-light">Rascunho</span>
                         )}
                       </td>
+
                       <td>{formatDate(i.createdAt)}</td>
                       <td>{formatDate(i.updatedAt)}</td>
+                      <td>
+                        {i.settings.pushNotification ? (
+                          <span className="badge badge-light-success">Sim</span>
+                        ) : (
+                          <span className="badge badge-light">Não</span>
+                        )}
+                      </td>
                       <td className="text-end">
                         <div className="dropdown">
                           <button
