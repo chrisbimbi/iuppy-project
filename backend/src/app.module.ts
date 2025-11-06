@@ -13,6 +13,7 @@ import { ChannelsModule } from './channels/channels.module';
 import { SpacesModule } from './spaces/spaces.module';
 import { GroupsModule } from './groups/groups.module';
 import { SurveysModule } from './modules/surveys/surveys.module';
+import { FormsModule } from './modules/forms/forms.module';
 import { AuthModule } from './auth/auth.module';
 import { CompanySettingsModule } from './modules/company-settings/company-settings.module';
 import { CompanyModulesModule } from './modules/company-modules/company-modules.module';
@@ -28,6 +29,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
+    FormsModule,
+    
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,

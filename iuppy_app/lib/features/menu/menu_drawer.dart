@@ -1,4 +1,3 @@
-// lib/features/menu/menu_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -37,59 +36,24 @@ class MenuDrawer extends ConsumerWidget {
                   style: Theme.of(context).textTheme.headlineSmall),
             ),
           ),
-
           if (enabled.contains('news')) _NewsTree(unread: unread),
-
           if (enabled.contains('surveys'))
             ListTile(
               leading: const Icon(Icons.poll),
               title: const Text('Surveys'),
               onTap: () => context.push('/surveys'),
             ),
-
+          if (enabled.contains('forms'))
+            ListTile(
+              leading: const Icon(Icons.description),
+              title: const Text('Formulários'),
+              onTap: () => context.push('/forms'),
+            ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configurações'),
             onTap: () => context.push('/settings'),
           ),
-
-          // ---------------------------
-          // DEBUG ONLY: marcar todas lidas
-          // ---------------------------
-          // if (kDebugMode)
-          //   ListTile(
-          //     leading: const Icon(Icons.done_all),
-          //     title:
-          //         const Text('Marcar TODAS as notícias (em cache) como lidas'),
-          //     onTap: () async {
-          //       final db = ref.read(dbProvider);
-          //       final cached = await db.getNews(limit: 2000);
-          //
-          //       // só as publicadas
-          //       final ids = cached
-          //           .where((n) => (n['isPublished'] ?? true) == true)
-          //           .map((n) => (n['id'] ?? '').toString());
-          //
-          //       await ref.read(localNewsStoreProvider).markManyRead(ids);
-          //
-          //       // Atualiza badges (Home + Drawer)
-          //       ref.read(homeBadgesProvider.notifier).state =
-          //           const HomeBadges(newsNew: 0, surveysPending: 0);
-          //       ref.invalidate(unreadCountersProvider);
-          //
-          //       if (context.mounted) {
-          //         Navigator.of(context).pop(); // fecha o drawer
-          //         ScaffoldMessenger.of(context).showSnackBar(
-          //           const SnackBar(
-          //             content: Text('Todas as notícias marcadas como lidas ✅'),
-          //           ),
-          //         );
-          //       }
-          //     },
-          //   ),
-
-          // const Divider(),
-
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sair'),

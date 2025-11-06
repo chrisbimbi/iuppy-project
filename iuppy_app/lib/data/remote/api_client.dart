@@ -564,4 +564,70 @@ class ApiClient {
       cancelToken: cancelToken,
     );
   }
+
+  // ==========================
+  // FORMS (NOVO MÓDULO)
+  // ==========================
+
+  /// Lista formulários publicados (ou todos, conforme backend).
+  Future<List<Map<String, dynamic>>> getForms({
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/forms',
+      queryParameters: queryParameters,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  /// Detalhe do formulário (inclui fields).
+  Future<Map<String, dynamic>> getFormDetail(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/forms/$id',
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  /// Envia submissão do formulário.
+  Future<Map<String, dynamic>> postFormSubmission(
+    String formId, {
+    required List<Map<String, dynamic>> answers,
+    Map<String, dynamic>? meta,
+    List<Map<String, dynamic>>? attachments,
+    bool? external,
+    String? externalEmail,
+    List<String>? spaceIds,
+    List<String>? groupIds,
+    CancelToken? cancelToken,
+  }) async {
+    final body = <String, dynamic>{
+      'answers': answers,
+      if (meta != null) 'meta': meta,
+      if (attachments != null) 'attachments': attachments,
+      if (external != null) 'external': external,
+      if (externalEmail != null) 'externalEmail': externalEmail,
+      if (spaceIds != null) 'spaceIds': spaceIds,
+      if (groupIds != null) 'groupIds': groupIds,
+    };
+    final resp = await _dio.post(
+      '/forms/$formId/submissions',
+      data: body,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
 }

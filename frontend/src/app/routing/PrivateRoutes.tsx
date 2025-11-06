@@ -22,9 +22,14 @@ import CompanySettingsPage from 'src/app/modules/company/controllers/CompanySett
 import { RequireModule } from 'src/app/components/RequireModule'
 import ModulesLanding from '../pages/ModulesLanding'
 
-// 🔥 Nova visão geral de conteúdos
+// Analytics de conteúdos
 import ContentsOverviewPage from 'src/app/modules/analytics/views/ContentsOverviewPage'
 import ContentPage from '../modules/communication/controllers/ContentPage'
+
+// 🔥 FORMS (nomes distintos para evitar colisão)
+import FormEditPage from 'src/app/modules/forms/controllers/FormEditPage'
+import FormsListPage from '../modules/forms/controllers/FormsListPage'
+import FormSubmissionsPage from '../modules/forms/controllers/FormSubmissionsPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -49,7 +54,7 @@ const PrivateRoutes: FC = () => {
         {/* Canais */}
         <Route path="channels" element={<ChannelsPage />} />
 
-        {/* Surveys (protegidas pelo módulo 'surveys') */}
+        {/* Surveys */}
         <Route path="modules" element={<ModulesLanding />} />
         <Route
           path="modules/surveys"
@@ -94,6 +99,68 @@ const PrivateRoutes: FC = () => {
 
         {/* Company Settings */}
         <Route path="company/settings" element={<CompanySettingsPage />} />
+
+        {/* FORMS — lista */}
+        <Route
+          path="forms"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormsListPage />
+            </RequireModule>
+          }
+        />
+        {/* FORMS — criar */}
+        <Route
+          path="forms/new"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormEditPage />
+            </RequireModule>
+          }
+        />
+        {/* FORMS — editar */}
+        <Route
+          path="forms/:formId/edit"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormEditPage />
+            </RequireModule>
+          }
+        />
+         <Route
+          path="forms/:formId/submissions"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormSubmissionsPage />
+            </RequireModule>
+          }
+        />
+
+        {/* Aliases sob /modules (opcional) */}
+        <Route
+          path="modules/forms"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormsListPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="modules/forms/new"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormEditPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="modules/forms/:formId/edit"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormEditPage />
+            </RequireModule>
+          }
+        />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/error/404" />} />

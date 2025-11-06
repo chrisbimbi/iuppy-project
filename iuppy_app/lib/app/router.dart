@@ -12,6 +12,10 @@ import '../features/news/news_detail_page.dart';
 import '../features/surveys/surveys_list_page.dart';
 import '../features/surveys/survey_detail_page.dart';
 
+// === Forms (NOVO) ===
+import '../features/forms/forms_list_page.dart';
+import '../features/forms/form_submit_page.dart';
+
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _sub;
   GoRouterRefreshStream(Stream<dynamic> stream) {
@@ -39,6 +43,14 @@ Uri _normalizeDeepLinkUri(Uri uri) {
     if (uri.host == 'news') {
       return Uri(
         path: '/news${uri.path}',
+        query: uri.query.isEmpty ? null : uri.query,
+        fragment: uri.fragment.isEmpty ? null : uri.fragment,
+      );
+    }
+    // === Deep link para Forms: iuppy://forms/<id> ===
+    if (uri.host == 'forms') {
+      return Uri(
+        path: '/forms${uri.path}',
         query: uri.query.isEmpty ? null : uri.query,
         fragment: uri.fragment.isEmpty ? null : uri.fragment,
       );
@@ -157,6 +169,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/surveys/:id',
         builder: (_, s) => SurveyDetailPage(id: s.pathParameters['id']!),
       ),
+
+      // ====== FORMS (NOVO) ======
+      GoRoute(
+        path: '/forms',
+        builder: (_, __) => const FormsListPage(),
+      ),
+      GoRoute(
+        path: '/forms/:id',
+        builder: (_, s) => FormSubmitPage(id: s.pathParameters['id']!),
+      ),
+
       GoRoute(
           path: '/settings',
           builder: (_, __) => const _Stub(title: 'Configurações')),

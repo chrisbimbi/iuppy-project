@@ -169,8 +169,6 @@ const NewsStatsPage = () => {
       title: 'Resumo', sheetName: 'Resumo',
       columns: [{ key: 'k', label: 'Métrica' }, { key: 'v', label: 'Valor' }],
       rows: [
-        { k: 'Publicado', v: isPublished ? 'Sim' : 'Não' },
-        { k: 'Push enviado', v: pushSent ? 'Sim' : 'Não' },
         { k: 'Público total', v: audienceTotal },
         { k: 'Recebível', v: recebivel },
         { k: 'Aberturas totais', v: totalOpens },
@@ -223,8 +221,7 @@ const NewsStatsPage = () => {
       title: 'Resumo', sheetName: 'Resumo',
       columns: [{ key: 'k', label: 'Métrica', width: 30 }, { key: 'v', label: 'Valor', width: 20 }],
       rows: [
-        { k: 'Publicado', v: isPublished ? 'Sim' : 'Não' },
-        { k: 'Push enviado', v: pushSent ? 'Sim' : 'Não' },
+
         { k: 'Público total', v: audienceTotal },
         { k: 'Recebível', v: recebivel },
         { k: 'Aberturas totais', v: totalOpens },
@@ -576,23 +573,7 @@ const NewsStatsPage = () => {
 
             {!loading && !error && (
               <>
-                {/* INDICADORES ADICIONAIS: Publicado / Push */}
-                <section data-pdf-section className='mb-6'>
-                  <div className='row g-6'>
-                    <div className='col-md-3'>
-                      <div className='card card-body'>
-                        <div className='fs-7 text-muted'>Publicado</div>
-                        <div className='fs-1 fw-bold'>{isPublished ? 'Sim' : 'Não'}</div>
-                      </div>
-                    </div>
-                    <div className='col-md-3'>
-                      <div className='card card-body'>
-                        <div className='fs-7 text-muted'>Push enviado</div>
-                        <div className='fs-1 fw-bold'>{pushSent ? 'Sim' : 'Não'}</div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
+
 
                 {/* TOTAIS com "ver usuários" */}
                 <section data-pdf-section className='mb-6'>

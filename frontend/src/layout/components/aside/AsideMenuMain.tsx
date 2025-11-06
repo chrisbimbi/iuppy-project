@@ -1,4 +1,3 @@
-// src/layout/components/aside/AsideMenuMain.tsx
 import React, { useEffect, useMemo } from 'react'
 import { useIntl } from 'react-intl'
 import { useLocation } from 'react-router'
@@ -27,12 +26,9 @@ export function AsideMenuMain() {
     }, 50)
   }, [pathname])
 
-  // módulos habilitados + capacidades
   const { loading: modsLoading, isEnabled } = useCompanyModulesCtx()
   const { loading: aclLoading, canView } = useAccess()
 
-  // Regra: mostra item quando (orgAdmin) OU (módulo habilitado E usuário pode ver).
-  // Enquanto carrega, mantemos visível para evitar flicker.
   const showContents = useMemo(() => {
     if (modsLoading || aclLoading) return true
     return isOrgAdmin || (isEnabled('news') && canView('news'))
@@ -53,62 +49,42 @@ export function AsideMenuMain() {
     return isOrgAdmin || (isEnabled('groups') && canView('groups'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
+  // 🔥 FORMS
+  const showForms = useMemo(() => {
+    if (modsLoading || aclLoading) return true
+    return isOrgAdmin || (isEnabled('forms') && canView('forms'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
   return (
     <>
-      {/* Dashboard (sempre visível) */}
-      <AsideMenuItem
-        to="/dashboard"
-        title={t('MENU.DASHBOARD', 'Dashboard')}
-        fontIcon="bi-speedometer2"
-      />
+      {/* Dashboard */}
+      <AsideMenuItem to="/dashboard" title={t('MENU.DASHBOARD', 'Dashboard')} fontIcon="bi-speedometer2" />
 
-      {/* Módulos (título fixo; itens condicionados) */}
-      <AsideMenuItemWithSub
-        to="/modules"
-        title={t('MENU.MODULES', 'Módulos')}
-        fontIcon="bi-stack"
-      >
+      {/* Módulos */}
+      <AsideMenuItemWithSub to="/modules" title={t('MENU.MODULES', 'Módulos')} fontIcon="bi-stack">
         {showContents && (
-          <AsideMenuItem
-            to="/contents"
-            hasBullet
-            fontIcon="bi-newspaper"
-            title={t('MENU.CONTENTS', 'Conteúdos')}
-          />
+          <AsideMenuItem to="/contents" hasBullet fontIcon="bi-newspaper" title={t('MENU.CONTENTS', 'Conteúdos')} />
         )}
-
-
         {showSurveys && (
+          <AsideMenuItem to="/modules/surveys" hasBullet fontIcon="bi-bar-chart" title={t('MENU.SURVEYS', 'Pesquisas e Enquetes')} />
+        )}
+        {showForms && (
           <AsideMenuItem
-            to="/modules/surveys"
+            to="/forms"                 // ✅ vai para a LISTA
             hasBullet
-            fontIcon="bi-bar-chart"
-            title={t('MENU.SURVEYS', 'Pesquisas e Enquetes')}
+            fontIcon="bi-ui-checks-grid"
+            title={t('MENU.FORMS', 'Formulários')}
           />
         )}
       </AsideMenuItemWithSub>
+
       {showChannels && (
-        <AsideMenuItem
-          to="/channels"
-          fontIcon="bi-chat-left-text"
-          title={t('MENU.CHANNELS', 'Canais')}
-        />
+        <AsideMenuItem to="/channels" fontIcon="bi-chat-left-text" title={t('MENU.CHANNELS', 'Canais')} />
       )}
 
-      {/* Usuários & Grupos (submenu fixo; itens condicionais) */}
-      <AsideMenuItemWithSub
-        to="#"
-        title={t('MENU.USERS_GROUPS', 'Meus usuários e grupos')}
-        fontIcon="bi-people"
-      >
-
-        {showGroups && (
-          <AsideMenuItem
-            to="/groups"
-            hasBullet
-            title={t('MENU.GROUPS', 'Grupos')}
-          />
-        )}
+      {/* Usuários & Grupos */}
+      <AsideMenuItemWithSub to="#" title={t('MENU.USERS_GROUPS', 'Meus usuários e grupos')} fontIcon="bi-people">
+        {showGroups && <AsideMenuItem to="/groups" hasBullet title={t('MENU.GROUPS', 'Grupos')} />}
       </AsideMenuItemWithSub>
     </>
   )
