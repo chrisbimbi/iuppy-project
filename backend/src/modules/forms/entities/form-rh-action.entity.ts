@@ -1,20 +1,37 @@
-// backend/src/modules/forms/entities/form-rh-action.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+} from 'typeorm'
 
-export type FormRhActionType = 'reply'|'approve'|'reject'
+export type FormRhActionType = 'reply' | 'approve' | 'reject'
 
 @Entity('form_rh_action')
-@Index(['companyId','submissionId','formId'])
+@Index(['companyId', 'formId', 'submissionId'])
 export class FormRhActionEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column() @Index() submissionId!: string
-  @Column() @Index() formId!: string
+  @Column('uuid')
+  companyId: string
 
-  @Column() actorUserId!: string
-  @Column({ type: 'enum', enum: ['reply','approve','reject'] }) type!: FormRhActionType
-  @Column('text', { nullable: true }) message!: string | null
+  @Column('uuid')
+  formId: string
 
-  @CreateDateColumn({ type: 'timestamptz' }) createdAt!: Date
+  @Column('uuid')
+  submissionId: string
+
+  @Column('uuid')
+  actorUserId: string
+
+  @Column('text')
+  type: FormRhActionType
+
+  @Column('text', { nullable: true })
+  message: string | null
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date
 }

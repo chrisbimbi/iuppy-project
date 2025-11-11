@@ -1,18 +1,19 @@
 // backend/src/modules/forms/dto/create-submission.dto.ts
+
 export interface CreateSubmissionDto {
-  answers: Array<{
-    fieldId: string
-    type: string
-    value: any
-  }>
-  meta?: Record<string, any>
+  external?: boolean;
+  externalEmail?: string | null;
+  answers?: Array<{
+    fieldId: string;
+    type?: string;
+    value: any;
+  }>;
   attachments?: Array<{
-    storagePath: string
-    mimeType: string
-    bytes: number
-  }>
-  external?: boolean
-  externalEmail?: string | null
-  spaceIds?: string[]
-  groupIds?: string[]
+    storagePath: string;
+    mimeType?: string;
+    bytes?: number;
+  }>;
+  meta?: any;
+  spaceIds?: string[];
+  groupIds?: string[];
 }

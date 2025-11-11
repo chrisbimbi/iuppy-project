@@ -1,36 +1,67 @@
-// backend/src/modules/forms/entities/form-submission.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm'
+import { FormEntity } from './form.entity'
 
-export type FormSubmissionStatus = 'pending'|'replied'|'approved'|'rejected'
+export type FormSubmissionStatus = 'pending' | 'replied' | 'approved' | 'rejected'
 
 @Entity('form_submission')
-@Index(['companyId','formId','submittedAt'])
-@Index(['status'])
+@Index(['companyId', 'formId'])
 export class FormSubmissionEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column() @Index() formId!: string
+  @Column('uuid')
+  @Index()
+  companyId: string
 
-  @Column({ type: 'timestamptz', nullable: true }) submittedAt!: Date | null
-  @Column({ nullable: true }) userId!: string | null
-  @Column({ type: 'boolean', default: false }) external!: boolean
-  @Column({ type: 'text', nullable: true }) externalEmail!: string | null
+  @Column('uuid')
+  @Index()
+  formId: string
 
-  @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
-  spaceIds!: string[]
+  @ManyToOne(() => FormEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'formId' })
+  form?: FormEntity
 
-  @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
-  groupIds!: string[]
+  @Column('timestamptz')
+  submittedAt: Date
 
-  @Column({ type: 'boolean', nullable: true }) isOnTime!: boolean | null
+  @Column('uuid', { nullable: true })
+  userId: string | null
 
-  @Column({ type: 'enum', enum: ['pending','replied','approved','rejected'], default: 'pending' })
-  status!: FormSubmissionStatus
+  @Column('boolean', { default: false })
+  external: boolean
 
-  @Column({ type: 'int', default: 0 }) replyCount!: number
-  @Column({ type: 'int', default: 0 }) fileCount!: number
-  @Column({ type: 'jsonb', nullable: true }) meta!: Record<string, any> | null
+  @Column('text', { nullable: true })
+  externalEmail: string | null
 
-  @CreateDateColumn({ type: 'timestamptz' }) createdAt!: Date
+  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
+  spaceIds: string[]
+
+  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
+  groupIds: string[]
+
+  @Column('boolean', { nullable: true })
+  isOnTime: boolean | null
+
+  @Column('text', { default: 'pending' })
+  status: FormSubmissionStatus
+
+  @Column('int', { default: 0 })
+  replyCount: number
+
+  @Column('int', { default: 0 })
+  fileCount: number
+
+  @Column('jsonb', { nullable: true })
+  meta: any | null
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date
 }

@@ -1,25 +1,41 @@
-// backend/src/modules/forms/entities/form-attachment.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm'
-
-export type AttachmentStatus = 'ok'|'failed'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+} from 'typeorm'
 
 @Entity('form_attachment')
-@Index(['companyId','submissionId','formId'])
+@Index(['companyId', 'submissionId'])
 export class FormAttachmentEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column() @Index() submissionId!: string
-  @Column() @Index() formId!: string
+  @Column('uuid')
+  companyId: string
 
-  @Column('text') storagePath!: string
-  @Column('text') mimeType!: string
-  @Column({ type: 'bigint' }) bytes!: string
+  @Column('uuid')
+  submissionId: string
 
-  @Column({ type: 'timestamptz' }) uploadedAt!: Date
+  @Column('uuid')
+  formId: string
 
-  @Column({ type: 'enum', enum: ['ok','failed'], default: 'ok' })
-  status!: AttachmentStatus
+  @Column('text')
+  storagePath: string
 
-  @Column({ type: 'text', nullable: true }) error!: string | null
+  @Column('text', { nullable: true })
+  mimeType: string | null
+
+  @Column('bigint', { nullable: true })
+  bytes: string | null
+
+  @Column('text', { default: 'ok' })
+  status: 'ok' | 'failed'
+
+  @Column('text', { nullable: true })
+  error: string | null
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  uploadedAt: Date
 }

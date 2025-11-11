@@ -1,15 +1,19 @@
 // lib/features/forms/form_submit_page.dart
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../../core/providers.dart';
-import 'services/forms_api.dart';
-import '../surveys/widgets/question_widgets.dart' show StarRating, NpsSlider;
+import 'providers/forms_provider.dart';
+import 'providers/forms_storage_provider.dart';
+import 'package:iuppy_app/features/surveys/widgets/question_widgets.dart';
 
 class FormSubmitPage extends ConsumerStatefulWidget {
-  final String id;
-  const FormSubmitPage({super.key, required this.id});
+  final String formId;
+  const FormSubmitPage({super.key, required this.formId});
 
   @override
   ConsumerState<FormSubmitPage> createState() => _FormSubmitPageState();
@@ -18,66 +22,35 @@ class FormSubmitPage extends ConsumerStatefulWidget {
 class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
   final _formKey = GlobalKey<FormState>();
   final _scroll = ScrollController();
-
-  late FormsApi _formsApi;
-  Map<String, dynamic>? _form;
-
-  // respostas em memória: fieldId -> dynamic
   final Map<String, dynamic> _answers = {};
 
-  bool _loading = true;
   bool _sending = false;
   bool _dirty = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final api = ref.read(apiClientProvider);
-      _formsApi = FormsApi(api);
-      await _load();
-    });
-  }
+  // arquivos escolhidos mas ainda não subidos
+  final List<PlatformFile> _pendingFiles = [];
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final j = await _formsApi.get(widget.id);
+  // anexos já upados (prontos pra mandar pro backend)
+  final List<Map<String, dynamic>> _uploadedAttachments = [];
 
-      final fields = (j['fields'] as List? ?? const []);
-      for (final raw in fields) {
-        final f = Map<String, dynamic>.from(raw as Map);
-        final fid = '${f['id']}';
-        if (f.containsKey('defaultValue') && !_answers.containsKey(fid)) {
-          _answers[fid] = f['defaultValue'];
-        }
-      }
+  bool _uploading = false;
+  double _uploadProgress = 0;
 
-      if (mounted) {
-        setState(() {
-          _form = j;
-          _loading = false;
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
+  final _imagePicker = ImagePicker();
 
   Future<bool> _maybeLeave() async {
-    if (!_dirty) return true;
+    if (!_dirty && _pendingFiles.isEmpty) return true;
     final leave = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Descartar respostas?'),
         content: const Text(
-          'Você alterou o formulário, mas ainda não enviou. '
-          'Deseja sair mesmo assim?',
+          'Você fez alterações ou escolheu anexos que ainda não foram enviados. Sair mesmo assim?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Continuar respondendo'),
+            child: const Text('Continuar'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -91,8 +64,8 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
 
   Future<void> _handleBack() async {
     final can = await _maybeLeave();
-    if (!mounted) return;
     if (!can) return;
+    if (!mounted) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -100,386 +73,495 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
     }
   }
 
-  // ========== HELPERS DE OPÇÕES ==========
-  // O backend pode mandar:
-  // 1) ['A','B']
-  // 2) [{id:'a', label:'A'}, {id:'b', label:'B'}]
-  // 3) { choices: [...] } ou { options: [...] }
-  // Sempre vamos exibir somente LABEL, mas salvar o ID.
-  List<Map<String, String>> _normalizedChoices(dynamic options) {
-    final out = <Map<String, String>>[];
+  @override
+  Widget build(BuildContext context) {
+    final asyncForm = ref.watch(formDetailProvider(widget.formId));
 
-    dynamic base = options;
-    if (base is Map) {
-      base = base['choices'] ?? base['options'];
-    }
+    return asyncForm.when(
+      loading: () => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleBack,
+          ),
+          title: const Text('Carregando...'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleBack,
+          ),
+          title: const Text('Formulário'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Erro ao carregar: $e'),
+        ),
+      ),
+      data: (form) {
+        // 👇 LOGA o payload que veio do backend
+        debugPrint('===== FORM PAYLOAD (${widget.formId}) =====');
+        debugPrint(form.toString());
 
-    if (base is List) {
-      for (final item in base) {
-        if (item is Map) {
-          final id =
-              (item['id'] ?? item['value'] ?? item['label'] ?? '').toString();
-          final label = (item['label'] ??
-                  item['text'] ??
-                  item['title'] ??
-                  item['id'] ??
-                  '')
-              .toString();
-          if (label.isEmpty && id.isEmpty) continue;
-          out.add({
-            'id': id.isEmpty ? label : id,
-            'label': label.isEmpty ? id : label
-          });
-        } else {
-          final s = item.toString();
-          out.add({'id': s, 'label': s});
-        }
-      }
-    }
+        final title = (form['title'] ?? '').toString();
+        final description = (form['description'] ?? '').toString();
+        final List fields = (form['fields'] as List? ?? []).toList();
+        fields.sort((a, b) {
+          final ao = (a['order'] ?? 0) as int;
+          final bo = (b['order'] ?? 0) as int;
+          return ao.compareTo(bo);
+        });
 
-    return out;
-  }
+        // 👇 deduz se pode anexar
+        final bool attachmentsAllowed = (form['attachmentsAllowed'] == true) ||
+            (form['allowAttachments'] == true) ||
+            fields.any((f) {
+              final t = (f['type'] ?? '').toString().toLowerCase().trim();
+              return t == 'file' ||
+                  t == 'upload' ||
+                  t == 'attachment' ||
+                  t == 'anexo';
+            });
 
-  int _starsMax(dynamic options) {
-    if (options is Map && options['max'] is num) {
-      return (options['max'] as num).toInt().clamp(1, 10);
-    }
-    return 5;
-  }
+        debugPrint(
+            'attachmentsAllowed? $attachmentsAllowed (campos: ${fields.map((e) => e['type']).toList()})');
 
-  (double min, double max, double step, String? l, String? r) _scaleOf(
-      dynamic options) {
-    if (options is Map) {
-      final min =
-          (options['min'] is num) ? (options['min'] as num).toDouble() : 0.0;
-      final max =
-          (options['max'] is num) ? (options['max'] as num).toDouble() : 10.0;
-      final step =
-          (options['step'] is num) ? (options['step'] as num).toDouble() : 1.0;
-      final l = options['labelLeft']?.toString();
-      final r = options['labelRight']?.toString();
-      return (min, max, step, l, r);
-    }
-    return (0.0, 10.0, 1.0, null, null);
-  }
-
-  bool _isEmptyAnswer(dynamic v) {
-    if (v == null) return true;
-    if (v is String) return v.trim().isEmpty;
-    if (v is Iterable) return v.isEmpty;
-    return false;
-  }
-
-  Future<void> _submit() async {
-    if (_form == null) return;
-
-    final fields = (_form!['fields'] as List? ?? const []);
-    var hasError = false;
-    for (final raw in fields) {
-      final f = Map<String, dynamic>.from(raw as Map);
-      final fid = '${f['id']}';
-      final required = f['required'] == true;
-      if (required && _isEmptyAnswer(_answers[fid])) {
-        hasError = true;
-      }
-    }
-
-    if (!(_formKey.currentState?.validate() ?? true)) {
-      hasError = true;
-    }
-
-    if (hasError) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha os campos obrigatórios.')),
-      );
-      _scroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-      return;
-    }
-
-    setState(() => _sending = true);
-    try {
-      final payloadAnswers = fields.map<Map<String, dynamic>>((raw) {
-        final f = Map<String, dynamic>.from(raw as Map);
-        final fid = '${f['id']}';
-        return {
-          'fieldId': fid,
-          'type': '${f['type']}',
-          // aqui mandamos exatamente o que o usuário escolheu (id da opção),
-          // e o backend sabe qual label era.
-          'value': _answers[fid],
-        };
-      }).toList();
-
-      await _formsApi.submit(
-        formId: widget.id,
-        answers: payloadAnswers,
-        meta: const {'client': 'flutter'},
-      );
-
-      if (!mounted) return;
-      _dirty = false;
-
-      await showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Enviado! 🙌'),
-          content: const Text('Sua resposta foi enviada ao RH.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                if (context.canPop()) {
-                  context.pop(true);
-                } else {
-                  context.go('/home');
-                }
-              },
-              child: const Text('Fechar'),
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop) return;
+            final leave = await _maybeLeave();
+            if (!mounted) return;
+            if (leave) {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _handleBack,
+              ),
+              title: Text(
+                title.isEmpty ? 'Formulário' : title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ],
+            body: Form(
+              key: _formKey,
+              child: ListView(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  if (description.isNotEmpty) ...[
+                    Text(description),
+                    const SizedBox(height: 12),
+                  ],
+                  for (final f in fields) _buildFieldCard(f),
+                  if (attachmentsAllowed) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Anexos',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+
+                    // já upados
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final att in _uploadedAttachments)
+                          Chip(
+                            label: Text(
+                              att['storagePath']?.toString().split('/').last ??
+                                  'arquivo',
+                            ),
+                            onDeleted: () {
+                              setState(() {
+                                _uploadedAttachments.remove(att);
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+
+                    // pendentes (mostrar miniaturas)
+                    if (_pendingFiles.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          for (final f in _pendingFiles)
+                            _buildPendingAttachmentTile(f),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed:
+                              _uploading ? null : _chooseAttachmentSource,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Escolher +'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: (!_uploading && _pendingFiles.isNotEmpty)
+                              ? () => _confirmUpload(form)
+                              : null,
+                          child: _uploading
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    value: _uploadProgress == 0
+                                        ? null
+                                        : _uploadProgress,
+                                  ),
+                                )
+                              : const Text('Confirmar escolha'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_uploading)
+                      LinearProgressIndicator(value: _uploadProgress),
+                  ],
+                  const SizedBox(height: 24),
+                  SafeArea(
+                    top: false,
+                    child: FilledButton.icon(
+                      onPressed: _sending
+                          ? null
+                          : () => _onSubmit(form, attachmentsAllowed),
+                      icon: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded),
+                      label: Text(_sending ? 'Enviando...' : 'Enviar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ======== ESCOLHA DA FONTE DO ANEXO ========
+
+  Future<void> _chooseAttachmentSource() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeria'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickFromGallery();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Câmera'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickFromCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file),
+                title: const Text('Arquivo'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickFiles();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickFromGallery() async {
+    final XFile? picked =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    setState(() {
+      _pendingFiles.add(
+        PlatformFile(
+          name: picked.name,
+          path: picked.path,
+          size: 0,
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível enviar: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
+    });
   }
 
+  Future<void> _pickFromCamera() async {
+    final XFile? picked =
+        await _imagePicker.pickImage(source: ImageSource.camera);
+    if (picked == null) return;
+
+    setState(() {
+      _pendingFiles.add(
+        PlatformFile(
+          name: picked.name,
+          path: picked.path,
+          size: 0,
+        ),
+      );
+    });
+  }
+
+  // ======== PICK DE ARQUIVO (O QUE JÁ EXISTIA) ========
+
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: false,
+    );
+    if (result == null) return;
+    setState(() {
+      _pendingFiles.addAll(result.files.where((f) => f.path != null));
+    });
+    debugPrint('[_pickFiles] pendentes: ${_pendingFiles.map((e) => e.name)}');
+  }
+
+  // ======== MINIATURA DOS PENDENTES ========
+
+  bool _isImageFile(PlatformFile f) {
+    final name = f.name.toLowerCase();
+    return name.endsWith('.png') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg') ||
+        name.endsWith('.gif') ||
+        name.endsWith('.heic') ||
+        name.endsWith('.webp');
+  }
+
+  Widget _buildPendingAttachmentTile(PlatformFile f) {
+    return Stack(
+      children: [
+        Container(
+          width: 82,
+          height: 82,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: _isImageFile(f) && f.path != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(f.path!),
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Center(
+                  child: Text(
+                    f.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _pendingFiles.remove(f);
+              });
+            },
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black54,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const Icon(
+                Icons.close,
+                size: 14,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ======== CONFIRMAR UPLOAD ========
+
+  Future<void> _confirmUpload(Map<String, dynamic> form) async {
+    if (_pendingFiles.isEmpty) return;
+    final storage = ref.read(formsStorageProvider);
+
+    setState(() {
+      _uploading = true;
+      _uploadProgress = 0;
+    });
+
+    for (int i = 0; i < _pendingFiles.length; i++) {
+      final f = _pendingFiles[i];
+      final file = File(f.path!);
+
+      final uploaded = await storage.uploadFormFile(
+        file,
+        formId: widget.formId,
+      );
+
+      debugPrint('[UPLOAD OK] ${uploaded.toJson()}');
+
+      _uploadedAttachments.add(uploaded.toJson());
+
+      setState(() {
+        _uploadProgress = (i + 1) / _pendingFiles.length;
+      });
+    }
+
+    setState(() {
+      _pendingFiles.clear();
+      _uploading = false;
+    });
+  }
+
+  // ======== CAMPOS DO FORM ========
+
   Widget _buildFieldCard(Map<String, dynamic> f) {
-    final fid = '${f['id']}';
-    final type = '${f['type']}'.toLowerCase();
-    final label = '${f['label'] ?? ''}';
-    final help = (f['helpText'] ?? f['description'] ?? '').toString();
-    final required = f['required'] == true;
-    final options = f['options'];
+    final fid = (f['id'] ?? '').toString();
+    final type = (f['type'] ?? '').toString().toLowerCase().trim();
+    final label = (f['label'] ?? '').toString();
+    final required = (f['required'] ?? false) == true;
+    final List optionsRaw = (f['options'] as List? ?? []);
+    final List<String> options = optionsRaw.map((e) => e.toString()).toList();
 
     Widget input;
 
     switch (type) {
-      case 'short_text':
-        input = TextFormField(
-          initialValue: (_answers[fid] as String?) ?? '',
-          decoration: const InputDecoration(
-            hintText: 'Digite aqui',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (v) {
-            _answers[fid] = v;
-            _dirty = true;
-          },
-          validator: (v) {
-            if (required && (v == null || v.trim().isEmpty)) {
-              return 'Campo obrigatório';
-            }
-            return null;
-          },
-        );
-        break;
-
-      case 'long_text':
-        input = TextFormField(
-          initialValue: (_answers[fid] as String?) ?? '',
-          minLines: 4,
-          maxLines: 8,
-          decoration: const InputDecoration(
-            hintText: 'Digite sua resposta completa',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (v) {
-            _answers[fid] = v;
-            _dirty = true;
-          },
-          validator: (v) {
-            if (required && (v == null || v.trim().isEmpty)) {
-              return 'Campo obrigatório';
-            }
-            return null;
-          },
-        );
-        break;
-
-      case 'number':
-        input = TextFormField(
-          initialValue: _answers[fid]?.toString() ?? '',
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (v) {
-            _answers[fid] = num.tryParse(v);
-            _dirty = true;
-          },
-          validator: (v) {
-            if (required && (v == null || v.trim().isEmpty)) {
-              return 'Campo obrigatório';
-            }
-            return null;
-          },
-        );
-        break;
-
-      case 'date':
-        final currentStr = (_answers[fid] as String?) ?? '';
-        DateTime? currentDt;
-        if (currentStr.isNotEmpty) {
-          currentDt = DateTime.tryParse(currentStr);
-        }
-        input = InkWell(
-          onTap: () async {
-            final now = DateTime.now();
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: currentDt ?? now,
-              firstDate: DateTime(now.year - 5),
-              lastDate: DateTime(now.year + 5),
-            );
-            if (picked != null) {
-              setState(() {
-                _answers[fid] = picked.toIso8601String();
-                _dirty = true;
-              });
-            }
-          },
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              suffixIcon: Icon(Icons.event),
-            ),
-            child: Text(
-              currentDt != null
-                  ? '${currentDt.day.toString().padLeft(2, '0')}/'
-                      '${currentDt.month.toString().padLeft(2, '0')}/'
-                      '${currentDt.year}'
-                  : 'Selecionar data',
-            ),
-          ),
-        );
-        break;
-
-      case 'single_choice':
-        final opts = _normalizedChoices(options);
+      case 'single':
+      case 'radio':
+      case 'choice':
         final current = (_answers[fid] as String?) ?? '';
         input = Column(
-          children: [
-            for (final o in opts)
-              RadioListTile<String>(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: Text(o['label'] ?? ''),
-                value: o['id'] ?? '',
-                groupValue: current,
-                onChanged: (v) {
-                  setState(() {
-                    _answers[fid] = v ?? '';
-                    _dirty = true;
-                  });
-                },
-              ),
-          ],
-        );
-        break;
-
-      case 'multi_choice':
-        final opts = _normalizedChoices(options);
-        final current = <String>{
-          ...(_answers[fid] as List<String>? ?? const [])
-        };
-        input = Column(
-          children: [
-            for (final o in opts)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: Text(o['label'] ?? ''),
-                value: current.contains(o['id']),
-                onChanged: (v) {
-                  setState(() {
-                    final id = o['id'] ?? '';
-                    if (v == true) {
-                      current.add(id);
-                    } else {
-                      current.remove(id);
-                    }
-                    _answers[fid] = current.toList();
-                    _dirty = true;
-                  });
-                },
-              ),
-          ],
-        );
-        break;
-
-      case 'stars':
-        final max = _starsMax(options);
-        final current = (_answers[fid] as int?) ?? 0;
-        input = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            StarRating(
-              value: current,
-              max: max,
+          children: options.map((opt) {
+            return RadioListTile<String>(
+              contentPadding: EdgeInsets.zero,
+              title: Text(opt),
+              value: opt,
+              groupValue: current,
               onChanged: (v) {
                 setState(() {
-                  _answers[fid] = v;
+                  _answers[fid] = v ?? '';
                   _dirty = true;
                 });
               },
-            ),
-            if (required && current <= 0)
-              const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Text(
-                  'Selecione uma quantidade de estrelas',
-                  style: TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ),
-          ],
+            );
+          }).toList(),
         );
         break;
-
-      case 'scale':
-        final (min, max, step, left, right) = _scaleOf(options);
-        final current =
-            (_answers[fid] is num) ? (_answers[fid] as num).toDouble() : min;
+      case 'multi':
+      case 'checkbox':
+        final current = (_answers[fid] as Set<String>?) ?? <String>{};
         input = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Slider(
-              value: current.clamp(min, max),
-              min: min,
-              max: max,
-              divisions: ((max - min) / step).round().clamp(1, 1000),
-              label: current.toStringAsFixed(0),
-              onChanged: (v) => setState(() {
-                _answers[fid] = v;
-                _dirty = true;
-              }),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (left != null)
-                  Text(left, style: const TextStyle(fontSize: 12)),
-                if (right != null)
-                  Text(right, style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-          ],
+          children: options.map((opt) {
+            final checked = current.contains(opt);
+            return CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(opt),
+              value: checked,
+              onChanged: (v) {
+                setState(() {
+                  final set = <String>{...current};
+                  if (v == true) {
+                    set.add(opt);
+                  } else {
+                    set.remove(opt);
+                  }
+                  _answers[fid] = set;
+                  _dirty = true;
+                });
+              },
+            );
+          }).toList(),
         );
         break;
-
+      case 'stars':
+      case 'rating':
+        final val = (_answers[fid] as int?) ?? 0;
+        input = StarRating(
+          value: val,
+          onChanged: (v) => setState(() {
+            _answers[fid] = v;
+            _dirty = true;
+          }),
+        );
+        break;
+      case 'nps':
+      case 'scale':
+        final val = (_answers[fid] as int?) ?? 0;
+        input = NpsSlider(
+          value: val,
+          onChanged: (v) => setState(() {
+            _answers[fid] = v;
+            _dirty = true;
+          }),
+        );
+        break;
       default:
-        input = const Text('Tipo de campo não suportado ainda');
+        final initial = (_answers[fid] as String?) ?? '';
+        final controller = TextEditingController(text: initial);
+        input = TextFormField(
+          controller: controller,
+          maxLines: type == 'long_text' ? 4 : 1,
+          decoration: const InputDecoration(
+            hintText: 'Digite sua resposta',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            _answers[fid] = v;
+            _dirty = true;
+          },
+          validator: (v) {
+            if (required && (v == null || v.trim().isEmpty)) {
+              return 'Este campo é obrigatório';
+            }
+            return null;
+          },
+        );
+        break;
     }
 
     return Card(
@@ -499,19 +581,11 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
                 ),
                 if (required)
                   const Padding(
-                    padding: EdgeInsets.only(left: 4),
+                    padding: EdgeInsets.only(left: 6),
                     child: Text('*', style: TextStyle(color: Colors.red)),
                   ),
               ],
             ),
-            if (help.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  help,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
             const SizedBox(height: 12),
             input,
           ],
@@ -520,104 +594,124 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _handleBack,
-          ),
-          title: const Text('Formulário'),
+  // ======== SUBMIT ========
+
+  Future<void> _onSubmit(
+    Map<String, dynamic> form,
+    bool attachmentsAllowed,
+  ) async {
+    final List fields = (form['fields'] as List? ?? []);
+    bool hasError = false;
+
+    for (final f in fields) {
+      final fid = (f['id'] ?? '').toString();
+      final type = (f['type'] ?? '').toString().toLowerCase().trim();
+      final required = (f['required'] ?? false) == true;
+      final ans = _answers[fid];
+
+      if (!required) continue;
+
+      if (type == 'text' || type == 'long_text' || type == '') {
+        if (ans == null || (ans as String).trim().isEmpty) hasError = true;
+      } else if (type == 'single' || type == 'radio' || type == 'choice') {
+        if (ans == null || (ans as String).isEmpty) hasError = true;
+      } else if (type == 'multi' || type == 'checkbox') {
+        if (ans == null || (ans as Set).isEmpty) hasError = true;
+      } else if (type == 'stars' || type == 'rating') {
+        if (ans == null || (ans as int) <= 0) hasError = true;
+      } else if (type == 'nps' || type == 'scale') {
+        if (ans == null) hasError = true;
+      }
+    }
+
+    if (!(_formKey.currentState?.validate() ?? true)) {
+      hasError = true;
+    }
+
+    if (_pendingFiles.isNotEmpty) {
+      hasError = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Confirme o upload dos anexos antes de enviar.'),
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (_form == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _handleBack,
-          ),
-          title: const Text('Formulário'),
-        ),
-        body: const Center(child: Text('Formulário não encontrado')),
+    if (hasError) {
+      _scroll.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
       );
+      return;
     }
 
-    final title = (_form!['title'] ?? '').toString();
-    final desc = (_form!['description'] ?? '').toString();
-    final fields = (_form!['fields'] as List? ?? const []);
+    final answers = <Map<String, dynamic>>[];
+    for (final f in fields) {
+      final fid = (f['id'] ?? '').toString();
+      final type = (f['type'] ?? '').toString();
+      if (!_answers.containsKey(fid)) continue;
+      final val = _answers[fid];
+      if (val is Set<String>) {
+        answers.add({
+          'fieldId': fid,
+          'type': type,
+          'value': val.toList(),
+        });
+      } else {
+        answers.add({
+          'fieldId': fid,
+          'type': type,
+          'value': val,
+        });
+      }
+    }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final can = await _maybeLeave();
-        if (!mounted) return;
-        if (can) {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go('/home');
-          }
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _handleBack,
-          ),
-          title: Tooltip(
-            message: title.isEmpty ? 'Formulário' : title,
-            child: Text(
-              title.isEmpty ? 'Formulário' : title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+    debugPrint('===== ENVIANDO FORM (${widget.formId}) =====');
+    debugPrint('answers: $answers');
+    debugPrint(
+        'attachments: ${attachmentsAllowed ? _uploadedAttachments : []}');
+
+    setState(() => _sending = true);
+    try {
+      await ref.read(formsRepoProvider).submit(
+            widget.formId,
+            answers,
+            attachments: attachmentsAllowed
+                ? _uploadedAttachments
+                : <Map<String, dynamic>>[],
+          );
+
+      if (!mounted) return;
+      _dirty = false;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Resposta enviada!'),
+          content: const Text('Obrigado por preencher.'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loading ? null : _load,
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
+              child: const Text('Fechar'),
             ),
           ],
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            children: [
-              if (desc.isNotEmpty) ...[
-                Text(desc),
-                const SizedBox(height: 12),
-              ],
-              for (final raw in fields)
-                _buildFieldCard(Map<String, dynamic>.from(raw as Map)),
-              const SizedBox(height: 24),
-              SafeArea(
-                top: false,
-                child: FilledButton.icon(
-                  onPressed: _sending ? null : _submit,
-                  icon: _sending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send_rounded),
-                  label: Text(_sending ? 'Enviando...' : 'Enviar'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Erro ao enviar formulário: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao enviar: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 }

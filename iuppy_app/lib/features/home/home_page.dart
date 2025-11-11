@@ -33,17 +33,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _selectedSpaceId;
   String _query = '';
 
-  // 👇 guarda um container estável para leituras assíncronas
+  // guarda um container estável para leituras assíncronas
   late final ProviderContainer _c;
   bool _alive = true;
 
   @override
   void initState() {
     super.initState();
-    // Riverpod 2.6.x: pegue o container a partir do context
     _c = ProviderScope.containerOf(context, listen: false);
-
-    // roda depois do primeiro frame para evitar race com montagem
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_alive) return;
       _bootstrap();
@@ -58,11 +55,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _bootstrap() async {
     try {
-      // pré-carrega tudo que a Home usa
       await Future.wait([
         _c.read(spacesRepoProvider).fetchAndCache(),
         _c.read(channelsRepoProvider).fetchAndCache(),
-        // 👇 força buscar company settings (branding/cor)
         _c.read(companySettingsProvider.future),
       ]);
 
@@ -71,9 +66,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       await _refreshLatestNewsAndBadges();
 
       if (!_alive || !mounted) return;
-      setState(() {}); // redesenha já com branding disponível
+      setState(() {});
     } catch (e) {
-      // opcional: log(e);
+      // log se quiser
     }
   }
 
@@ -81,11 +76,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (!_alive) return;
     try {
       final api = _c.read(apiClientProvider);
-      // Pega a lista remota de notícias para verificar se há conteúdos publicados.
       final remote = await api.getNews();
       if (!_alive) return;
       if (remote.isEmpty) {
-        // Nada publicado no servidor → marca todos do cache como lidos para zerar contadores.
         final cachedAll = await _c.read(dbProvider).getNews(limit: 2000);
         final ids = cachedAll
             .map((e) => (e['id'] ?? '').toString())
@@ -94,19 +87,16 @@ class _HomePageState extends ConsumerState<HomePage> {
         if (ids.isNotEmpty) {
           await _c.read(localNewsStoreProvider).markManyRead(ids);
         }
-        // Invalida contadores e avisa para recomputar o feed e badges.
         _c.invalidate(unreadCountersProvider);
         _c.read(feedVersionProvider.notifier).state++;
-        return; // encerra
+        return;
       }
     } catch (_) {
-      // Falhou a verificação remota? Continua utilizando o cache.
+      // se der erro, segue com cache
     }
 
-    // Atualiza o feed e o cache de notícias (remote-first)
     await _c.read(newsRepoProvider).homeFeedRemoteFirst(maxItems: 24);
     if (!_alive) return;
-    // Após atualizar o feed, invalida contadores e incrementa a versão do feed.
     _c.invalidate(unreadCountersProvider);
     _c.read(feedVersionProvider.notifier).state++;
   }
@@ -119,20 +109,28 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
     final name = ref.watch(authControllerProvider).userName ?? 'usuário';
 
-    // badges "cached" (fallback)
+    // badges "cached" (fallback) — agora tem forms
     final badges = ref.watch(homeBadgesProvider);
     final hasAnyNews = ref.watch(_hasAnyNewsCachedProvider).maybeWhen(
           data: (v) => v,
-          orElse: () => true, // assume true enquanto carrega
+          orElse: () => true,
         );
-    // 👇 badge vivo de "novas" (global) observando unreadCountersProvider,
-    // que por sua vez já observa newsSeenVersionProvider.
-    var unreadLive = ref.watch(unreadCountersProvider).maybeWhen(
+
+    // badge vivo de news
+    var unreadNews = ref.watch(unreadCountersProvider).maybeWhen(
           data: (d) => d.total,
           orElse: () => badges.newsNew,
         );
-    // Se não há nenhuma notícia no cache local, clampa o badge para 0.
-    if (!hasAnyNews) unreadLive = 0;
+    if (!hasAnyNews) unreadNews = 0;
+
+    // badge vivo de forms (veio do core/providers.dart)
+    final unreadForms = ref.watch(formsBadgesProvider).maybeWhen(
+          data: (v) => v,
+          orElse: () => badges.formsNew,
+        );
+
+    // soma tudo no badge de "Alertas" (índice 2)
+    final totalAlerts = unreadNews + unreadForms;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -143,7 +141,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           setState(() => _navIndex = i);
           switch (i) {
             case 0:
-              break; // Início
+              break;
             case 1:
               GoRouter.of(context).push('/favorites');
               break;
@@ -158,8 +156,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               break;
           }
         },
-        // badge só em "Alertas" — agora usando a contagem viva (clamped)
-        badges: {2: unreadLive},
+        badges: {
+          2: totalAlerts,
+        },
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -169,15 +168,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         },
         child: CustomScrollView(
           slivers: [
-            // Header com curva + quick access por cima
             SliverToBoxAdapter(
               child: _HeaderWithQuickAccess(
                 color: Color(branding?.primary ?? 0xFF22B4FF),
                 title: _greeting(name),
               ),
             ),
-
-            // Busca + filtros de spaces
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -193,19 +189,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-
-            // Últimas notícias
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Últimas notícias',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Últimas notícias',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                     TextButton(
                       onPressed: () => GoRouter.of(context).push('/news'),
                       child: const Text('Ver todas'),
@@ -220,19 +216,19 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: NewsCarousel(spaceId: _selectedSpaceId),
               ),
             ),
-
-            // Módulos
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Comece agora!',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Comece agora!',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                     TextButton(
                       onPressed: () => GoRouter.of(context).push('/modules'),
                       child: const Text('Ver todos'),
@@ -242,8 +238,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
             const ModulesGrid(),
-
-            // respiro p/ a TabBar curva
             SliverToBoxAdapter(
               child: SizedBox(
                 height: MediaQuery.of(context).padding.bottom + 16,
@@ -256,7 +250,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-/// Header com a curva + QuickAccess por cima (sem padding negativo)
 class _HeaderWithQuickAccess extends StatelessWidget {
   const _HeaderWithQuickAccess({
     required this.color,
@@ -268,7 +261,7 @@ class _HeaderWithQuickAccess extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const headerH = 232.0; // altura maior p/ ficar longe do QuickAccess
+    const headerH = 232.0;
     const rowH = 112.0;
 
     return SizedBox(

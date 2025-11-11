@@ -24,9 +24,6 @@ import { SearchMetricsDailyEntity } from 'src/v2/interactions/entities/search-me
 // CONTROLLERS
 import { NewsV2Controller } from 'src/v2/news/news.controller'
 import { AnalyticsV2Controller } from 'src/v2/analytics/analytics.controller'
-import { FormsAnalyticsV2Controller, FormsAnalyticsLegacyController } from 'src/v2/forms/analytics.controller'
-import { FormsEventsController } from 'src/v2/forms/forms-events.controller'
-import { FormsController } from 'src/v2/forms/forms.controller'
 import { MeController } from 'src/v2/me/me.controller'
 import { SpacesV2Controller } from 'src/v2/spaces/spaces.controller'
 import { ChannelsV2Controller } from 'src/v2/channels/channels.controller'
@@ -41,9 +38,6 @@ import { AudienceV2Controller } from 'src/v2/audience/audience.controller'
 import { NewsV2Service } from 'src/v2/news/news.service'
 import { InteractionsService } from 'src/v2/interactions/interactions.service'
 import { AnalyticsV2Service } from 'src/v2/analytics/analytics.service'
-import { FormsAnalyticsV2Service } from 'src/v2/forms/analytics.service'
-import { FormsEventsService } from 'src/v2/forms/forms-events.service'
-import { FormsService } from 'src/v2/forms/forms.service'
 import { MeService } from 'src/v2/me/me.service'
 import { SpacesV2Service } from 'src/v2/spaces/spaces.service'
 import { ChannelsV2Service } from 'src/v2/channels/channels.service'
@@ -101,11 +95,7 @@ import { NewsPushServiceV2 } from 'src/v2/news/news-push.service'
     NewsV2Controller,
     AnalyticsV2Controller,
 
-    // FORMS
-    FormsController,
-    FormsAnalyticsV2Controller,
-    FormsAnalyticsLegacyController,
-    FormsEventsController,
+
 
     MeController,
     SpacesV2Controller,
@@ -123,10 +113,7 @@ import { NewsPushServiceV2 } from 'src/v2/news/news-push.service'
     InteractionsService,
     AnalyticsV2Service,
 
-    // FORMS
-    FormsService,
-    FormsAnalyticsV2Service,
-    FormsEventsService,
+
 
     MeService,
     SpacesV2Service,
@@ -152,6 +139,7 @@ import { NewsPushServiceV2 } from 'src/v2/news/news-push.service'
     SchemaIntrospectorV2,
     CommentCounterAdapterV2,
     MetricsDailyServiceV2,
+
   ],
 })
-export class V2Module {}
+export class V2Module { }

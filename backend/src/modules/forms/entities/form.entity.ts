@@ -1,45 +1,96 @@
-// backend/src/modules/forms/entities/form.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm'
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm'
 
-export type FormStatus = 'draft'|'published'|'expired'|'archived'
+export type FormStatus = 'draft' | 'published' | 'expired' | 'archived'
 
 @Entity('form')
 @Index(['companyId', 'status'])
 export class FormEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column('text') title!: string
-  @Column('text', { nullable: true }) description!: string | null
+  @Column('uuid')
+  @Index()
+  companyId: string
 
-  @Column({ type: 'enum', enum: ['draft','published','expired','archived'], default: 'draft' })
-  status!: FormStatus
+  @Column('text')
+  title: string
 
-  @Column({ type: 'timestamptz', nullable: true }) scheduleStartAt!: Date | null
-  @Column({ type: 'timestamptz', nullable: true }) scheduleEndAt!: Date | null
-  @Column({ type: 'timestamptz', nullable: true }) deadlineAt!: Date | null
+  @Column('text', { nullable: true })
+  description: string | null
 
-  @Column({ type: 'boolean', default: false }) allowMultipleSubmissions!: boolean
-  @Column({ type: 'boolean', default: false }) anonymous!: boolean
-  @Column({ type: 'boolean', default: false }) allowExternal!: boolean
+  @Column('text', { default: 'draft' })
+  status: FormStatus
 
-  @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
-  audienceSpaceIds!: string[]
+  @Column('timestamptz', { nullable: true })
+  scheduleStartAt: Date | null
 
-  @Column('text', { array: true, nullable: true, default: () => 'ARRAY[]::text[]' })
-  audienceGroupIds!: string[]
+  @Column('timestamptz', { nullable: true })
+  scheduleEndAt: Date | null
 
-  @Column({ type: 'boolean', default: true }) attachmentsAllowed!: boolean
-  @Column('text', { nullable: true }) attachmentHelpText!: string | null
+  @Column('timestamptz', { nullable: true })
+  deadlineAt: Date | null
 
-  @Column({ type: 'jsonb', nullable: true }) remindersConfig!: Record<string, any> | null
-  @Column({ type: 'jsonb', nullable: true }) notificationsConfig!: Record<string, any> | null
-  @Column({ type: 'jsonb', nullable: true }) acl!: Record<string, any> | null
+  @Column('boolean', { default: false })
+  allowMultipleSubmissions: boolean
 
-  @Column() createdBy!: string
-  @Column({ type: 'timestamptz', nullable: true }) publishedAt!: Date | null
-  @Column({ type: 'int', default: 1 }) version!: number
+  @Column('boolean', { default: false })
+  anonymous: boolean
 
-  @CreateDateColumn({ type: 'timestamptz' }) createdAt!: Date
-  @UpdateDateColumn({ type: 'timestamptz' }) updatedAt!: Date
+  @Column('boolean', { default: false })
+  allowExternal: boolean
+
+  // snapshot de segmentação
+  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
+  audienceSpaceIds: string[]
+
+  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
+  audienceGroupIds: string[]
+
+  @Column('boolean', { default: false })
+  attachmentsAllowed: boolean
+
+  @Column('text', { nullable: true })
+  attachmentHelpText: string | null
+
+  @Column('jsonb', { nullable: true })
+  remindersConfig: any | null
+
+  @Column('jsonb', { nullable: true })
+  notificationsConfig: any | null
+
+  @Column('jsonb', { nullable: true })
+  acl: any | null
+
+  // se o RH precisa aprovar/reprovar
+  @Column('boolean', { default: false })
+  requiresApproval: boolean
+
+  // i18n (deixa aqui, mesmo que não use 100% ainda)
+  @Column('boolean', { default: false })
+  allowTranslations: boolean
+
+  @Column('text', { nullable: true })
+  defaultLocale: string | null
+
+  @Column('uuid', { nullable: true })
+  createdBy: string | null
+
+  @Column('timestamptz', { nullable: true })
+  publishedAt: Date | null
+
+  @Column('int', { default: 1 })
+  version: number
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date
 }

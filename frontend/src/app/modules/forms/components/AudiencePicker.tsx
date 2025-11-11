@@ -1,44 +1,57 @@
-import React from 'react'
-import { FormsApi } from '../services/api'
+// src/modules/forms/components/AudiencePicker.tsx
+import React from 'react';
+import { FormsApi } from '../services/api';
 
-type Value = { spaceIds: string[]; groupIds: string[] }
-type Props = { value: Value; onChange: (v: Value) => void }
+type Value = { spaceIds: string[]; groupIds: string[] };
+type Props = { value: Value; onChange: (v: Value) => void };
 
 export default function AudiencePicker({ value, onChange }: Props) {
-  const entireCompany = (value.spaceIds?.length ?? 0) === 0 && (value.groupIds?.length ?? 0) === 0
-  const [segments, setSegments] = React.useState<{ spaces: any[]; groups: any[] }>({ spaces: [], groups: [] })
-  const [loading, setLoading] = React.useState(false)
-  const [err, setErr] = React.useState<string | null>(null)
+  const [segments, setSegments] = React.useState<{ spaces: any[]; groups: any[] }>({
+    spaces: [],
+    groups: [],
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  // forçar mostrar selects mesmo se arrays estiverem vazias
+  const [forceShow, setForceShow] = React.useState(false);
+
+  const isEmpty = (value.spaceIds?.length ?? 0) === 0 && (value.groupIds?.length ?? 0) === 0;
+  const entireCompany = !forceShow && isEmpty;
 
   React.useEffect(() => {
-    if (entireCompany) return
-    let mounted = true
-    setLoading(true)
-    setErr(null)
+    if (entireCompany) return;
+    let mounted = true;
+    setLoading(true);
+    setErr(null);
     FormsApi.segmentationOptions()
-      .then(res => {
-        if (!mounted) return
-        const spaces = Array.isArray(res?.spaces) ? res.spaces : []
-        const groups = Array.isArray(res?.groups) ? res.groups : []
-        setSegments({ spaces, groups })
+      .then((res) => {
+        if (!mounted) return;
+        const spaces = Array.isArray(res?.spaces) ? res.spaces : [];
+        const groups = Array.isArray(res?.groups) ? res.groups : [];
+        setSegments({ spaces, groups });
       })
       .catch(async (e: any) => {
-        // fallback defensivo p/ projetos legados que ainda expõem /forms/segments
         try {
-          const r = await fetch('/forms/segments', { credentials: 'include', headers: { Accept: 'application/json' } })
+          const r = await fetch('/forms/segments', {
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+          });
           if (r.ok) {
-            const j = await r.json()
-            const spaces = Array.isArray(j?.spaces) ? j.spaces : []
-            const groups = Array.isArray(j?.groups) ? j.groups : []
-            setSegments({ spaces, groups })
-            return
+            const j = await r.json();
+            const spaces = Array.isArray(j?.spaces) ? j.spaces : [];
+            const groups = Array.isArray(j?.groups) ? j.groups : [];
+            setSegments({ spaces, groups });
+            return;
           }
         } catch (_) {}
-        setErr(String(e?.message || 'Falha ao carregar segmentos'))
+        setErr(String(e?.message || 'Falha ao carregar segmentos'));
       })
-      .finally(() => mounted && setLoading(false))
-    return () => { mounted = false }
-  }, [entireCompany])
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, [entireCompany]);
 
   return (
     <div className="border rounded p-3">
@@ -49,12 +62,20 @@ export default function AudiencePicker({ value, onChange }: Props) {
           type="checkbox"
           checked={entireCompany}
           onChange={(e) => {
-            const on = e.target.checked
-            if (on) onChange({ spaceIds: [], groupIds: [] })
-            else onChange({ spaceIds: value.spaceIds ?? [], groupIds: value.groupIds ?? [] })
+            const on = e.target.checked;
+            if (on) {
+              setForceShow(false);
+              onChange({ spaceIds: [], groupIds: [] });
+            } else {
+              // desmarcou -> mostra selects
+              setForceShow(true);
+              onChange({ spaceIds: [], groupIds: [] });
+            }
           }}
         />
-        <label className="form-check-label" htmlFor="entireCompany">Enviar para a empresa inteira</label>
+        <label className="form-check-label" htmlFor="entireCompany">
+          Enviar para a empresa inteira
+        </label>
       </div>
 
       {!entireCompany && (
@@ -70,12 +91,14 @@ export default function AudiencePicker({ value, onChange }: Props) {
                 className="form-select"
                 value={value.spaceIds ?? []}
                 onChange={(e) => {
-                  const vals = Array.from(e.target.selectedOptions).map((o) => o.value)
-                  onChange({ ...value, spaceIds: vals })
+                  const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+                  onChange({ ...value, spaceIds: vals });
                 }}
               >
                 {segments.spaces.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -86,12 +109,14 @@ export default function AudiencePicker({ value, onChange }: Props) {
                 className="form-select"
                 value={value.groupIds ?? []}
                 onChange={(e) => {
-                  const vals = Array.from(e.target.selectedOptions).map((o) => o.value)
-                  onChange({ ...value, groupIds: vals })
+                  const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+                  onChange({ ...value, groupIds: vals });
                 }}
               >
                 {segments.groups.map((g: any) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -99,5 +124,5 @@ export default function AudiencePicker({ value, onChange }: Props) {
         </>
       )}
     </div>
-  )
+  );
 }

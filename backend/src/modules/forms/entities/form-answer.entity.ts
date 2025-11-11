@@ -1,18 +1,36 @@
-// backend/src/modules/forms/entities/form-answer.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm'
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+} from 'typeorm'
 
 @Entity('form_answer')
-@Index(['companyId','submissionId','formId','fieldId'])
+@Index(['companyId', 'submissionId'])
+@Index(['companyId', 'formId', 'fieldId'])
 export class FormAnswerEntity {
-  @PrimaryGeneratedColumn('uuid') id!: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column() @Index() submissionId!: string
-  @Column() @Index() formId!: string
-  @Column() @Index() fieldId!: string
+  @Column('uuid')
+  companyId: string
 
-  @Column('text') type!: string
-  @Column({ type: 'jsonb', nullable: true }) value!: any
+  @Column('uuid')
+  submissionId: string
 
-  @CreateDateColumn({ type: 'timestamptz' }) createdAt!: Date
+  @Column('uuid')
+  formId: string
+
+  @Column('uuid')
+  fieldId: string
+
+  @Column('text', { nullable: true })
+  type: string | null
+
+  @Column('jsonb')
+  value: any
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date
 }

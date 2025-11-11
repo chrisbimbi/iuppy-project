@@ -26,10 +26,11 @@ import ModulesLanding from '../pages/ModulesLanding'
 import ContentsOverviewPage from 'src/app/modules/analytics/views/ContentsOverviewPage'
 import ContentPage from '../modules/communication/controllers/ContentPage'
 
-// 🔥 FORMS (nomes distintos para evitar colisão)
+// 🔥 FORMS
 import FormEditPage from 'src/app/modules/forms/controllers/FormEditPage'
 import FormsListPage from '../modules/forms/controllers/FormsListPage'
 import FormSubmissionsPage from '../modules/forms/controllers/FormSubmissionsPage'
+import FormStatsPage from '../modules/forms/controllers/FormStatsPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -127,11 +128,21 @@ const PrivateRoutes: FC = () => {
             </RequireModule>
           }
         />
-         <Route
+        {/* FORMS — submissões */}
+        <Route
           path="forms/:formId/submissions"
           element={
             <RequireModule moduleKey="forms">
               <FormSubmissionsPage />
+            </RequireModule>
+          }
+        />
+        {/* FORMS — estatísticas */}
+        <Route
+          path="forms/:formId/stats"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormStatsPage />
             </RequireModule>
           }
         />

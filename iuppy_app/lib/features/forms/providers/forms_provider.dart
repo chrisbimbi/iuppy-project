@@ -1,12 +1,11 @@
+// lib/features/forms/providers/forms_provider.dart
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:iuppy_app/core/providers.dart';
+import 'package:iuppy_app/features/forms/services/forms_api.dart';
 
-import '../../../core/providers.dart'; // apiClientProvider, userGroupsProvider, spacesRepoProvider, feedVersionProvider
-import '../services/forms_api.dart';
-
-/// Disparador manual para recarregar a lista (pull-to-refresh, etc).
 final formsRefreshProvider = StateProvider<int>((ref) => 0);
 
-final formsRepoProvider = Provider((ref) => _FormsRepo(ref));
+final formsRepoProvider = Provider<_FormsRepo>((ref) => _FormsRepo(ref));
 
 class _FormsRepo {
   final Ref ref;
@@ -23,10 +22,7 @@ class _FormsRepo {
     final aGroups = <String>{..._arr(item['audienceGroupIds'])}
       ..removeWhere((e) => e.trim().isEmpty);
 
-    // Empresa inteira: sem filtros de segmentação
     if (aSpaces.isEmpty && aGroups.isEmpty) return true;
-
-    // Qualquer interseção em spaces OU groups já habilita visibilidade
     if (aSpaces.isNotEmpty && aSpaces.any(mySpaces.contains)) return true;
     if (aGroups.isNotEmpty && aGroups.any(myGroups.contains)) return true;
     return false;
@@ -35,30 +31,24 @@ class _FormsRepo {
   bool _matchesSchedule(Map item) {
     DateTime? parseUtc(dynamic v) {
       if (v == null) return null;
-      try {
-        return DateTime.tryParse(v.toString())?.toUtc();
-      } catch (_) {
-        return null;
-      }
+      return DateTime.tryParse(v.toString())?.toUtc();
     }
 
     final now = DateTime.now().toUtc();
     final start = parseUtc(item['scheduleStartAt']);
     final end = parseUtc(item['scheduleEndAt']);
 
-    if (start != null && start.isAfter(now)) return false; // ainda não começou
-    if (end != null && !end.isAfter(now)) return false; // já terminou
+    if (start != null && start.isAfter(now)) return false;
+    if (end != null && !end.isAfter(now)) return false;
     return true;
   }
 
   Future<List<Map<String, dynamic>>> listVisible() async {
-    // IMPORTANTÍSSIMO: usa o ApiClient (não o Dio) para criar a FormsApi.
     final apiClient = ref.read(apiClientProvider);
     final api = FormsApi(apiClient);
 
     final userGroups = ref.read(userGroupsProvider);
 
-    // Spaces visíveis (usa cache local; se estiver vazio, carrega do backend)
     final spacesRepo = ref.read(spacesRepoProvider);
     final cachedSpaces = await spacesRepo.getCached();
     final spaces = cachedSpaces.isNotEmpty
@@ -70,7 +60,6 @@ class _FormsRepo {
         .where((e) => e.isNotEmpty)
         .toSet();
 
-    // Busca todos os formulários e filtra no app
     final all = await api.list();
 
     return all
@@ -79,14 +68,74 @@ class _FormsRepo {
         .where((f) => _matchesAudience(f, userGroups, visibleSpaces))
         .toList();
   }
+
+  Future<Map<String, dynamic>> mySubmissions() async {
+    final apiClient = ref.read(apiClientProvider);
+    final me = await apiClient.getMe();
+    final userId = (me['id'] ?? me['sub'] ?? '').toString();
+    final api = FormsApi(apiClient);
+    return api.mySubmissions(userId: userId);
+  }
+
+  Future<Map<String, dynamic>> getForm(String id) async {
+    final apiClient = ref.read(apiClientProvider);
+    final api = FormsApi(apiClient);
+    return api.getForm(id);
+  }
+
+  Future<Map<String, dynamic>> getSubmissionDetail(
+    String formId,
+    String submissionId,
+  ) async {
+    final apiClient = ref.read(apiClientProvider);
+    final api = FormsApi(apiClient);
+    return api.submissionDetail(formId, submissionId);
+  }
+
+  Future<void> submit(
+    String formId,
+    List<Map<String, dynamic>> answers, {
+    List<Map<String, dynamic>>? attachments,
+  }) async {
+    final apiClient = ref.read(apiClientProvider);
+    final api = FormsApi(apiClient);
+    await api.submit(
+      formId,
+      answers: answers,
+      attachments: attachments,
+      meta: {
+        // você pode colocar device/os aqui depois
+      },
+    );
+  }
 }
 
-/// Lista de formulários visíveis para o usuário:
-/// - reage a formsRefreshProvider (pull-to-refresh manual)
-/// - reage a feedVersionProvider (quando a home pedir atualização)
 final formsListProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   ref.watch(formsRefreshProvider);
   ref.watch(feedVersionProvider);
   return ref.read(formsRepoProvider).listVisible();
 });
+
+final myFormsSubmissionsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  ref.watch(formsRefreshProvider);
+  return ref.read(formsRepoProvider).mySubmissions();
+});
+
+final formDetailProvider =
+    FutureProvider.autoDispose.family<Map<String, dynamic>, String>(
+  (ref, formId) async {
+    return ref.read(formsRepoProvider).getForm(formId);
+  },
+);
+
+final formSubmissionDetailProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, (String formId, String submissionId)>(
+  (ref, params) async {
+    final (formId, submissionId) = params;
+    return ref
+        .read(formsRepoProvider)
+        .getSubmissionDetail(formId, submissionId);
+  },
+);

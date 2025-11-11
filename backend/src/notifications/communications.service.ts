@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as admin from 'firebase-admin';
+import * as nodemailer from 'nodemailer';
 
 type Platform = 'web' | 'android' | 'ios';
 
@@ -10,11 +11,11 @@ type SendPushInput = {
   title: string;
   body: string;
   imageUrl?: string;
-  deepLinkMobile?: string; // DATA→ deepLink (app)
-  webLink?: string;        // webpush.fcmOptions.link (web)
+  deepLinkMobile?: string;
+  webLink?: string;
   data?: Record<string, string | number | boolean | null | undefined>;
   kind: 'NEWS' | string;
-  entityId?: string;       // <- para NEWS, é o newsId
+  entityId?: string;
 };
 
 type TokenRow = { userId: string; platform: Platform; token: string; id: string };
@@ -27,7 +28,31 @@ export class CommunicationsService {
   private readonly DEBUG_PAYLOAD = process.env.PUSH_LOG_PAYLOAD === '1';
   private readonly DEBUG_TOKENS = process.env.PUSH_LOG_TOKENS === '1';
 
-  constructor(private readonly ds: DataSource) {}
+  // SMTP (gmail)
+  private mailEnabled = false;
+  private mailer?: nodemailer.Transporter;
+  private mailFrom?: string;
+  private mailReplyTo?: string;
+
+  constructor(private readonly ds: DataSource) {
+    const host = process.env.MAIL_HOST;
+    const user = process.env.MAIL_USER;
+    const pass = process.env.MAIL_PASS;
+    const port = process.env.MAIL_PORT ? Number(process.env.MAIL_PORT) : 587;
+    const secure = process.env.MAIL_SECURE === 'true' || process.env.MAIL_SECURE === '1';
+    this.mailFrom = process.env.MAIL_FROM || user;
+    this.mailReplyTo = process.env.MAIL_REPLY_TO || undefined;
+
+    if (host && user && pass) {
+      this.mailer = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+      this.mailEnabled = process.env.MAIL_ENABLED !== '0';
+      this.logger.log(`communications: SMTP initialized. from=${this.mailFrom}`);
+    } else {
+      this.logger.warn('communications: MAIL_* not set, email disabled');
+    }
+  }
+
+  // ---------------- utils ----------------
 
   private maskToken(t: string) {
     if (!t) return '';
@@ -47,7 +72,6 @@ export class CommunicationsService {
     return out;
   }
 
-  // shape dinâmico de push_delivery
   private async getPushDeliveryColumns(): Promise<Set<string> | null> {
     const exists = await this.tableExists('push_delivery');
     if (!exists) return null;
@@ -67,7 +91,7 @@ export class CommunicationsService {
     status?: 'queued' | 'delivered' | 'failed';
     sentAt?: Date | null; deliveredAt?: Date | null; openedAt?: Date | null;
     meta?: any; error?: string | null; kind?: string | null; entityId?: string | null;
-    newsId?: string | null; // <- novo
+    newsId?: string | null;
   }) {
     const fields: string[] = [];
     const values: any[] = [];
@@ -80,7 +104,6 @@ export class CommunicationsService {
       placeholders.push(`$${values.length}`);
     };
 
-    // mapeia NEWS → newsId quando a coluna existir
     const finalNewsId =
       row.newsId ?? (row.kind === 'NEWS' ? (row.entityId ?? null) : null);
 
@@ -98,7 +121,7 @@ export class CommunicationsService {
     put('error', row.error ?? null);
     put('kind', row.kind ?? null);
     put('entityId', row.entityId ?? null);
-    put('newsId', finalNewsId); // <- essencial p/ NOT NULL
+    put('newsId', finalNewsId);
 
     if (!fields.length) return;
     const sql = `INSERT INTO push_delivery (${fields.join(',')}) VALUES (${placeholders.join(',')})`;
@@ -161,7 +184,6 @@ export class CommunicationsService {
   }
 
   private async fetchTokens(companyId: string, userIds: string[]): Promise<TokenRow[]> {
-    // aceita devices com companyId=null (multi-tenant permissivo)
     return this.ds.query(
       `SELECT "userId","platform","token","id"
          FROM user_device
@@ -180,8 +202,72 @@ export class CommunicationsService {
     return by;
   }
 
+  // ---------------- EMAIL ----------------
+
+  async sendEmail(input: {
+    companyId?: string;
+    to: string[];
+    subject: string;
+    html?: string;
+    text?: string;
+    template?: 'forms/new-submission' | 'forms/deadline-reminder' | string;
+    data?: any;
+    from?: string;
+    replyTo?: string;
+  }) {
+    if (!this.mailEnabled || !this.mailer) {
+      this.logger.warn('communications: sendEmail called but mailer not enabled');
+      return;
+    }
+
+    const from = input.from || this.mailFrom || process.env.MAIL_USER;
+    const replyTo = input.replyTo || this.mailReplyTo;
+
+    let html = input.html;
+    let text = input.text;
+
+    if (input.template === 'forms/new-submission') {
+      const formId = input.data?.formId;
+      const submissionId = input.data?.submissionId;
+      const submittedAt = input.data?.submittedAt;
+      html = `
+        <p>Olá,</p>
+        <p>Um novo formulário foi enviado.</p>
+        <ul>
+          <li><b>Formulário:</b> ${formId}</li>
+          <li><b>Submissão:</b> ${submissionId}</li>
+          <li><b>Data:</b> ${submittedAt}</li>
+        </ul>
+      `;
+      text = `Novo formulário enviado. Form: ${formId} Submissão: ${submissionId}`;
+    } else if (input.template === 'forms/deadline-reminder') {
+      const title = input.data?.title || 'Formulário';
+      const deadlineAt = input.data?.deadlineAt;
+      html = `
+        <p>Olá,</p>
+        <p>Este é um lembrete para o formulário <b>${title}</b>.</p>
+        ${deadlineAt ? `<p>Deadline: ${deadlineAt}</p>` : ''}
+      `;
+      text = `Lembrete de formulário: ${title}`;
+    }
+
+    await this.mailer.sendMail({
+      from,
+      to: input.to.join(','),
+      subject: input.subject,
+      html,
+      text,
+      ...(replyTo ? { replyTo } : {}),
+    });
+
+    this.logger.log(
+      `communications: email sent to=${input.to.join(',')} subject="${input.subject}" from=${from}`,
+    );
+  }
+
+  // ---------------- PUSH (como já estava) ----------------
+
   async sendPush(input: SendPushInput) {
-    // garante deepLink/webLink mesmo se não vierem preenchidos
     const newsIdForLink = input.kind === 'NEWS' ? (input.entityId || '') : '';
     const autoLinks = newsIdForLink ? this.buildNewsLinks(newsIdForLink) : { deepLinkMobile: undefined, webLink: undefined };
     const deepLinkMobile = input.deepLinkMobile ?? autoLinks.deepLinkMobile;
@@ -199,11 +285,7 @@ export class CommunicationsService {
     const cols = await this.getPushDeliveryColumns();
     const results = { requested: 0, success: 0, failure: 0 };
 
-    const baseData = {
-      companyId: input.companyId,
-      kind: input.kind,
-      entityId: input.entityId || '',
-    };
+    const baseData = { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' };
 
     for (const platform of ['android', 'ios', 'web'] as Platform[]) {
       const rows = by[platform];
@@ -238,7 +320,6 @@ export class CommunicationsService {
           const resp = await admin.messaging().sendEachForMulticast(multicast);
           this.logger.log(`[${reqId}] FCM resp platform=${platform}#${i + 1} success=${resp.successCount} failure=${resp.failureCount}`);
 
-          // registrar entregas (dinâmico)
           for (let idx = 0; idx < lot.length; idx++) {
             const t = lot[idx];
             const r = resp.responses[idx];
@@ -312,7 +393,6 @@ export class CommunicationsService {
     return results;
   }
 
-  // envio para notícia
   async sendNewsPush(input: {
     companyId: string;
     newsId: string;
@@ -336,7 +416,6 @@ export class CommunicationsService {
     });
   }
 
-  // teste por tokens diretos
   async sendDirectTokens(input: {
     companyId: string;
     tokens: string[];

@@ -1,3 +1,4 @@
+// modules/forms/components/StepHeader.tsx
 import React from 'react'
 
 type Step = { key: string; title: string }
@@ -19,15 +20,20 @@ export default function StepHeader({
           const done = i < idx
           const active = i === idx
           return (
-            <li key={s.key} className={`breadcrumb-item ${active ? 'text-primary' : done ? 'text-muted' : ''}`}>
+            <li
+              key={s.key}
+              className={`breadcrumb-item ${active ? 'text-primary' : done ? 'text-muted' : ''}`}
+            >
               <button
-                type="button" /* evita submit/reset acidental */
+                type="button"
                 className={`btn btn-sm ${active ? 'btn-primary' : 'btn-light'} me-2`}
                 onClick={() => onStepClick?.(s.key)}
               >
                 {i + 1}
               </button>
-              <span role="button" onClick={() => onStepClick?.(s.key)}>{s.title}</span>
+              <span role="button" onClick={() => onStepClick?.(s.key)}>
+                {s.title}
+              </span>
             </li>
           )
         })}

@@ -27,19 +27,25 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './notifications/notifications.module';
 
+// ⬇️ IMPORTANTE: habilita cron no Nest
+import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
-    FormsModule,
-    
+    // primeiro os módulos de config
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
 
+    // habilita scheduler global
+    ScheduleModule.forRoot(),
+
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
+
     NotificationsModule,
 
     ThrottlerModule.forRoot([{ ttl: 60, limit: 60 }]),
@@ -59,17 +65,19 @@ import { NotificationsModule } from './notifications/notifications.module';
           password: cs.get<string>('DB_PASSWORD'),
           database: cs.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize:false,
+          synchronize: false,
           logging: nodeEnv === 'development',
         };
       },
       inject: [ConfigService],
     }),
 
-    AuthModule,   // JWT guard disponível pros controllers v2
-    V2Module,     // agrega os controllers/services v2
+    // auth (tem teus guards jwt-access / jwt-refresh)
+    AuthModule,
 
-    // legado / demais módulos
+    // módulos de negócio
+    FormsModule,
+    V2Module,
     UsersModule,
     NewsModule,
     ChannelsModule,
@@ -88,4 +96,4 @@ import { NotificationsModule } from './notifications/notifications.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule { }
+export class AppModule {}

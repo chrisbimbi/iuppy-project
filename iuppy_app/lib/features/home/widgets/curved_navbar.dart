@@ -1,3 +1,4 @@
+// lib/features/home/widgets/curved_navbar.dart
 import 'package:flutter/material.dart';
 
 class CurvedNavBar extends StatelessWidget {

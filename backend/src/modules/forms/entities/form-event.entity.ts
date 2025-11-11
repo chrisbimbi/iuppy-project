@@ -1,28 +1,58 @@
-// backend/src/modules/forms/entities/form-event.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm'
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Index,
+} from 'typeorm'
 
 export type FormEventType =
-  | 'form_impression'|'form_open'|'form_start'|'form_save_draft'
-  | 'field_focus'|'field_change'|'field_validation_error'
-  | 'attachment_upload_start'|'attachment_upload_success'|'attachment_upload_fail'
-  | 'form_submit_attempt'|'form_submit_success'|'form_submit_fail'
+  | 'form_impression'
+  | 'form_open'
+  | 'form_start'
+  | 'form_save_draft'
+  | 'field_focus'
+  | 'field_change'
+  | 'field_validation_error'
+  | 'attachment_upload_start'
+  | 'attachment_upload_success'
+  | 'attachment_upload_fail'
+  | 'form_submit_attempt'
+  | 'form_submit_success'
+  | 'form_submit_fail'
   | 'form_view_submission'
 
 @Entity('form_event')
-@Index(['companyId','formId','ts'])
+@Index(['companyId', 'formId'])
+@Index(['companyId', 'ts'])
 export class FormEventEntity {
-  @PrimaryGeneratedColumn('increment') id!: number
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
-  @Column() @Index() companyId!: string
-  @Column() @Index() formId!: string
-  @Column({ type: 'text' }) type!: FormEventType
+  @Column('uuid')
+  companyId: string
 
-  @Column({ nullable: true }) userId!: string | null
-  @Column({ type: 'boolean', default: false }) external!: boolean
-  @Column({ type: 'text', nullable: true }) externalEmail!: string | null
-  @Column({ nullable: true }) fieldId!: string | null
+  @Column('uuid')
+  formId: string
 
-  @Column({ type: 'jsonb', nullable: true }) meta!: Record<string, any> | null
+  @Column('text')
+  type: FormEventType
 
-  @Column({ type: 'timestamptz' }) ts!: Date
+  @Column('uuid', { nullable: true })
+  userId: string | null
+
+  @Column('boolean', { default: false })
+  external: boolean
+
+  @Column('text', { nullable: true })
+  externalEmail: string | null
+
+  @Column('uuid', { nullable: true })
+  fieldId: string | null
+
+  @Column('jsonb', { nullable: true })
+  meta: any | null
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  ts: Date
 }

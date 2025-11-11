@@ -409,8 +409,6 @@ final companySettingsProvider =
   );
   ref.read(appThemeProvider.notifier).state = theme;
 
-  // ❌ REMOVIDO: bootstrap de push daqui (agora é centralizado no pushBootstrapProvider)
-
   return CompanySettingsState(branding, enabled);
 });
 
@@ -772,11 +770,34 @@ class SurveysRepo {
           );
 }
 
+/// ===== Forms badges =====
+/// bate em /v2/forms/analytics/badges e soma os newCount
+final formsBadgesProvider = FutureProvider<int>((ref) async {
+  final api = ref.read(apiClientProvider);
+
+  // ⚠️ TROQUE o nome deste método se no seu ApiClient estiver diferente
+  // (ex.: getFormsAnalyticsBadges)
+  final resp = await api.getFormBadges();
+
+  final items = (resp['items'] as List? ?? const []);
+  var total = 0;
+  for (final it in items) {
+    final n = it is Map ? (it['newCount'] ?? 0) : 0;
+    if (n is int) total += n;
+  }
+  return total;
+});
+
 /// ===== Home badges =====
 class HomeBadges {
   final int newsNew;
+  final int formsNew;
   final int surveysPending;
-  const HomeBadges({this.newsNew = 0, this.surveysPending = 0});
+  const HomeBadges({
+    this.newsNew = 0,
+    this.formsNew = 0,
+    this.surveysPending = 0,
+  });
 }
 
 final homeBadgesProvider = Provider<HomeBadges>((ref) {
@@ -785,9 +806,20 @@ final homeBadgesProvider = Provider<HomeBadges>((ref) {
     data: (d) => d.total,
     orElse: () => 0,
   );
+
+  final formsNew = ref.watch(formsBadgesProvider).maybeWhen(
+        data: (v) => v,
+        orElse: () => 0,
+      );
+
   // TODO: plug surveys pending count when available
   final surveysPending = 0;
-  return HomeBadges(newsNew: newsNew, surveysPending: surveysPending);
+
+  return HomeBadges(
+    newsNew: newsNew,
+    formsNew: formsNew,
+    surveysPending: surveysPending,
+  );
 });
 
 final unreadCountersProvider = FutureProvider<UnreadCounters>((ref) async {

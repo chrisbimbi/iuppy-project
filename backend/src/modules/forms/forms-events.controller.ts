@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Param, Req, UseGuards } from '@nestjs/common'
+// src/modules/forms/forms-events.controller.ts
+import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common'
 import { FormsEventsService, FormEventType } from './forms-events.service'
 import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard'
 
@@ -10,31 +11,40 @@ class TrackEventDto {
   externalEmail?: string
 }
 
-@UseGuards(JwtAccessGuard)
 @Controller('v2/forms/:formId/events')
+@UseGuards(JwtAccessGuard)
 export class FormsEventsController {
   constructor(private readonly svc: FormsEventsService) {}
 
   @Post()
-  async track(@Param('formId') formId: string, @Body() dto: TrackEventDto, @Req() req: any) {
-    const companyId: string = String(req.user?.companyId || req.user?.company?.id || req.user?.cid)
-    const userId: string | null = dto.external ? null : String(req.user?.userId || req.user?.id)
+  async track(
+    @Param('formId') formId: string,
+    @Body() dto: TrackEventDto,
+    @Req() req: any,
+  ) {
+    const companyId: string =
+      req?.user?.companyId ||
+      req?.user?.company?.id ||
+      req?.headers?.['x-company-id'] ||
+      req?.query?.companyId
 
-    // S1: somente "form_open" e "form_start"
-    if (!['form_open', 'form_start'].includes(dto.type)) {
-      return { ok: true, ignored: dto.type }
+    if (!companyId) {
+      return { ok: false, reason: 'companyId missing' }
     }
+
+    const userId = dto.external ? null : (req?.user?.id || req?.user?.sub || null)
 
     await this.svc.insertEvent({
       companyId,
       formId,
+      type: dto.type,
       userId,
       external: !!dto.external,
       externalEmail: dto.externalEmail ?? null,
-      type: dto.type,
       fieldId: dto.fieldId ?? null,
       meta: dto.meta ?? null,
     })
+
     return { ok: true }
   }
 }

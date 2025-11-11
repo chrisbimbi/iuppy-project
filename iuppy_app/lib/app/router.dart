@@ -1,3 +1,4 @@
+// lib/router/app_router.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -12,9 +13,10 @@ import '../features/news/news_detail_page.dart';
 import '../features/surveys/surveys_list_page.dart';
 import '../features/surveys/survey_detail_page.dart';
 
-// === Forms (NOVO) ===
+// === Forms ===
 import '../features/forms/forms_list_page.dart';
 import '../features/forms/form_submit_page.dart';
+import '../features/forms/my_form_responses_page.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _sub;
@@ -47,7 +49,6 @@ Uri _normalizeDeepLinkUri(Uri uri) {
         fragment: uri.fragment.isEmpty ? null : uri.fragment,
       );
     }
-    // === Deep link para Forms: iuppy://forms/<id> ===
     if (uri.host == 'forms') {
       return Uri(
         path: '/forms${uri.path}',
@@ -170,27 +171,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => SurveyDetailPage(id: s.pathParameters['id']!),
       ),
 
-      // ====== FORMS (NOVO) ======
+      // ====== FORMS ======
       GoRoute(
         path: '/forms',
         builder: (_, __) => const FormsListPage(),
       ),
       GoRoute(
+        path: '/forms/my',
+        builder: (_, __) => const MyFormResponsesPage(),
+      ),
+      GoRoute(
+        path: '/forms/:id/submissions/:submissionId',
+        builder: (_, s) => _FormSubmissionDetailStub(
+          formId: s.pathParameters['id']!,
+          submissionId: s.pathParameters['submissionId']!,
+        ),
+      ),
+      GoRoute(
         path: '/forms/:id',
-        builder: (_, s) => FormSubmitPage(id: s.pathParameters['id']!),
+        builder: (_, s) => FormSubmitPage(formId: s.pathParameters['id']!),
       ),
 
       GoRoute(
-          path: '/settings',
-          builder: (_, __) => const _Stub(title: 'Configurações')),
+        path: '/settings',
+        builder: (_, __) => const _Stub(title: 'Configurações'),
+      ),
       GoRoute(
-          path: '/favorites',
-          builder: (_, __) => const _Stub(title: 'Favoritos')),
+        path: '/favorites',
+        builder: (_, __) => const _Stub(title: 'Favoritos'),
+      ),
       GoRoute(
-          path: '/groups', builder: (_, __) => const _Stub(title: 'Grupos')),
+        path: '/groups',
+        builder: (_, __) => const _Stub(title: 'Grupos'),
+      ),
       GoRoute(
-          path: '/notifications',
-          builder: (_, __) => const _Stub(title: 'Notificações')),
+        path: '/notifications',
+        builder: (_, __) => const _Stub(title: 'Notificações'),
+      ),
     ],
   );
 });
@@ -218,6 +235,29 @@ class _Stub extends StatelessWidget {
         ),
       ),
       body: const Center(child: Text('Em breve')),
+    );
+  }
+}
+
+// placeholder pra deep link completo
+class _FormSubmissionDetailStub extends StatelessWidget {
+  final String formId;
+  final String submissionId;
+  const _FormSubmissionDetailStub({
+    super.key,
+    required this.formId,
+    required this.submissionId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Resposta do formulário'),
+      ),
+      body: Center(
+        child: Text('Form: $formId\nSubmissão: $submissionId'),
+      ),
     );
   }
 }
