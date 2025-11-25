@@ -1,3 +1,4 @@
+// lib/features/menu/menu_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,11 +16,17 @@ class MenuDrawer extends ConsumerWidget {
       orElse: () => <String>{},
     );
 
-    // contadores (total/por space/por canal) — sempre vindos do provider corrigido
-    final unread = ref.watch(unreadCountersProvider).maybeWhen(
+    // Contadores de News
+    final unreadNews = ref.watch(unreadCountersProvider).maybeWhen(
           data: (d) => d,
           orElse: () =>
               const UnreadCounters(total: 0, bySpace: {}, byChannel: {}),
+        );
+
+    // 🔥 NOVO: Contador de Forms (Novos + Respostas)
+    final unreadForms = ref.watch(formsBadgesProvider).maybeWhen(
+          data: (val) => val,
+          orElse: () => 0,
         );
 
     return Drawer(
@@ -36,30 +43,65 @@ class MenuDrawer extends ConsumerWidget {
                   style: Theme.of(context).textTheme.headlineSmall),
             ),
           ),
-          if (enabled.contains('news')) _NewsTree(unread: unread),
+
+          // News Tree
+          if (enabled.contains('news')) _NewsTree(unread: unreadNews),
+
+          // Surveys
           if (enabled.contains('surveys'))
             ListTile(
               leading: const Icon(Icons.poll),
               title: const Text('Surveys'),
               onTap: () => context.push('/surveys'),
             ),
+
+          // 🔥 Formulários com Badge
           if (enabled.contains('forms'))
             ListTile(
               leading: const Icon(Icons.description),
-              title: const Text('Formulários'),
+              title: Row(
+                children: [
+                  const Text('Formulários'),
+                  const SizedBox(width: 8),
+                  if (unreadForms > 0) _badge(context, unreadForms),
+                ],
+              ),
               onTap: () => context.push('/forms'),
             ),
+
+          // Configurações
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configurações'),
             onTap: () => context.push('/settings'),
           ),
+
+          // Logout
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sair'),
             onTap: () => ref.read(authControllerProvider.notifier).logout(),
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper visual de badge (reutilizado da árvore de news)
+  Widget _badge(BuildContext context, int n) {
+    final c = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: c.error, // Cor de erro (vermelho) para destaque
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$n',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: c.onError,
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }

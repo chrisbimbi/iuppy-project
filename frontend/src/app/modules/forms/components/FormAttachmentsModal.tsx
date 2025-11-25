@@ -1,4 +1,6 @@
-// modules/forms/components/FormAttachmentsModal.tsx
+// src/app/modules/forms/components/FormAttachmentsModal.tsx
+// (Nenhuma alteração necessária, este arquivo está correto)
+
 import React from 'react'
 import { Modal, Button } from 'react-bootstrap'
 

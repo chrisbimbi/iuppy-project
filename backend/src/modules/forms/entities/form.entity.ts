@@ -1,96 +1,103 @@
+// src/forms/entities/form.entity.ts
 import {
-  Column,
-  CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
   UpdateDateColumn,
   Index,
-} from 'typeorm'
+} from 'typeorm';
 
-export type FormStatus = 'draft' | 'published' | 'expired' | 'archived'
+// Novo tipo para campos traduzíveis
+export type TranslatableString = {
+  [locale: string]: string; // ex: { "pt-BR": "Título", "en": "Title" }
+};
+
+// ==================================
+// CORREÇÃO: Adicionando o tipo que faltava
+// ==================================
+export type FormStatus = 'draft' | 'published' | 'archived';
 
 @Entity('form')
 @Index(['companyId', 'status'])
 export class FormEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
   @Index()
-  companyId: string
+  companyId: string;
 
-  @Column('text')
-  title: string
+  @Column('uuid')
+  @Index()
+  createdBy: string;
 
-  @Column('text', { nullable: true })
-  description: string | null
+  @Column('jsonb')
+  title: TranslatableString; // DTO deve enviar { "pt-BR": "..." }
+
+  @Column('jsonb', { nullable: true })
+  description: TranslatableString | null;
 
   @Column('text', { default: 'draft' })
-  status: FormStatus
+  status: FormStatus; // Usando o tipo corrigido
 
   @Column('timestamptz', { nullable: true })
-  scheduleStartAt: Date | null
+  scheduleStartAt: Date | null;
 
   @Column('timestamptz', { nullable: true })
-  scheduleEndAt: Date | null
+  scheduleEndAt: Date | null;
 
   @Column('timestamptz', { nullable: true })
-  deadlineAt: Date | null
+  deadlineAt: Date | null;
+
+  @Column('timestamptz', { nullable: true })
+  publishedAt: Date | null;
 
   @Column('boolean', { default: false })
-  allowMultipleSubmissions: boolean
+  allowMultipleSubmissions: boolean;
 
   @Column('boolean', { default: false })
-  anonymous: boolean
+  anonymous: boolean;
 
   @Column('boolean', { default: false })
-  allowExternal: boolean
+  allowExternal: boolean;
 
-  // snapshot de segmentação
-  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  audienceSpaceIds: string[]
+  @Column('text', { array: true, nullable: true })
+  audienceSpaceIds: string[] | null;
 
-  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  audienceGroupIds: string[]
-
-  @Column('boolean', { default: false })
-  attachmentsAllowed: boolean
-
-  @Column('text', { nullable: true })
-  attachmentHelpText: string | null
+  @Column('text', { array: true, nullable: true })
+  audienceGroupIds: string[] | null;
 
   @Column('jsonb', { nullable: true })
-  remindersConfig: any | null
+  remindersConfig: any | null;
 
   @Column('jsonb', { nullable: true })
-  notificationsConfig: any | null
+  notificationsConfig: any | null;
+
+  @Column('boolean', { default: false })
+  requiresApproval: boolean;
+
+  @Column('boolean', { default: false })
+  attachmentsAllowed: boolean;
 
   @Column('jsonb', { nullable: true })
-  acl: any | null
+  attachmentHelpText: TranslatableString | null;
 
-  // se o RH precisa aprovar/reprovar
   @Column('boolean', { default: false })
-  requiresApproval: boolean
+  allowTranslations: boolean;
 
-  // i18n (deixa aqui, mesmo que não use 100% ainda)
-  @Column('boolean', { default: false })
-  allowTranslations: boolean
+  @Column('text', { nullable: true, default: 'pt-BR' })
+  defaultLocale: string;
 
-  @Column('text', { nullable: true })
-  defaultLocale: string | null
-
-  @Column('uuid', { nullable: true })
-  createdBy: string | null
-
-  @Column('timestamptz', { nullable: true })
-  publishedAt: Date | null
+  @Column('jsonb', { nullable: true })
+  acl: any | null;
 
   @Column('int', { default: 1 })
-  version: number
+  version: number;
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

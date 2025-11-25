@@ -1,4 +1,27 @@
 // lib/features/forms/models/form_models.dart
+
+// ==================================
+// NOVO (Fase 3): Definição de Tipo
+// ==================================
+typedef TranslatableString = Map<String, String>;
+
+/// Helper para ler um campo que pode ser uma string (legado)
+/// ou um objeto de tradução JSONB (novo)
+String _readTranslatable(dynamic jsonField, [String locale = 'pt-BR']) {
+  if (jsonField == null) return '';
+  if (jsonField is String) return jsonField; // Suporte legado
+  if (jsonField is Map) {
+    // Garante que o mapa é <String, dynamic>
+    final Map<String, dynamic> map = Map<String, dynamic>.from(jsonField);
+    // Tenta o locale, senão 'pt-BR', senão o primeiro
+    return map[locale]?.toString() ??
+        map['pt-BR']?.toString() ??
+        map.values.first?.toString() ??
+        '';
+  }
+  return jsonField.toString();
+}
+
 class FormFieldOption {
   final String id;
   final String label;
@@ -8,7 +31,8 @@ class FormFieldOption {
   factory FormFieldOption.fromJson(Map<String, dynamic> json) {
     return FormFieldOption(
       id: json['id']?.toString() ?? '',
-      label: json['label']?.toString() ?? '',
+      // ATUALIZADO (Fase 3): Opções de Múltipla Escolha usam a mesma lógica
+      label: _readTranslatable(json['label']),
     );
   }
 }
@@ -16,10 +40,11 @@ class FormFieldOption {
 class FormFieldModel {
   final String id;
   final String type;
-  final String label;
+  final String label; // O título já traduzido
   final bool required;
   final List<FormFieldOption> options;
   final int? order;
+  final TranslatableString labelMap; // O objeto jsonb original
 
   FormFieldModel({
     required this.id,
@@ -28,13 +53,22 @@ class FormFieldModel {
     required this.required,
     required this.options,
     this.order,
+    required this.labelMap,
   });
 
-  factory FormFieldModel.fromJson(Map<String, dynamic> json) {
+  factory FormFieldModel.fromJson(Map<String, dynamic> json,
+      [String locale = 'pt-BR']) {
+    // ATUALIZADO (Fase 3): Ler o label traduzido
+    final labelStr = _readTranslatable(json['label'], locale);
+
     return FormFieldModel(
       id: json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? 'short_text',
-      label: json['label']?.toString() ?? '',
+      label: labelStr,
+      labelMap: json['label'] is Map
+          ? (json['label'] as Map)
+              .map((key, value) => MapEntry(key.toString(), value.toString()))
+          : {locale: labelStr},
       required: json['required'] == true,
       options: (json['options'] as List? ?? [])
           .map((e) => FormFieldOption.fromJson(
@@ -47,11 +81,14 @@ class FormFieldModel {
 
 class FormModel {
   final String id;
-  final String title;
-  final String description;
+  final String title; // O título já traduzido
+  final String description; // A descrição já traduzida
   final bool anonymous;
   final bool attachmentsAllowed;
+  final String attachmentHelpText; // O texto de ajuda já traduzido
   final List<FormFieldModel> fields;
+  final String defaultLocale;
+  final TranslatableString titleMap; // O objeto jsonb original
 
   FormModel({
     required this.id,
@@ -59,18 +96,35 @@ class FormModel {
     required this.description,
     required this.anonymous,
     required this.attachmentsAllowed,
+    required this.attachmentHelpText,
     required this.fields,
+    required this.defaultLocale,
+    required this.titleMap,
   });
 
   factory FormModel.fromJson(Map<String, dynamic> json) {
+    // ATUALIZADO (Fase 3): O locale vem do backend, senão 'pt-BR'
+    final locale = json['defaultLocale']?.toString() ?? 'pt-BR';
+
+    final titleStr = _readTranslatable(json['title'], locale);
+    final descStr = _readTranslatable(json['description'], locale);
+    final helpTextStr = _readTranslatable(json['attachmentHelpText'], locale);
+
     return FormModel(
       id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
+      title: titleStr,
+      description: descStr,
+      attachmentHelpText: helpTextStr,
+      defaultLocale: locale,
+      titleMap: json['title'] is Map
+          ? (json['title'] as Map)
+              .map((key, value) => MapEntry(key.toString(), value.toString()))
+          : {locale: titleStr},
       anonymous: json['anonymous'] == true,
-      attachmentsAllowed: json['attachmentsAllowed'] == true,
+      attachmentsAllowed: (json['attachmentsAllowed'] == true) ||
+          (json['allowAttachments'] == true),
       fields: (json['fields'] as List? ?? [])
-          .map((e) => FormFieldModel.fromJson(e))
+          .map((e) => FormFieldModel.fromJson(e, locale))
           .toList()
         ..sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0)),
     );
@@ -165,7 +219,7 @@ class FormSubmissionDetail {
   final String? externalEmail;
   final List<FormAnswerDetail> answers;
   final List<FormAttachmentDetail> attachments;
-  final List<FormRhActionDetail> rhActions;
+  final List<FormRhActionDetail> rhActions; // Legado S1
 
   FormSubmissionDetail({
     required this.submissionId,
@@ -182,10 +236,14 @@ class FormSubmissionDetail {
   });
 
   factory FormSubmissionDetail.fromJson(Map<String, dynamic> json) {
+    // ATUALIZADO (Fase 3): O backend já envia o locale
+    final locale = json['defaultLocale']?.toString() ?? 'pt-BR';
+
     return FormSubmissionDetail(
       submissionId:
           json['submissionId']?.toString() ?? json['id']?.toString() ?? '',
       formId: json['formId']?.toString() ?? '',
+      // ATUALIZADO (Fase 3): Backend já envia o título traduzido
       formTitle: json['formTitle']?.toString(),
       submittedAt: DateTime.tryParse(json['submittedAt']?.toString() ?? '') ??
           DateTime.now(),
@@ -193,8 +251,10 @@ class FormSubmissionDetail {
       external: json['external'] == true,
       isOnTime: json['isOnTime'] as bool?,
       externalEmail: json['externalEmail']?.toString(),
+      // ATUALIZADO (Fase 3): Passa o locale para o construtor do Answer
       answers: (json['answers'] as List? ?? [])
-          .map((e) => FormAnswerDetail.fromJson(e as Map<String, dynamic>))
+          .map((e) =>
+              FormAnswerDetail.fromJson(e as Map<String, dynamic>, locale))
           .toList(),
       attachments: (json['attachments'] as List? ?? [])
           .map((e) => FormAttachmentDetail.fromJson(e as Map<String, dynamic>))
@@ -210,18 +270,23 @@ class FormAnswerDetail {
   final String fieldId;
   final String type;
   final dynamic value;
+  final String label; // O label já traduzido
 
   FormAnswerDetail({
     required this.fieldId,
     required this.type,
     this.value,
+    required this.label,
   });
 
-  factory FormAnswerDetail.fromJson(Map<String, dynamic> json) {
+  factory FormAnswerDetail.fromJson(Map<String, dynamic> json,
+      [String locale = 'pt-BR']) {
     return FormAnswerDetail(
       fieldId: json['fieldId']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
       value: json['value'],
+      // ATUALIZADO (Fase 3): Backend já envia o label traduzido
+      label: json['label']?.toString() ?? '',
     );
   }
 }
@@ -261,6 +326,55 @@ class FormRhActionDetail {
     return FormRhActionDetail(
       type: json['type']?.toString() ?? '',
       message: json['message']?.toString(),
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+    );
+  }
+}
+
+// ==================================
+// NOVO (Fase 1 - Chat S3)
+// ==================================
+
+/// Modelo para o histórico de chat retornado pela API
+class FormChatHistory {
+  final String chatStatus; // 'open' | 'closed'
+  final List<FormChatMessage> messages;
+
+  FormChatHistory({required this.chatStatus, this.messages = const []});
+
+  factory FormChatHistory.fromJson(Map<String, dynamic> json) {
+    return FormChatHistory(
+      chatStatus: json['chatStatus']?.toString() ?? 'open',
+      messages: (json['messages'] as List? ?? [])
+          .map((e) => FormChatMessage.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Modelo para uma única mensagem de chat
+class FormChatMessage {
+  final String id;
+  final String actor; // 'user' | 'rh'
+  final String? userId; // Quem enviou
+  final String message;
+  final DateTime createdAt;
+
+  FormChatMessage({
+    required this.id,
+    required this.actor,
+    required this.message,
+    required this.createdAt,
+    this.userId,
+  });
+
+  factory FormChatMessage.fromJson(Map<String, dynamic> json) {
+    return FormChatMessage(
+      id: json['id']?.toString() ?? '',
+      actor: json['actor']?.toString() ?? 'user',
+      userId: json['userId']?.toString(),
+      message: json['message']?.toString() ?? '',
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
     );

@@ -1,4 +1,4 @@
-// src/modules/forms/forms.controller.ts
+// src/modules/forms/controllers/forms.controller.ts
 import {
   BadRequestException,
   Body,
@@ -12,15 +12,24 @@ import {
   Query,
   Req,
   UseGuards,
+  Delete,
+  UsePipes, // S3+
+  ValidationPipe, // S3+
 } from '@nestjs/common';
 import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { RespondDto } from './dto/respond.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
+// 🔥 S3+: Importa o novo DTO
+import { ChatMessageDto } from './dto/chat-message.dto';
 import { JwtAccessGuard } from '../../auth/guards/jwt-access.guard';
 import { FormsService } from './forms.service';
+// 🔥 S3+: Importa o ACL Guard (se for usar)
+// import { FormsAclGuard } from './guards/forms-acl.guard';
 
 @Controller('forms')
+@UseGuards(JwtAccessGuard) // Protege todas as rotas por padrão
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true })) // S3+: Adiciona validação
 export class FormsController {
   constructor(private readonly formsService: FormsService) { }
 
@@ -39,10 +48,8 @@ export class FormsController {
   }
 
   // =========================================================
-  //  // =========================================================
-  // SEGMENTAÇÃO
+  // SEGMENTAÇÃO (CMS)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Get('segments')
   async segments(@Req() req: any, @Query('companyId') companyId?: string) {
     let cid = companyId || this.getCompanyIdSync(req);
@@ -59,9 +66,8 @@ export class FormsController {
   }
 
   // =========================================================
-  // LISTAR FORMS
+  // LISTAR FORMS (CMS / APP)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Get()
   async list(
     @Req() req: any,
@@ -81,19 +87,35 @@ export class FormsController {
     return this.formsService.listForms(companyId, status);
   }
 
+
+  // 🔥 NOVO ENDPOINT
+  @Get('my/interactions')
+  async myInteractions(
+    @Req() req: any,
+    @Query('limit') limit = '50',
+  ) {
+    let companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
+
+    if (!companyId && userId) {
+      companyId = await this.formsService.findCompanyIdByUser(userId);
+    }
+
+    if (!companyId || !userId) {
+      throw new BadRequestException('companyId/userId missing');
+    }
+
+    return this.formsService.getMyInteractions(userId, companyId, Number(limit));
+  }
   // =========================================================
-  // CRIAR FORM
+  // CRIAR FORM (CMS)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Post()
   async create(
     @Req() req: any,
     @Body() dto: CreateFormDto,
     @Query('companyId') companyIdFromQuery?: string,
   ) {
-    // LOG do que veio
-    console.log('[forms.controller][create] body =', JSON.stringify(dto, null, 2));
-
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const userId = this.getUserId(req);
     if (!companyId && userId) {
@@ -105,13 +127,13 @@ export class FormsController {
     if (!userId) {
       throw new BadRequestException('userId missing');
     }
+    // Assinatura do Service: createForm(companyId, createdBy, dto)
     return this.formsService.createForm(companyId, userId, dto);
   }
 
   // =========================================================
-  // ATUALIZAR FORM
+  // ATUALIZAR FORM (CMS)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Patch(':id')
   async update(
     @Req() req: any,
@@ -119,31 +141,28 @@ export class FormsController {
     @Body() dto: UpdateFormDto,
     @Query('companyId') companyIdFromQuery?: string,
   ) {
-    // LOG do que veio
-    console.log(
-      '[forms.controller][update] id=',
-      id,
-      'dto=',
-      JSON.stringify(dto, null, 2),
-    );
-
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
-    if (!companyId) {
-      const userId = this.getUserId(req);
-      if (userId) {
-        companyId = await this.formsService.findCompanyIdByUser(userId);
-      }
+    const userId = this.getUserId(req); // Pega o ator
+    if (!companyId && userId) {
+      companyId = await this.formsService.findCompanyIdByUser(userId);
     }
     if (!companyId) {
       throw new BadRequestException('companyId missing');
     }
-    return this.formsService.updateForm(companyId, id, dto);
+    if (!userId) {
+      throw new BadRequestException('userId missing for update');
+    }
+
+    // ==================================
+    // CORREÇÃO (Fase 3): Passa o actorUserId
+    // Assinatura do Service: updateForm(companyId, formId, actorUserId, dto)
+    // ==================================
+    return this.formsService.updateForm(companyId, id, userId, dto);
   }
 
   // =========================================================
-  // DETALHE FORM
+  // DETALHE FORM (CMS / APP)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Get(':id')
   async detail(
     @Req() req: any,
@@ -164,9 +183,51 @@ export class FormsController {
   }
 
   // =========================================================
-  // SUBMIT (APP LOGADO) - endpoint novo
+  // AÇÕES DE GERENCIAMENTO (NOVAS - S1 FIX)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
+  @Post(':id/publish')
+  async publish(@Req() req: any, @Param('id') id: string) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req); // Pega o ator
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+    // Assinatura: updateStatus(companyId, formId, actorUserId, status)
+    return this.formsService.updateStatus(companyId, id, userId, 'published');
+  }
+
+  @Post(':id/unpublish')
+  async unpublish(@Req() req: any, @Param('id') id: string) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req); // Pega o ator
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+    // Assinatura: updateStatus(companyId, formId, actorUserId, status)
+    return this.formsService.updateStatus(companyId, id, userId, 'draft');
+  }
+
+  @Post(':id/duplicate')
+  async duplicate(@Req() req: any, @Param('id') id: string) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing for duplicate');
+    // Assinatura: duplicate(companyId, formId, actorUserId)
+    return this.formsService.duplicate(companyId, id, userId);
+  }
+
+  @Post('remove-many')
+  async removeMany(@Req() req: any, @Body() body: { ids: string[] }) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req); // Pega o ator
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+    // Assinatura: removeMany(companyId, actorUserId, ids)
+    return this.formsService.removeMany(companyId, userId, body.ids || []);
+  }
+
+  // =========================================================
+  // SUBMIT (APP LOGADO)
+  // =========================================================
   @Post(':id/submit')
   async submitInternal(
     @Req() req: any,
@@ -189,71 +250,23 @@ export class FormsController {
     });
   }
 
-  // alias para submissão antiga
-  @UseGuards(JwtAccessGuard)
-  @Post(':id/submissions')
+  @Post(':id/submissions') // alias
   async submitInternalAlias(
     @Req() req: any,
     @Param('id') id: string,
     @Body() dto: CreateSubmissionDto,
     @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const userId = this.getUserId(req);
-    let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
-    if (!companyId && userId) {
-      companyId = await this.formsService.findCompanyIdByUser(userId);
-    }
-    if (!companyId) {
-      throw new BadRequestException('companyId missing');
-    }
-
-    return this.formsService.submit(companyId, id, userId, {
-      ...dto,
-      external: false,
-    });
+    return this.submitInternal(req, id, dto, companyIdFromQuery);
   }
 
   // =========================================================
-  // SUBMIT (PÚBLICO / EXTERNO)
+  // LISTAR SUBMISSÕES (CMS / APP)
   // =========================================================
-  @Post([
-    'public/:id/submit',
-    'public/:id/submissions',
-    'v2/public/:id/submit',
-    'v2/public/:id/submissions',
-  ])
-  async submitPublic(
-    @Param('id') id: string,
-    @Body() dto: CreateSubmissionDto,
-  ) {
-    const form = await this.formsService.findFormById(id);
-    if (!form) {
-      throw new NotFoundException('form not found');
-    }
-
-    if (!form.allowExternal) {
-      throw new ForbiddenException('external submissions not allowed');
-    }
-
-    const companyId = form.companyId;
-    if (!companyId) {
-      throw new BadRequestException('form without companyId');
-    }
-
-    return this.formsService.submit(companyId, id, null, {
-      ...dto,
-      external: true,
-    });
-  }
-
-  // =========================================================
-  // LISTAR SUBMISSÕES
-  // =========================================================
-  @UseGuards(JwtAccessGuard)
   @Get(':id/submissions')
   async listSubmissions(
     @Req() req: any,
-    @Param('id') id: string,
+    @Param('id') id: string, // pode ser 'my'
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '50',
     @Query('companyId') companyIdFromQuery?: string,
@@ -262,6 +275,7 @@ export class FormsController {
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const pageNum = Number(page) || 1;
     const pageSizeNum = Number(pageSize) || 50;
+    const locale = req?.user?.locale ?? 'pt-BR'; // Pega o locale do App
 
     if (!companyId) {
       const userId = this.getUserId(req);
@@ -280,14 +294,17 @@ export class FormsController {
           'userId missing for /forms/my/submissions',
         );
       }
+      // Assinatura: listMySubmissions(userId, companyId, page, pageSize, locale)
       return this.formsService.listMySubmissions(
         userId,
         companyId,
         pageNum,
         pageSizeNum,
+        locale,
       );
     }
 
+    // CMS (ou admin) pode listar
     const userId = this.getUserId(req);
     return this.formsService.listSubmissions(
       companyId,
@@ -299,9 +316,39 @@ export class FormsController {
   }
 
   // =========================================================
-  // RESPONDER SUBMISSÃO
+  // DETALHE DA SUBMISSÃO (APP)
   // =========================================================
-  @UseGuards(JwtAccessGuard)
+  @Get(':id/submissions/:submissionId')
+  async submissionDetail(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('submissionId') submissionId: string,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    const locale = req?.user?.locale ?? 'pt-BR'; // Pega o locale
+    if (!companyId) {
+      const userId = this.getUserId(req);
+      if (userId) {
+        companyId = await this.formsService.findCompanyIdByUser(userId);
+      }
+    }
+    if (!companyId) {
+      throw new BadRequestException('companyId missing');
+    }
+
+    // Assinatura: getSubmissionDetail(companyId, formId, submissionId, locale)
+    return this.formsService.getSubmissionDetail(
+      companyId,
+      id,
+      submissionId,
+      locale,
+    );
+  }
+
+  // =========================================================
+  // RESPONDER SUBMISSÃO (CMS) - LEGADO S1
+  // =========================================================
   @Post(':id/submissions/:submissionId/respond')
   async respond(
     @Req() req: any,
@@ -322,13 +369,96 @@ export class FormsController {
       throw new BadRequestException('userId missing');
     }
 
+    // Assinatura: respond(companyId, formId, submissionId, actorUserId, dto)
     return this.formsService.respond(companyId, id, submissionId, userId, dto);
   }
 
   // =========================================================
-  // NOTIF SETTINGS
+  // 🔥 S3+: NOVOS ENDPOINTS DE CHAT
   // =========================================================
-  @UseGuards(JwtAccessGuard)
+
+  @Get(':id/submissions/:submissionId/chat')
+  // @UseGuards(FormsAclGuard) // TODO: Adicionar ACL
+  async getChat(
+    @Req() req: any,
+    @Param('id') formId: string,
+    @Param('submissionId') submissionId: string,
+  ) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+
+    // ==================================
+    // CORREÇÃO (Fase 1): Passa o ator (RH ou User)
+    // Assumindo que o App usa um guard/rota diferente ou passa um query param ?actor=user
+    // Para o CMS, o ator é sempre 'rh'.
+    // ==================================
+    const actor = req.query.actor === 'user' ? 'user' : 'rh';
+
+    return this.formsService.getChatHistory(
+      companyId,
+      formId,
+      submissionId,
+      userId,
+      actor, // Passa quem está lendo (para zerar o badge)
+    );
+  }
+
+  @Post(':id/submissions/:submissionId/chat')
+  // @UseGuards(FormsAclGuard) // TODO: Adicionar ACL
+  async postChat(
+    @Req() req: any,
+    @Param('id') formId: string,
+    @Param('submissionId') submissionId: string,
+    @Body() dto: ChatMessageDto,
+  ) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+
+    // Garante que o ID do token sobreponha o do DTO
+    const actorUserId = userId;
+
+    // Se o DTO não trouxer o ator (ex: app vindo do CMS), assume 'rh'
+    // Se o app enviar, ele deve mandar 'user'
+    const actor = dto.actor || 'rh';
+
+    return this.formsService.postChatMessage(
+      companyId,
+      formId,
+      submissionId,
+      actorUserId,
+      { ...dto, userId: actorUserId, actor: actor }, // Força o userId e o ator
+    );
+  }
+
+  @Post(':id/submissions/:submissionId/chat/close')
+  // @UseGuards(FormsAclGuard) // TODO: Adicionar ACL (SÓ RH)
+  async closeChat(
+    @Req() req: any,
+    @Param('id') formId: string,
+    @Param('submissionId') submissionId: string,
+  ) {
+    const companyId = this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
+    if (!companyId) throw new BadRequestException('companyId missing');
+    if (!userId) throw new BadRequestException('userId missing');
+
+    // TODO: Adicionar verificação se o 'userId' é RH/Admin
+
+    return this.formsService.closeChat(
+      companyId,
+      formId,
+      submissionId,
+      userId,
+    );
+  }
+
+  // =========================================================
+  // NOTIF SETTINGS (CMS)
+  // =========================================================
   @Get(':id/notification-settings')
   async getNotif(
     @Req() req: any,
@@ -348,7 +478,6 @@ export class FormsController {
     return this.formsService.getFormNotificationSettings(companyId, id);
   }
 
-  @UseGuards(JwtAccessGuard)
   @Post(':id/notification-settings')
   async saveNotif(
     @Req() req: any,
@@ -358,48 +487,23 @@ export class FormsController {
     @Query('companyId') companyIdFromQuery?: string,
   ) {
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
-    if (!companyId) {
-      const userId = this.getUserId(req);
-      if (userId) {
-        companyId = await this.formsService.findCompanyIdByUser(userId);
-      }
+    const userId = this.getUserId(req); // Pega o ator
+    if (!companyId && userId) {
+      companyId = await this.formsService.findCompanyIdByUser(userId);
     }
     if (!companyId) {
       throw new BadRequestException('companyId missing');
     }
+    if (!userId) {
+      throw new BadRequestException('userId missing');
+    }
+
+    // Assinatura: saveFormNotificationSettings(companyId, formId, actorUserId, items)
     return this.formsService.saveFormNotificationSettings(
       companyId,
       id,
+      userId,
       body.items || [],
-    );
-  }
-  // =========================================================
-  // DETALHE DA SUBMISSÃO (APP)  👈 faltava esse
-  // =========================================================
-  @UseGuards(JwtAccessGuard)
-  @Get(':id/submissions/:submissionId')
-  async submissionDetail(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Param('submissionId') submissionId: string,
-    @Query('companyId') companyIdFromQuery?: string,
-  ) {
-    let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
-    if (!companyId) {
-      const userId = this.getUserId(req);
-      if (userId) {
-        companyId = await this.formsService.findCompanyIdByUser(userId);
-      }
-    }
-    if (!companyId) {
-      throw new BadRequestException('companyId missing');
-    }
-
-    // 👇 esse cara já existe no service e já monta answers, attachments, rhActions
-    return this.formsService.getSubmissionDetail(
-      companyId,
-      id,
-      submissionId,
     );
   }
 }

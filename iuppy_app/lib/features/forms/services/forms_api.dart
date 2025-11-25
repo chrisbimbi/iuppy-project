@@ -41,18 +41,57 @@ class FormsApi {
     int page = 1,
     int pageSize = 50,
     String? userId,
+    String? locale,
   }) async {
     return _client.getMyFormSubmissions(
       page: page,
       pageSize: pageSize,
       userId: userId,
+      locale: locale,
     );
+  }
+
+  // 🔥 Wrapper Novo
+  Future<List<Map<String, dynamic>>> myInteractions({int limit = 50}) async {
+    return _client.getMyFormInteractions(limit: limit);
   }
 
   Future<Map<String, dynamic>> submissionDetail(
     String formId,
+    String submissionId, {
+    String? locale,
+  }) async {
+    return _client.getFormSubmissionDetail(
+      formId,
+      submissionId,
+      locale: locale,
+    );
+  }
+
+  Future<Map<String, dynamic>> getChatHistory(
+    String formId,
     String submissionId,
   ) async {
-    return _client.getFormSubmissionDetail(formId, submissionId);
+    return _client.getFormChatHistory(
+      formId,
+      submissionId,
+      actor: 'user',
+    );
+  }
+
+  Future<Map<String, dynamic>> postChatMessage(
+    String formId,
+    String submissionId,
+    String message,
+  ) async {
+    final payload = {
+      'message': message,
+      'actor': 'user',
+    };
+    return _client.postFormChatMessage(
+      formId,
+      submissionId,
+      payload: payload,
+    );
   }
 }

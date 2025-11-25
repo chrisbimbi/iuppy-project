@@ -17,7 +17,7 @@ import { RespondDto } from './dto/respond.dto';
 
 @Controller('forms')
 export class FormsController {
-  constructor(private readonly formsService: FormsService) {}
+  constructor(private readonly formsService: FormsService) { }
 
   private getCompanyIdSync(req: any): string | null {
     return (
@@ -116,8 +116,11 @@ export class FormsController {
     if (!companyId) {
       throw new BadRequestException('companyId missing');
     }
+    if (!userId) {
+      throw new BadRequestException('userId missing');
+    }
 
-    return this.formsService.updateForm(companyId, id, dto);
+    return this.formsService.updateForm(companyId, id, userId, dto);
   }
 
   // GET /forms/:id
@@ -266,8 +269,9 @@ export class FormsController {
     return this.formsService.saveFormNotificationSettings(
       companyId,
       id,
+      userId,
       body.items || [],
     );
   }
-  
+
 }

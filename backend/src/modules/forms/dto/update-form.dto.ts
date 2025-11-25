@@ -1,18 +1,18 @@
-// backend/src/modules/forms/dto/update-form.dto.ts
-import type { FormStatus } from '../entities/form.entity';
+// src/forms/dto/update-form.dto.ts
+import type { FormStatus, TranslatableString } from '../entities/form.entity'; // Importa o novo tipo
 import type { FormFieldType } from '../entities/form-field.entity';
 
 export interface UpdateFormFieldDto {
   type: FormFieldType;
-  label: string;
+  label: TranslatableString; // MODIFICADO
   required?: boolean;
   options?: Record<string, any> | null;
   order?: number;
 }
 
 export interface UpdateFormDto {
-  title?: string;
-  description?: string;
+  title?: TranslatableString; // MODIFICADO
+  description?: TranslatableString | null; // MODIFICADO
   status?: FormStatus;
 
   scheduleStartAt?: string | null;
@@ -27,7 +27,7 @@ export interface UpdateFormDto {
   audienceGroupIds?: string[];
 
   attachmentsAllowed?: boolean;
-  attachmentHelpText?: string | null;
+  attachmentHelpText?: TranslatableString | null; // MODIFICADO
 
   remindersConfig?: Record<string, any> | null;
   notificationsConfig?: Record<string, any> | null;
@@ -37,6 +37,5 @@ export interface UpdateFormDto {
   allowTranslations?: boolean;
   defaultLocale?: string | null;
 
-  // se vier, recria versão de campos
   fields?: UpdateFormFieldDto[];
 }

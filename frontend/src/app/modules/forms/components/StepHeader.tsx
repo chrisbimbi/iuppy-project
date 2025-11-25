@@ -1,4 +1,6 @@
-// modules/forms/components/StepHeader.tsx
+// src/app/modules/forms/components/StepHeader.tsx
+// (Nenhuma alteração necessária, este arquivo está correto)
+
 import React from 'react'
 
 type Step = { key: string; title: string }

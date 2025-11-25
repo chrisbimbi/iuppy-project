@@ -17,7 +17,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController(text: 'chris@iuppy.com.br');
+  final _email = TextEditingController(text: 'dev@iuppy.com.br');
   final _password = TextFormFieldController('123456');
   bool _loading = false;
   String? _error;

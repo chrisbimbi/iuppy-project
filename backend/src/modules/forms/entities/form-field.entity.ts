@@ -1,10 +1,12 @@
+// src/forms/entities/form-field.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  Index,
   CreateDateColumn,
-} from 'typeorm'
+  Index,
+} from 'typeorm';
+import { TranslatableString } from './form.entity';
 
 export type FormFieldType =
   | 'short_text'
@@ -14,40 +16,42 @@ export type FormFieldType =
   | 'multi_choice'
   | 'single_choice'
   | 'stars'
-  | 'scale'
+  | 'scale';
 
 @Entity('form_field')
-@Index(['companyId', 'formId'])
+@Index(['companyId', 'formId', 'version'])
 export class FormFieldEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  @Index()
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  @Index()
-  formId: string
+  formId: string;
 
   @Column('int', { default: 1 })
-  version: number
+  version: number;
 
   @Column('text')
-  type: FormFieldType
+  type: FormFieldType;
 
-  @Column('text')
-  label: string
+  // ==================================
+  // MODIFICADO (Traduções - Fase 3)
+  // ==================================
+  @Column('jsonb')
+  label: TranslatableString | string;
+  // ==================================
 
   @Column('boolean', { default: false })
-  required: boolean
+  required: boolean;
 
   @Column('jsonb', { nullable: true })
-  options: any | null
+  options: any | null; // { choices: [], min: 1, max: 10 }
 
-  @Column('int', { default: 0, name: 'order' })
-  order: number
+  @Column('int', { default: 0 })
+  order: number;
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  @CreateDateColumn()
+  createdAt: Date;
 }

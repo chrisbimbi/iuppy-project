@@ -1,10 +1,10 @@
-// backend/src/modules/forms/dto/create-form.dto.ts
-import type { FormStatus } from '../entities/form.entity';
+// src/forms/dto/create-form.dto.ts
+import type { FormStatus, TranslatableString } from '../entities/form.entity'; // Importa o novo tipo
 import type { FormFieldType } from '../entities/form-field.entity';
 
 export interface CreateFormFieldDto {
   type: FormFieldType;
-  label: string;
+  label: TranslatableString; // MODIFICADO
   required?: boolean;
   options?: Record<string, any> | null;
   order?: number;
@@ -12,8 +12,8 @@ export interface CreateFormFieldDto {
 
 export interface CreateFormDto {
   companyId: string;
-  title: string;
-  description?: string;
+  title: TranslatableString; // MODIFICADO
+  description?: TranslatableString | null; // MODIFICADO
   status?: FormStatus;
   scheduleStartAt?: string | null;
   scheduleEndAt?: string | null;
@@ -24,16 +24,15 @@ export interface CreateFormDto {
   audienceSpaceIds?: string[];
   audienceGroupIds?: string[];
   attachmentsAllowed?: boolean;
-  attachmentHelpText?: string | null;
+  attachmentHelpText?: TranslatableString | null; // MODIFICADO
   remindersConfig?: Record<string, any> | null;
   notificationsConfig?: Record<string, any> | null;
   acl?: Record<string, any> | null;
 
-  // novos da entity que você mostrou
+  // Seus campos
   requiresApproval?: boolean;
   allowTranslations?: boolean;
   defaultLocale?: string | null;
 
-  // V0: obrigatório
   fields: CreateFormFieldDto[];
 }

@@ -3,8 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../providers/forms_provider.dart';
+import 'form_chat_sheet.dart';
 
-// helpers
+String _readTranslatable(dynamic jsonField, [String locale = 'pt-BR']) {
+  if (jsonField == null) return '';
+  if (jsonField is String) return jsonField;
+  if (jsonField is Map) {
+    final Map<String, dynamic> map = Map<String, dynamic>.from(jsonField);
+    return map[locale]?.toString() ??
+        map['pt-BR']?.toString() ??
+        map.values.first?.toString() ??
+        '';
+  }
+  return jsonField.toString();
+}
+
 String formatHuman(DateTime d) {
   String two(int v) => v.toString().padLeft(2, '0');
   return '${two(d.day)}/${two(d.month)}/${d.year % 100} - ${two(d.hour)}:${two(d.minute)}';
@@ -36,6 +49,19 @@ Color approvalColor(String raw, BuildContext ctx) {
   }
 }
 
+Color approvalTextColor(String raw) {
+  switch (raw) {
+    case 'approved':
+      return Colors.green.shade800;
+    case 'rejected':
+      return Colors.red.shade800;
+    case 'pending':
+      return Colors.amber.shade800;
+    default:
+      return Colors.black87;
+  }
+}
+
 class SubmissionDetailSheet extends ConsumerWidget {
   final String formId;
   final String submissionId;
@@ -58,11 +84,11 @@ class SubmissionDetailSheet extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Material(
-        color: const Color(0xfff6f4f7),
+        color: const Color(0xfff6f4f7), // Fundo cinza claro
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         child: asyncDetail.when(
           loading: () => const SizedBox(
-            height: 200,
+            height: 300,
             child: Center(child: CircularProgressIndicator()),
           ),
           error: (e, _) => SizedBox(
@@ -72,45 +98,46 @@ class SubmissionDetailSheet extends ConsumerWidget {
           data: (detail) {
             return asyncForm.when(
               loading: () => const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => SizedBox(
-                height: 200,
-                child: Center(child: Text('Erro ao carregar formulário: $e')),
-              ),
+                  height: 300,
+                  child: Center(child: CircularProgressIndicator())),
+              error: (e, _) =>
+                  SizedBox(height: 200, child: Center(child: Text('Erro: $e'))),
               data: (form) {
                 final submittedAtStr = detail['submittedAt']?.toString() ?? '';
                 final submittedAt = DateTime.tryParse(submittedAtStr);
-                final formTitle = detail['formTitle']?.toString() ??
-                    form['title']?.toString() ??
-                    'Formulário';
-                final rawStatus = detail['status']?.toString() ?? '';
 
-                final answers = (detail['answers'] as List? ?? const [])
+                final locale = form['defaultLocale']?.toString() ?? 'pt-BR';
+                final formTitle =
+                    detail['formTitle']?.toString() ?? 'Formulário';
+                // Pega a descrição do form para exibir no card
+                final formDescription =
+                    _readTranslatable(form['description'], locale);
+
+                final rawStatus = detail['status']?.toString() ?? '';
+                final answers = (detail['answers'] as List? ?? [])
                     .cast<Map<String, dynamic>>();
-                final attachments = (detail['attachments'] as List? ?? const [])
+                final attachments = (detail['attachments'] as List? ?? [])
                     .cast<Map<String, dynamic>>();
-                final rhActions = (detail['rhActions'] as List? ?? const [])
+                final rhActions = (detail['rhActions'] as List? ?? [])
                     .cast<Map<String, dynamic>>();
-                final fields = (form['fields'] as List? ?? const [])
+                final fields = (form['fields'] as List? ?? [])
                     .cast<Map<String, dynamic>>();
+
+                final requiresApproval = form['requiresApproval'] == true;
+                final allowAttachments = (form['attachmentsAllowed'] == true) ||
+                    (form['allowAttachments'] == true);
 
                 final Map<String, Map<String, dynamic>> answersByField = {};
                 for (final ans in answers) {
-                  final fid = ans['fieldId']?.toString();
-                  if (fid != null) {
-                    answersByField[fid] = ans;
+                  if (ans['fieldId'] != null) {
+                    answersByField[ans['fieldId'].toString()] = ans;
                   }
                 }
 
-                final requiresApproval = form['requiresApproval'] == true;
-                final allowAttachments = form['attachmentsAllowed'] == true;
-
                 return DraggableScrollableSheet(
                   expand: false,
-                  initialChildSize: 0.7,
-                  minChildSize: 0.4,
+                  initialChildSize: 0.85,
+                  minChildSize: 0.5,
                   maxChildSize: 0.95,
                   builder: (context, scrollController) {
                     return SingleChildScrollView(
@@ -119,169 +146,325 @@ class SubmissionDetailSheet extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Handle
                           Center(
                             child: Container(
-                              width: 50,
-                              height: 5,
-                              margin: const EdgeInsets.only(bottom: 14),
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 20),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade400,
+                                color: Colors.grey.shade300,
                                 borderRadius: BorderRadius.circular(999),
                               ),
                             ),
                           ),
-                          Text(
-                            formTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  color: Colors.orange[800],
-                                  fontWeight: FontWeight.w700,
-                                ),
+
+                          // 🔥 HEADER CARD (Estilo Lista)
+                          Card(
+                            elevation: 0,
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Ícone do Form
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.description,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      // Textos
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              formTitle,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            if (submittedAt != null)
+                                              Text(
+                                                'Enviado em ${formatHuman(submittedAt)}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                        color:
+                                                            Colors.grey[600]),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (formDescription.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      formDescription,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Colors.grey[700]),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 12),
+                                  // Chips
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      // Status de Aprovação
+                                      if (requiresApproval &&
+                                          _isApprovalStatus(rawStatus))
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: approvalColor(
+                                                rawStatus, context),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            mapApprovalStatus(rawStatus),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  approvalTextColor(rawStatus),
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade100,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            'Enviado',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+
+                                      // Badge de Resposta do RH
+                                      if (rhActions.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                            border: Border.all(
+                                                color: Colors.blue.shade100),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.chat_bubble_outline,
+                                                  size: 12,
+                                                  color: Colors.blue.shade700),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'RH Respondeu',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.blue.shade700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          if (submittedAt != null)
-                            Text(
-                              'Enviado em ${formatHuman(submittedAt)}',
+
+                          const SizedBox(height: 24),
+
+                          // Seção de Respostas
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              'SUAS RESPOSTAS',
                               style: Theme.of(context)
                                   .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: Colors.orange[800]),
-                            ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Chip(
-                                label: const Text('Formulário enviado'),
-                                backgroundColor: Colors.white,
-                              ),
-                              if (requiresApproval &&
-                                  _isApprovalStatus(rawStatus))
-                                Chip(
-                                  label: Text(mapApprovalStatus(rawStatus)),
-                                  backgroundColor:
-                                      approvalColor(rawStatus, context),
-                                ),
-                              if (attachments.isNotEmpty)
-                                Chip(
-                                  label: Text(
-                                    '${attachments.length} anexo${attachments.length > 1 ? 's' : ''}',
+                                  .labelSmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                    letterSpacing: 1.2,
                                   ),
-                                  backgroundColor: Colors.white,
-                                ),
-                              if (rhActions.isNotEmpty)
-                                const Chip(
-                                  label: Text('Com resposta do RH'),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 22),
-                          Text(
-                            'Respostas',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  color: Colors.orange[800],
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            ),
                           ),
                           const SizedBox(height: 12),
+
                           if (fields.isEmpty && answers.isEmpty)
-                            Text(
-                              'Sem respostas salvas',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: Colors.grey[600]),
-                            )
+                            const Center(
+                                child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text('Sem dados para exibir.'),
+                            ))
                           else
                             Column(
                               children: [
                                 for (int i = 0; i < fields.length; i++)
                                   _AnswerCard(
                                     field: fields[i],
-                                    answer: () {
-                                      final fid = fields[i]['id']?.toString();
-                                      if (fid != null &&
-                                          answersByField.containsKey(fid)) {
-                                        return answersByField[fid];
-                                      }
-                                      if (i < answers.length) {
-                                        return answers[i];
-                                      }
-                                      return null;
-                                    }(),
+                                    locale: locale,
+                                    answer: answersByField[
+                                        fields[i]['id']?.toString()],
                                   ),
                               ],
                             ),
 
-                          // miniaturas de anexos (se o form permite e existe)
+                          // Anexos
                           if (allowAttachments && attachments.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Text(
-                              'Anexos',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                            const SizedBox(height: 24),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                'ANEXOS',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                      letterSpacing: 1.2,
+                                    ),
+                              ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             _AttachmentStrip(
                               attachments: attachments,
                               onTap: (att) {
-                                _openAttachment(context, att);
+                                // TODO: Implementar viewer
                               },
                             ),
                           ],
 
+                          // Interações Legado (Opcional, se quiser esconder e deixar só no chat)
                           if (rhActions.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            Text(
-                              'Interações do RH',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                            const SizedBox(height: 24),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                'HISTÓRICO',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                      letterSpacing: 1.2,
+                                    ),
+                              ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             Column(
                               children: rhActions.map((rh) {
-                                final type = rh['type']?.toString() ?? 'reply';
-                                final msg = rh['message']?.toString() ?? '';
                                 return Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
+                                  margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.blueGrey.shade50,
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.grey.shade200),
                                   ),
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
                                       Icon(
-                                        type == 'approve'
+                                        rh['type'] == 'approve'
                                             ? Icons.check_circle
-                                            : type == 'reject'
-                                                ? Icons.cancel_outlined
-                                                : Icons.chat_bubble,
+                                            : rh['type'] == 'reject'
+                                                ? Icons.cancel
+                                                : Icons.info,
                                         size: 20,
-                                        color: Colors.blueGrey,
+                                        color: rh['type'] == 'approve'
+                                            ? Colors.green
+                                            : rh['type'] == 'reject'
+                                                ? Colors.red
+                                                : Colors.blue,
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 12),
                                       Expanded(
-                                        child: Text(
-                                          msg.isEmpty ? '(sem mensagem)' : msg,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              rh['type'] == 'approve'
+                                                  ? 'Aprovado pelo RH'
+                                                  : rh['type'] == 'reject'
+                                                      ? 'Rejeitado pelo RH'
+                                                      : 'Resposta do RH',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12),
+                                            ),
+                                            if (rh['message'] != null &&
+                                                rh['message']
+                                                    .toString()
+                                                    .isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                rh['message'],
+                                                style: TextStyle(
+                                                    color: Colors.grey[700],
+                                                    fontSize: 13),
+                                              ),
+                                            ]
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -290,7 +473,38 @@ class SubmissionDetailSheet extends ConsumerWidget {
                               }).toList(),
                             ),
                           ],
-                          const SizedBox(height: 30),
+
+                          const SizedBox(height: 40),
+
+                          // Botão de Chat
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => FormChatSheet(
+                                    formId: formId,
+                                    submissionId: submissionId,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.chat),
+                              label: const Text('Ver Mensagens e Responder'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.all(18),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     );
@@ -303,65 +517,34 @@ class SubmissionDetailSheet extends ConsumerWidget {
       ),
     );
   }
-
-  void _openAttachment(BuildContext context, Map<String, dynamic> att) {
-    // aqui você coloca o que o app já usa pra abrir imagem/pdf
-    // por enquanto só loga:
-    debugPrint('abrir anexo: $att');
-  }
 }
 
 class _AnswerCard extends StatelessWidget {
   final Map<String, dynamic> field;
   final Map<String, dynamic>? answer;
+  final String locale;
 
   const _AnswerCard({
     required this.field,
     this.answer,
+    required this.locale,
   });
 
   @override
   Widget build(BuildContext context) {
-    final label = field['label']?.toString() ?? 'Pergunta';
+    final label = _readTranslatable(field['label'], locale);
     final rawType =
         (answer?['type'] ?? field['type'] ?? 'short_text').toString();
     final valueStr = answer?['value']?.toString() ?? '';
-    final options = (field['options'] as List? ?? const [])
-        .map((e) => e.toString())
+    final options = (field['options'] as List? ?? [])
+        .map((e) =>
+            e is Map ? _readTranslatable(e['label'], locale) : e.toString())
         .toList();
 
     Widget valueWidget;
 
-    // ----- mapeamento dos tipos do backend -----
     switch (rawType) {
-      case 'short_text':
-      case 'long_text':
-        valueWidget = Text(
-          valueStr.isEmpty ? '—' : valueStr,
-          style: Theme.of(context).textTheme.bodyMedium,
-        );
-        break;
-      case 'number':
-        valueWidget = Text(
-          valueStr.isEmpty ? '—' : valueStr,
-          style: Theme.of(context).textTheme.bodyMedium,
-        );
-        break;
-      case 'date':
-        DateTime? d;
-        if (valueStr.isNotEmpty) {
-          d = DateTime.tryParse(valueStr);
-        }
-        final txt = d != null
-            ? '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}'
-            : (valueStr.isEmpty ? '—' : valueStr);
-        valueWidget = Text(
-          txt,
-          style: Theme.of(context).textTheme.bodyMedium,
-        );
-        break;
       case 'multi_choice':
-        // pode vir "a,b,c" ou lista
         final selected = <String>{};
         if (answer?['value'] is List) {
           for (final v in (answer!['value'] as List)) {
@@ -375,109 +558,60 @@ class _AnswerCard extends StatelessWidget {
         valueWidget = Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: options.map((opt) {
-            final sel = selected.contains(opt);
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color:
-                    sel ? Colors.orange[700]!.withOpacity(0.12) : Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: sel ? Colors.orange[700]! : Colors.grey.shade300,
-                ),
-              ),
-              child: Text(
-                opt,
-                style: TextStyle(
-                  color: sel ? Colors.orange[700] : Colors.grey.shade800,
-                ),
-              ),
-            );
-          }).toList(),
+          children: options
+              .map((opt) =>
+                  _OptionChip(label: opt, selected: selected.contains(opt)))
+              .toList(),
         );
         break;
       case 'single_choice':
-        // basicamente o que já tínhamos
         valueWidget = Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: options.map((opt) {
-            final sel = opt == valueStr;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color:
-                    sel ? Colors.orange[700]!.withOpacity(0.12) : Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: sel ? Colors.orange[700]! : Colors.grey.shade300,
-                ),
-              ),
-              child: Text(
-                opt,
-                style: TextStyle(
-                  color: sel ? Colors.orange[700] : Colors.grey.shade800,
-                ),
-              ),
-            );
-          }).toList(),
+          children: options
+              .map((opt) => _OptionChip(label: opt, selected: opt == valueStr))
+              .toList(),
         );
         break;
-      case 'stars':
-        final rating = int.tryParse(valueStr) ?? 0;
-        valueWidget = Row(
-          children: List.generate(5, (i) {
-            return Icon(
-              i < rating ? Icons.star : Icons.star_border,
-              color: Colors.orange[700],
-              size: 20,
-            );
-          }),
-        );
-        break;
-      case 'scale':
-        final selected = int.tryParse(valueStr) ?? 0;
-        final max = (field['max'] is int) ? field['max'] as int : 10;
-        valueWidget = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('$selected / $max'),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                minHeight: 5,
-                backgroundColor: Colors.grey.shade300,
-                value: max > 0 ? selected / max : 0,
-                color: Colors.orange[700],
-              ),
-            ),
-          ],
-        );
+      case 'date':
+        DateTime? d;
+        if (valueStr.isNotEmpty) d = DateTime.tryParse(valueStr);
+        valueWidget = Text(
+            d != null
+                ? '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}'
+                : (valueStr.isEmpty ? '—' : valueStr),
+            style: Theme.of(context).textTheme.bodyMedium);
         break;
       default:
-        valueWidget = Text(
-          valueStr.isEmpty ? '—' : valueStr,
-          style: Theme.of(context).textTheme.bodyMedium,
-        );
+        valueWidget = Text(valueStr.isEmpty ? '—' : valueStr,
+            style: Theme.of(context).textTheme.bodyMedium);
     }
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.transparent), // Ou border sutil
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.orange[700],
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  letterSpacing: 0.5,
                 ),
           ),
           const SizedBox(height: 8),
@@ -488,20 +622,40 @@ class _AnswerCard extends StatelessWidget {
   }
 }
 
+class _OptionChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  const _OptionChip({required this.label, required this.selected});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: selected
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade300),
+      ),
+      child: Text(label,
+          style: TextStyle(
+            fontSize: 13,
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade800,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          )),
+    );
+  }
+}
+
 class _AttachmentStrip extends StatelessWidget {
   final List<Map<String, dynamic>> attachments;
   final void Function(Map<String, dynamic>) onTap;
-
-  const _AttachmentStrip({
-    required this.attachments,
-    required this.onTap,
-  });
-
-  bool _isImage(Map<String, dynamic> att) {
-    final mime = att['mimeType']?.toString().toLowerCase() ?? '';
-    return mime.startsWith('image/');
-  }
-
+  const _AttachmentStrip({required this.attachments, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -513,61 +667,29 @@ class _AttachmentStrip extends StatelessWidget {
         itemBuilder: (context, index) {
           final att = attachments[index];
           final path = att['storagePath']?.toString() ?? 'arquivo';
-          final fileName = path.split('/').last;
-          final isImg = _isImage(att);
-
-          return InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => onTap(att),
-            child: Container(
-              width: 78,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: isImg
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      // aqui depende de como vc monta a URL da imagem
-                      child: Image.network(
-                        path,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _FileThumbFallback(name: fileName),
-                      ),
-                    )
-                  : _FileThumbFallback(name: fileName),
+          return Container(
+            width: 80,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.attach_file, size: 24, color: Colors.grey),
+                const SizedBox(height: 4),
+                Text(
+                  path.split('/').last,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _FileThumbFallback extends StatelessWidget {
-  final String name;
-  const _FileThumbFallback({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(6.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.insert_drive_file, size: 26, color: Colors.orange),
-            const SizedBox(height: 4),
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10),
-            ),
-          ],
-        ),
       ),
     );
   }

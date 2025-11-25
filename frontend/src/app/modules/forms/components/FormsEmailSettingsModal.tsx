@@ -1,29 +1,29 @@
-// src/modules/forms/components/FormEmailSettingsModal.tsx
-import React from 'react'
-import { Modal, Button, Form, Spinner } from 'react-bootstrap'
-import { FormsApi } from '../services/api'
+// src/app/modules/forms/components/FormsEmailSettingsModal.tsx
+import React from 'react';
+import { Modal, Button, Form, Spinner } from 'react-bootstrap';
+import { FormsApi } from '../services/api';
 
 type Props = {
-  show: boolean
-  onHide: () => void
-  formId: string
-}
+  show: boolean;
+  onHide: () => void;
+  formId: string;
+};
 
-type Space = { id: string; name: string }
-type Setting = { spaceId: string | null; emails: string[] }
+type Space = { id: string; name: string };
+type Setting = { spaceId: string | null; emails: string[] };
 
 export default function FormEmailSettingsModal({ show, onHide, formId }: Props) {
-  const [loading, setLoading] = React.useState(false)
-  const [saving, setSaving] = React.useState(false)
-  const [allSpaces, setAllSpaces] = React.useState<Space[]>([])
-  const [audienceSpaces, setAudienceSpaces] = React.useState<string[]>([])
-  const [items, setItems] = React.useState<Record<string, string>>({})
-  const [err, setErr] = React.useState<string | null>(null)
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [allSpaces, setAllSpaces] = React.useState<Space[]>([]);
+  const [audienceSpaces, setAudienceSpaces] = React.useState<string[]>([]);
+  const [items, setItems] = React.useState<Record<string, string>>({});
+  const [err, setErr] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!show) return
-    setLoading(true)
-    setErr(null)
+    if (!show) return;
+    setLoading(true);
+    setErr(null);
 
     Promise.all([
       FormsApi.get(formId),
@@ -31,34 +31,34 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
       FormsApi.getFormNotificationSettings(formId),
     ])
       .then(([form, segs, settings]) => {
-        const spaces: Space[] = Array.isArray(segs?.spaces) ? segs.spaces : []
-        setAllSpaces(spaces)
+        const spaces: Space[] = Array.isArray(segs?.spaces) ? segs.spaces : [];
+        setAllSpaces(spaces);
 
         const formAudience: string[] = Array.isArray(form?.audienceSpaceIds)
           ? form.audienceSpaceIds
-          : []
-        setAudienceSpaces(formAudience)
+          : [];
+        setAudienceSpaces(formAudience);
 
-        const map: Record<string, string> = {}
-        ;(settings?.items ?? []).forEach((s: Setting) => {
-          const key = s.spaceId ?? '__global__'
-          map[key] = Array.isArray(s.emails) ? s.emails.join(', ') : String(s.emails ?? '')
-        })
+        const map: Record<string, string> = {};
+        (settings?.items ?? []).forEach((s: Setting) => {
+          const key = s.spaceId ?? '__global__';
+          map[key] = Array.isArray(s.emails) ? s.emails.join(', ') : String(s.emails ?? '');
+        });
 
-        setItems(map)
+        setItems(map);
       })
       .catch((e) => setErr(String(e?.message || e)))
-      .finally(() => setLoading(false))
-  }, [show, formId])
+      .finally(() => setLoading(false));
+  }, [show, formId]);
 
   const save = async () => {
-    setSaving(true)
-    setErr(null)
+    setSaving(true);
+    setErr(null);
     try {
       const spacesToPersist =
         audienceSpaces.length > 0
           ? allSpaces.filter((s) => audienceSpaces.includes(s.id))
-          : []
+          : [];
 
       // monta tudo que o usuário digitou
       const rawList = [
@@ -76,31 +76,24 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
             .map((v) => v.trim())
             .filter(Boolean),
         })),
-      ]
+      ];
 
-      // não vamos mandar os vazios
-      const list = rawList.filter((i) => i.emails.length > 0)
+      // O backend S1 (corrigido) agora aceita o array completo
+      await FormsApi.saveFormNotificationSettings(formId, rawList);
 
-      console.log('[forms] salvando notification-settings =>', list)
-
-      // aqui está a diferença: o backend está dando INSERT em lote e tem UNIQUE,
-      // então mandamos 1 por vez pra não tombar
-      for (const item of list) {
-        await FormsApi.saveFormNotificationSettings(formId, [item])
-      }
-
-      onHide()
+      onHide();
     } catch (e: any) {
-      setErr(String(e?.message || e))
+      setErr(String(e?.message || e));
     } finally {
-      setSaving(false)
+      setSaving(false);
+
     }
-  }
+  };
 
   const visibleSpaces: Space[] =
     audienceSpaces.length > 0
       ? allSpaces.filter((s) => audienceSpaces.includes(s.id))
-      : []
+      : [];
 
   return (
     <Modal show={show} onHide={onHide} size="lg">
@@ -115,7 +108,7 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
         )}
         {err && <div className="alert alert-danger">{err}</div>}
 
-        {!loading && (
+        Não {!loading && (
           <>
             {/* global */}
             <Form.Group className="mb-4">
@@ -139,7 +132,7 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
             {audienceSpaces.length === 0 && (
               <div className="alert alert-info">
                 Este formulário está para a empresa inteira ou sem segmentação. Se quiser e-mails
-                por space, primeiro selecione os spaces na aba de segmentação.
+                section por space, primeiro selecione os spaces na aba de segmentação.
               </div>
             )}
 
@@ -158,7 +151,7 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
                   }
                 />
                 <Form.Text className="text-muted">
-                  Um ou mais e-mails para quem deve ser avisado quando alguém desse space enviar.
+                   Um ou mais e-mails para quem deve ser avisado quando alguém desse space enviar.
                 </Form.Text>
               </Form.Group>
             ))}
@@ -174,5 +167,5 @@ export default function FormEmailSettingsModal({ show, onHide, formId }: Props) 
         </Button>
       </Modal.Footer>
     </Modal>
-  )
+  );
 }

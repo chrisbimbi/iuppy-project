@@ -1,67 +1,80 @@
+// src/modules/forms/entities/form-submission.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  Index,
   CreateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm'
-import { FormEntity } from './form.entity'
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
-export type FormSubmissionStatus = 'pending' | 'replied' | 'approved' | 'rejected'
+// 🔥 NOVO STATUS 'submitted' adicionado para form que não requer aprovação
+export type FormSubmissionStatus = 'pending' | 'submitted' | 'replied' | 'approved' | 'rejected';
+export type FormChatStatus = 'open' | 'closed';
 
 @Entity('form_submission')
-@Index(['companyId', 'formId'])
+@Index(['companyId', 'formId', 'submittedAt'])
 export class FormSubmissionEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  @Index()
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  @Index()
-  formId: string
+  formId: string;
 
-  @ManyToOne(() => FormEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'formId' })
-  form?: FormEntity
+  @Column('int', { default: 1 })
+  formVersion: number;
 
   @Column('timestamptz')
-  submittedAt: Date
+  @Index()
+  submittedAt: Date;
 
   @Column('uuid', { nullable: true })
-  userId: string | null
+  @Index()
+  userId: string | null;
 
   @Column('boolean', { default: false })
-  external: boolean
+  external: boolean;
 
   @Column('text', { nullable: true })
-  externalEmail: string | null
+  externalEmail: string | null;
 
-  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  spaceIds: string[]
+  @Column('text', { array: true, nullable: true })
+  @Index({ spatial: true }) // GIN Index
+  spaceIds: string[] | null;
 
-  @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  groupIds: string[]
+  @Column('text', { array: true, nullable: true })
+  @Index({ spatial: true }) // GIN Index
+  groupIds: string[] | null;
 
   @Column('boolean', { nullable: true })
-  isOnTime: boolean | null
+  isOnTime: boolean | null;
 
   @Column('text', { default: 'pending' })
-  status: FormSubmissionStatus
+  @Index()
+  status: FormSubmissionStatus;
+
+  @Column('text', { default: 'open' })
+  @Index()
+  chatStatus: FormChatStatus;
 
   @Column('int', { default: 0 })
-  replyCount: number
+  replyCount: number; 
 
   @Column('int', { default: 0 })
-  fileCount: number
+  fileCount: number;
+
+  @Column('int', { default: 0 })
+  userUnreadChatCount: number;
 
   @Column('jsonb', { nullable: true })
-  meta: any | null
+  meta: any | null; 
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

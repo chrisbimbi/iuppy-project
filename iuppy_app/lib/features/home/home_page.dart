@@ -87,17 +87,16 @@ class _HomePageState extends ConsumerState<HomePage> {
         if (ids.isNotEmpty) {
           await _c.read(localNewsStoreProvider).markManyRead(ids);
         }
-        _c.invalidate(unreadCountersProvider);
-        _c.read(feedVersionProvider.notifier).state++;
-        return;
       }
-    } catch (_) {
-      // se der erro, segue com cache
-    }
+    } catch (_) {}
 
     await _c.read(newsRepoProvider).homeFeedRemoteFirst(maxItems: 24);
     if (!_alive) return;
+
+    // Invalida para forçar recálculo dos badges
     _c.invalidate(unreadCountersProvider);
+    _c.invalidate(formsBadgesProvider);
+
     _c.read(feedVersionProvider.notifier).state++;
   }
 
@@ -109,7 +108,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
     final name = ref.watch(authControllerProvider).userName ?? 'usuário';
 
-    // badges "cached" (fallback) — agora tem forms
+    // badges "cached" (fallback)
     final badges = ref.watch(homeBadgesProvider);
     final hasAnyNews = ref.watch(_hasAnyNewsCachedProvider).maybeWhen(
           data: (v) => v,
@@ -123,18 +122,18 @@ class _HomePageState extends ConsumerState<HomePage> {
         );
     if (!hasAnyNews) unreadNews = 0;
 
-    // badge vivo de forms (veio do core/providers.dart)
+    // 🔥 BADGE DE FORMS: Pega do provider global que já soma (Novos + Respostas)
     final unreadForms = ref.watch(formsBadgesProvider).maybeWhen(
           data: (v) => v,
           orElse: () => badges.formsNew,
         );
 
-    // soma tudo no badge de "Alertas" (índice 2)
+    // 🔥 TOTAL: News + Forms
     final totalAlerts = unreadNews + unreadForms;
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: const MenuDrawer(),
+      drawer: const MenuDrawer(), // Agora o MenuDrawer tem o badge!
       bottomNavigationBar: CurvedNavBar(
         selectedIndex: _navIndex,
         onSelected: (i) {
@@ -157,7 +156,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
         },
         badges: {
-          2: totalAlerts,
+          2: totalAlerts, // 🔥 Mostra o total no sininho
         },
       ),
       body: RefreshIndicator(

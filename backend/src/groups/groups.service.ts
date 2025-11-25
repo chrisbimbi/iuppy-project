@@ -13,15 +13,17 @@ export class GroupsService {
     @InjectRepository(UserEntity)  private userRepo: Repository<UserEntity>,
   ) {}
 
-  // ——— LIST TODOS OS GRUPOS (incluindo members) ———
+  // ——— LISTA TODOS OS GRUPOS (Leve para Dropdown) ———
   findAll(companyId: string) {
     return this.groupRepo.find({
       where: { companyId },
-      relations: ['members'],      // <<< adiciona carregamento de membros
+      order: { name: 'ASC' },
+      // 🔥 OTIMIZAÇÃO: Apenas campos essenciais, sem relations pesadas
+      select: ['id', 'name', 'identifier', 'type'], 
     });
   }
 
-  // ——— BUSCA 1 GRUPO (já carregando members) ———
+  // ——— BUSCA 1 GRUPO (Detalhe - Carrega members) ———
   async findOne(id: string): Promise<GroupEntity> {
     const g = await this.groupRepo.findOne({
       where: { id },
@@ -45,7 +47,6 @@ export class GroupsService {
     await this.groupRepo.delete(id);
   }
 
-  // ——— Membros ———
   async findMembers(groupId: string): Promise<UserEntity[]> {
     const g = await this.groupRepo.findOne({
       where: { id: groupId },
@@ -57,10 +58,7 @@ export class GroupsService {
 
   async addMember(groupId: string, userId: string): Promise<void> {
     const [g, u] = await Promise.all([
-      this.groupRepo.findOne({
-        where: { id: groupId },
-        relations: ['members'],
-      }),
+      this.groupRepo.findOne({ where: { id: groupId }, relations: ['members'] }),
       this.userRepo.findOneBy({ id: userId }),
     ]);
     if (!g) throw new NotFoundException(`Group ${groupId} not found`);
@@ -72,10 +70,7 @@ export class GroupsService {
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
-    const g = await this.groupRepo.findOne({
-      where: { id: groupId },
-      relations: ['members'],
-    });
+    const g = await this.groupRepo.findOne({ where: { id: groupId }, relations: ['members'] });
     if (!g) throw new NotFoundException(`Group ${groupId} not found`);
     g.members = g.members.filter(m => m.id !== userId);
     await this.groupRepo.save(g);

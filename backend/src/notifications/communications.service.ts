@@ -1,3 +1,4 @@
+// backend/src/modules/notifications/communications.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as admin from 'firebase-admin';
@@ -14,7 +15,7 @@ type SendPushInput = {
   deepLinkMobile?: string;
   webLink?: string;
   data?: Record<string, string | number | boolean | null | undefined>;
-  kind: 'NEWS' | string;
+  kind: 'NEWS' | 'FORM_PUBLISHED' | 'FORM_RESPONSE' | 'FORM_CHAT' | string;
   entityId?: string;
 };
 
@@ -42,6 +43,18 @@ export class CommunicationsService {
     const secure = process.env.MAIL_SECURE === 'true' || process.env.MAIL_SECURE === '1';
     this.mailFrom = process.env.MAIL_FROM || user;
     this.mailReplyTo = process.env.MAIL_REPLY_TO || undefined;
+
+    // Inicializa Firebase se ainda não estiver (Prevenção de erro)
+    if (admin.apps.length === 0) {
+       try {
+         admin.initializeApp({
+           credential: admin.credential.applicationDefault(), // ou cert
+         });
+         this.logger.log('communications: Firebase Admin initialized inside service.');
+       } catch (e) {
+         this.logger.warn('communications: Failed to init Firebase Admin (check env vars).');
+       }
+    }
 
     if (host && user && pass) {
       this.mailer = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
@@ -184,11 +197,13 @@ export class CommunicationsService {
   }
 
   private async fetchTokens(companyId: string, userIds: string[]): Promise<TokenRow[]> {
+    // 🔥 CORREÇÃO FINAL: Casting da coluna do banco para TEXT
+    // Isso permite comparar a coluna UUID com o array de texto
     return this.ds.query(
       `SELECT "userId","platform","token","id"
          FROM user_device
         WHERE "enabled"=true
-          AND "userId"=ANY($2::uuid[])
+          AND "userId"::text = ANY($2::text[]) 
           AND ("companyId"=$1 OR "companyId" IS NULL)`,
       [companyId, userIds],
     );
@@ -226,7 +241,8 @@ export class CommunicationsService {
     let html = input.html;
     let text = input.text;
 
-    if (input.template === 'forms/new-submission') {
+    // Fallback de templates apenas se html não for fornecido
+    if (!html && input.template === 'forms/new-submission') {
       const formId = input.data?.formId;
       const submissionId = input.data?.submissionId;
       const submittedAt = input.data?.submittedAt;
@@ -240,7 +256,7 @@ export class CommunicationsService {
         </ul>
       `;
       text = `Novo formulário enviado. Form: ${formId} Submissão: ${submissionId}`;
-    } else if (input.template === 'forms/deadline-reminder') {
+    } else if (!html && input.template === 'forms/deadline-reminder') {
       const title = input.data?.title || 'Formulário';
       const deadlineAt = input.data?.deadlineAt;
       html = `

@@ -1,4 +1,6 @@
-// src/modules/forms/components/AudiencePicker.tsx
+// src/app/modules/forms/components/AudiencePicker.tsx
+// (Nenhuma alteração necessária, este arquivo está correto)
+
 import React from 'react';
 import { FormsApi } from '../services/api';
 
@@ -33,6 +35,7 @@ export default function AudiencePicker({ value, onChange }: Props) {
       })
       .catch(async (e: any) => {
         try {
+          // Fallback manual (não deveria ser necessário se a API estiver correta)
           const r = await fetch('/forms/segments', {
             credentials: 'include',
             headers: { Accept: 'application/json' },

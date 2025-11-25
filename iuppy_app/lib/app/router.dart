@@ -12,12 +12,15 @@ import '../features/news/news_channel_list_page.dart';
 import '../features/news/news_detail_page.dart';
 import '../features/surveys/surveys_list_page.dart';
 import '../features/surveys/survey_detail_page.dart';
-
-// === Forms ===
 import '../features/forms/forms_list_page.dart';
 import '../features/forms/form_submit_page.dart';
-import '../features/forms/my_form_responses_page.dart';
 
+// 🔥 NOVO IMPORT
+import '../features/notifications/notifications_page.dart';
+
+// ... (GoRouterRefreshStream e _normalizeDeepLinkUri mantidos iguais) ...
+
+// ... (Provider _routerRefreshListenableProvider mantido igual) ...
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _sub;
   GoRouterRefreshStream(Stream<dynamic> stream) {
@@ -174,19 +177,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ====== FORMS ======
       GoRoute(
         path: '/forms',
-        builder: (_, __) => const FormsListPage(),
+        builder: (_, s) {
+          final tab = s.uri.queryParameters['tab'];
+          final formId = s.uri.queryParameters['formId'];
+          final subId = s.uri.queryParameters['submissionId'];
+          return FormsListPage(
+            initialTab: tab == 'my' ? 1 : 0,
+            openFormId: formId,
+            openSubmissionId: subId,
+          );
+        },
       ),
       GoRoute(
         path: '/forms/my',
-        builder: (_, __) => const MyFormResponsesPage(),
+        builder: (_, __) => const FormsListPage(initialTab: 1),
       ),
+
       GoRoute(
         path: '/forms/:id/submissions/:submissionId',
-        builder: (_, s) => _FormSubmissionDetailStub(
-          formId: s.pathParameters['id']!,
-          submissionId: s.pathParameters['submissionId']!,
-        ),
+        redirect: (context, state) {
+          final fid = state.pathParameters['id'];
+          final sid = state.pathParameters['submissionId'];
+          // 🔥 Captura a action enviada pela NotificationsPage
+          final action = state.uri.queryParameters['action'] ?? 'chat';
+          return '/forms?tab=my&formId=$fid&submissionId=$sid&action=$action';
+        },
       ),
+
       GoRoute(
         path: '/forms/:id',
         builder: (_, s) => FormSubmitPage(formId: s.pathParameters['id']!),
@@ -204,9 +221,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/groups',
         builder: (_, __) => const _Stub(title: 'Grupos'),
       ),
+
+      // 🔥 CORREÇÃO: Rota de Notificações agora aponta para a página real
       GoRoute(
         path: '/notifications',
-        builder: (_, __) => const _Stub(title: 'Notificações'),
+        builder: (_, __) => const NotificationsPage(),
       ),
     ],
   );
@@ -235,29 +254,6 @@ class _Stub extends StatelessWidget {
         ),
       ),
       body: const Center(child: Text('Em breve')),
-    );
-  }
-}
-
-// placeholder pra deep link completo
-class _FormSubmissionDetailStub extends StatelessWidget {
-  final String formId;
-  final String submissionId;
-  const _FormSubmissionDetailStub({
-    super.key,
-    required this.formId,
-    required this.submissionId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Resposta do formulário'),
-      ),
-      body: Center(
-        child: Text('Form: $formId\nSubmissão: $submissionId'),
-      ),
     );
   }
 }

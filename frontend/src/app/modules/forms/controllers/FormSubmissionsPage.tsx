@@ -1,168 +1,193 @@
-// modules/forms/controllers/FormSubmissionsPage.tsx
-import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { FormsApi } from '../services/api'
-import { Button, Modal } from 'react-bootstrap'
+// src/app/modules/forms/controllers/FormSubmissionsPage.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { FormsApi, TranslatableString } from '../services/api';
+import { Card, Spinner, Alert, Button, Table } from 'react-bootstrap';
+import { SubmissionDetailModal } from '../components/SubmissionDetailModal'; 
 
-type SubmissionItem = {
-  submissionId: string
-  submittedAt: string
-  status?: string
-  isOnTime?: boolean
-  attachments?: Array<{
-    id: string
-    filename: string
-    url?: string
-  }>
-}
+type FormInfo = {
+  id: string;
+  title: TranslatableString | string;
+  defaultLocale: string;
+  requiresApproval: boolean;
+  fields: Array<{
+    id: string;
+    label: TranslatableString | string;
+    type: string;
+    order: number;
+  }>;
+};
+
+type Submission = {
+  submissionId: string;
+  submittedAt: string;
+  status: string;
+  isOnTime: boolean;
+  external: boolean;
+  externalEmail?: string;
+  fileCount: number;
+  userId?: string;
+  userName?: string;
+  answers: Array<{
+    fieldId: string;
+    value: any;
+    type: string;
+  }>;
+};
+
+const getTranslation = (
+  field: TranslatableString | string | null | undefined,
+  locale: string,
+) => {
+  if (!field) return '';
+  if (typeof field === 'string') return field;
+  return field[locale] || field['pt-BR'] || field[Object.keys(field)[0]] || '';
+};
 
 export default function FormSubmissionsPage() {
-  const { formId } = useParams()
-  const nav = useNavigate()
-  const [data, setData] = React.useState<any>({
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: 50,
-  })
-  const [form, setForm] = React.useState<any>(null)
-  const [loading, setLoading] = React.useState(true)
+  const { formId } = useParams<{ formId: string }>();
+  const [form, setForm] = useState<FormInfo | null>(null);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
-  const [showAttachments, setShowAttachments] = React.useState(false)
-  const [currentAttachments, setCurrentAttachments] = React.useState<
-    SubmissionItem['attachments']
-  >([])
+  const [detailModalShow, setDetailModalShow] = useState(false);
+  const [currentSubId, setCurrentSubId] = useState<string | null>(null);
 
-  const openAttachments = (attachments?: SubmissionItem['attachments']) => {
-    setCurrentAttachments(attachments ?? [])
-    setShowAttachments(true)
-  }
+  const loadData = () => {
+    if (!formId) return;
+    setLoading(true);
+    setErr(null);
 
-  const closeAttachments = () => {
-    setShowAttachments(false)
-    setCurrentAttachments([])
-  }
+    Promise.all([
+      FormsApi.get(formId), 
+      FormsApi.analyticsSubmissions(formId, {
+        pageSize: '100', 
+      }),
+    ])
+      .then(([formDetail, subResponse]) => {
+        setForm(formDetail as FormInfo);
+        setSubmissions(subResponse.items as Submission[]);
+      })
+      .catch((e) => setErr(String(e?.message || e)))
+      .finally(() => setLoading(false));
+  };
 
-  const load = async () => {
-    if (!formId) return
-    setLoading(true)
+  useEffect(loadData, [formId]);
+
+  const openDetailModal = (submissionId: string) => {
+    setCurrentSubId(submissionId);
+    setDetailModalShow(true);
+  };
+
+  // 🔥 CORREÇÃO: Chamada REAL da API
+  const handleLegacyResponse = async (
+    type: 'reply' | 'approve' | 'reject', 
+    message: string
+  ) => {
+    if (!formId || !currentSubId) return;
+    
     try {
-      const [f, s] = await Promise.all([
-        FormsApi.get(formId),
-        FormsApi.submissions(formId, { page: 1, pageSize: 50 }),
-      ])
-      setForm(f)
-      setData(s)
-    } finally {
-      setLoading(false)
+      // Chama a API real (mensagem é opcional no DTO, mas passamos string vazia se null)
+      await FormsApi.respond(formId, currentSubId, { type, message: message || '' });
+      
+      setDetailModalShow(false);
+      setCurrentSubId(null);
+      loadData(); 
+    } catch (e: any) {
+      console.error('Falha ao responder', e);
+      alert('Erro ao processar ação: ' + (e.message || e));
     }
+  };
+
+  const tableColumns = useMemo(() => {
+    if (!form) return [];
+    const locale = form.defaultLocale || 'pt-BR';
+
+    const columns = [
+      { id: 'user', label: 'Usuário' },
+      { id: 'submittedAt', label: 'Data' },
+      { id: 'status', label: 'Status' },
+    ];
+
+    const fieldColumns = (form.fields || [])
+      .sort((a, b) => a.order - b.order)
+      .map(f => ({
+        id: f.id,
+        label: getTranslation(f.label, locale),
+      }));
+
+    return [...columns, ...fieldColumns];
+  }, [form]);
+
+  const getAnswerForField = (sub: Submission, fieldId: string) => {
+    const answer = sub.answers?.find(a => a.fieldId === fieldId);
+    if (!answer) return 'N/A';
+    if (Array.isArray(answer.value)) return answer.value.join(', ');
+    if (typeof answer.value === 'object' && answer.value !== null) return JSON.stringify(answer.value);
+    return String(answer.value);
+  };
+
+  if (loading && !form) {
+    return <Card><Card.Body><Spinner animation="border" size="sm" /> Carregando envios...</Card.Body></Card>;
   }
 
-  React.useEffect(() => {
-    load()
-  }, [formId])
+  if (err) return <Alert variant="danger">{err}</Alert>;
+  if (!form) return <Alert variant="warning">Formulário não encontrado.</Alert>;
 
-  const act = async (sid: string, type: 'reply' | 'approve' | 'reject') => {
-    if (!formId) return
-    await FormsApi.respond(formId, sid, { type })
-    await load()
-  }
-
-  if (loading) return <div className="p-6">Carregando…</div>
+  const formTitle = getTranslation(form.title, form.defaultLocale);
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="d-flex align-items-center justify-content-between mb-3">
-        <h1 className="text-2xl font-semibold mb-0">Submissões · {form?.title}</h1>
-        <div className="d-flex gap-2">
-          <Button variant="outline-secondary" onClick={() => nav(`/forms/${formId}/stats`)}>
-            Ver estatísticas
-          </Button>
-          <Button variant="outline-primary" onClick={load}>
-            Recarregar
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        {data.items.map((it: SubmissionItem & any) => (
-          <div
-            key={it.submissionId}
-            className="p-3 border rounded d-flex align-items-center justify-content-between"
-          >
-            <div>
-              <div className="fw-medium">{it.userName ? it.userName : it.submissionId}</div>
-              <div className="text-muted small">
-                {it.submittedAt ? new Date(it.submittedAt).toLocaleString() : '—'}
-              </div>
-              <div className="small">
-                Status: {it.status ?? '-'} {it.isOnTime ? '· no prazo' : ''}
-              </div>
-              {it.attachments && it.attachments.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-link btn-sm ps-0"
-                  onClick={() => openAttachments(it.attachments)}
-                >
-                  Ver anexos ({it.attachments.length})
-                </button>
-              )}
-            </div>
-            <div className="d-flex gap-2">
-              <Button variant="outline" onClick={() => act(it.submissionId, 'reply')}>
-                Responder
-              </Button>
-              {form?.requiresApproval && (
-                <>
-                  <Button variant="outline" onClick={() => act(it.submissionId, 'approve')}>
-                    Aprovar
-                  </Button>
-                  <Button variant="danger" onClick={() => act(it.submissionId, 'reject')}>
-                    Reprovar
-                  </Button>
-                </>
-              )}
-            </div>
+    <>
+      <Card>
+        <Card.Header>
+          <h3 className="card-title">Envios de: {formTitle}</h3>
+          <div className="card-toolbar">
+            <Link to={`/forms/${formId}/stats`} className="btn btn-sm btn-light me-2">Ver Estatísticas</Link>
+            <Link to="/forms" className="btn btn-sm btn-light-primary">Voltar</Link>
           </div>
-        ))}
-      </div>
+        </Card.Header>
+        <Card.Body className="p-0">
+          <div className="table-responsive">
+            <Table className="table table-row-dashed align-middle gs-0 gy-3 mb-0">
+              <thead>
+                <tr>
+                  {tableColumns.map(col => <th key={col.id}>{col.label}</th>)}
+                  <th className="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {submissions.map(sub => (
+                  <tr key={sub.submissionId}>
+                    <td>{sub.userName || sub.userId || (sub.external ? sub.externalEmail : 'Anônimo')}</td>
+                    <td>{new Date(sub.submittedAt).toLocaleString()}</td>
+                    <td><span className={`badge badge-light-${sub.status === 'approved' ? 'success' : sub.status === 'rejected' ? 'danger' : 'warning'}`}>{sub.status}</span></td>
+                    {(form.fields || []).sort((a, b) => a.order - b.order).map(f => (
+                      <td key={f.id}>{getAnswerForField(sub, f.id)}</td>
+                    ))}
+                    <td className="text-end">
+                      <Button variant="primary" size="sm" onClick={() => openDetailModal(sub.submissionId)}>Ver Envio</Button>
+                    </td>
+                  </tr>
+                ))}
+                {submissions.length === 0 && (
+                  <tr><td colSpan={tableColumns.length + 1} className="text-center text-muted p-4">Nenhum envio encontrado.</td></tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        </Card.Body>
+      </Card>
 
-      <Modal show={showAttachments} onHide={closeAttachments} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Anexos da submissão</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {(!currentAttachments || currentAttachments.length === 0) && (
-            <div className="text-muted">Nenhum anexo encontrado.</div>
-          )}
-          {currentAttachments && currentAttachments.length > 0 && (
-            <ul className="list-group">
-              {currentAttachments.map((att) => (
-                <li key={att.id} className="list-group-item d-flex justify-content-between">
-                  <span>{att.filename}</span>
-                  {att.url ? (
-                    <a
-                      href={att.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-sm btn-link"
-                    >
-                      Abrir
-                    </a>
-                  ) : (
-                    <span className="text-muted small">sem URL (assinar no backend)</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={closeAttachments}>
-            Fechar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </div>
-  )
+      {currentSubId && formId && (
+        <SubmissionDetailModal
+          show={detailModalShow}
+          onHide={() => setDetailModalShow(false)}
+          form={form}
+          submissionId={currentSubId}
+          onRespond={handleLegacyResponse}
+        />
+      )}
+    </>
+  );
 }

@@ -563,23 +563,33 @@ class ApiClient {
   // FORMS (NOVO MÓDULO)
   // ==========================
 
+// 🔥 NOVO: Método para buscar histórico granular
+  Future<List<Map<String, dynamic>>> getMyFormInteractions({
+    int limit = 50,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/forms/my/interactions',
+      queryParameters: {'limit': limit, 'companyId': companyId},
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
   /// Badges dos formulários (azul/vermelho)
   Future<Map<String, dynamic>> getFormBadges() async {
+    // ATUALIZADO: Rota do Blueprint S2
     final resp = await _dio.get(
-      '/forms/badges',
-      queryParameters: {'companyId': companyId},
+      '/v2/forms/analytics/badges',
       options:
           Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
     );
-
-    // volta no formato que o teu provider já usava:
-    final list = List<Map<String, dynamic>>.from(
-      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
-    );
-
-    return {
-      'items': list,
-    };
+    // O backend S2 retorna { totalNew, byForm }
+    return Map<String, dynamic>.from(resp.data as Map);
   }
 
   /// Lista formulários publicados (ou todos, conforme backend).
@@ -606,11 +616,16 @@ class ApiClient {
   /// Detalhe do formulário (inclui fields).
   Future<Map<String, dynamic>> getFormDetail(
     String id, {
+    Map<String, dynamic>? queryParameters, // ATUALIZADO (Fase 3)
     CancelToken? cancelToken,
   }) async {
+    final qp = <String, dynamic>{
+      'companyId': companyId,
+      if (queryParameters != null) ...queryParameters, // Passa 'locale'
+    };
     final resp = await _dio.get(
       '/forms/$id',
-      queryParameters: {'companyId': companyId},
+      queryParameters: qp,
       options:
           Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
       cancelToken: cancelToken,
@@ -619,12 +634,6 @@ class ApiClient {
   }
 
   /// Envia submissão do formulário (usa o endpoint que VOCÊ tem).
-  ///
-  /// Ordem:
-  /// 1) POST /forms/:id/submit           (teu endpoint do app)
-  /// 2) POST /forms/:id/submissions      (teu alias)
-  /// 3) POST /forms/public/:id/submit    (público)
-  /// 4) POST /forms/public/:id/submissions
   Future<Map<String, dynamic>> postFormSubmission(
     String formId, {
     required List<Map<String, dynamic>> answers,
@@ -658,7 +667,6 @@ class ApiClient {
       );
       return Map<String, dynamic>.from(resp.data as Map);
     } on DioException catch (e) {
-      // se não for 404, 400, 403 — rethrow
       if (e.response?.statusCode != 404 &&
           e.response?.statusCode != 400 &&
           e.response?.statusCode != 403) {
@@ -667,45 +675,9 @@ class ApiClient {
     }
 
     // 2) alias: /forms/:id/submissions
-    try {
-      final resp = await _dio.post(
-        '/forms/$formId/submissions',
-        queryParameters: {'companyId': companyId},
-        data: body,
-        options:
-            Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
-        cancelToken: cancelToken,
-      );
-      return Map<String, dynamic>.from(resp.data as Map);
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 404 &&
-          e.response?.statusCode != 400 &&
-          e.response?.statusCode != 403) {
-        rethrow;
-      }
-    }
-
-    // 3) público: /forms/public/:id/submit
-    try {
-      final resp = await _dio.post(
-        '/forms/public/$formId/submit',
-        data: body,
-        options:
-            Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
-        cancelToken: cancelToken,
-      );
-      return Map<String, dynamic>.from(resp.data as Map);
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 404 &&
-          e.response?.statusCode != 400 &&
-          e.response?.statusCode != 403) {
-        rethrow;
-      }
-    }
-
-    // 4) público alt: /forms/public/:id/submissions
     final resp = await _dio.post(
-      '/forms/public/$formId/submissions',
+      '/forms/$formId/submissions',
+      queryParameters: {'companyId': companyId},
       data: body,
       options:
           Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
@@ -719,17 +691,20 @@ class ApiClient {
     int page = 1,
     int pageSize = 50,
     String? userId,
+    String? locale, // ATUALIZADO (Fase 3)
     CancelToken? cancelToken,
   }) async {
-    // teu controller aceita /forms/:id/submissions com id='my'
-    // mas vamos manter essa rota conveniência
     final qp = <String, dynamic>{
       'companyId': companyId,
       'page': page,
       'pageSize': pageSize,
       if (userId != null && userId.isNotEmpty) 'userId': userId,
+      if (locale != null && locale.isNotEmpty)
+        'locale': locale, // Passa o locale
     };
 
+    // ATUALIZADO: Chama o endpoint /forms/:id/submissions
+    // com o 'id' especial 'my'
     final resp = await _dio.get(
       '/forms/my/submissions',
       queryParameters: qp,
@@ -741,18 +716,20 @@ class ApiClient {
   }
 
   /// Detalhe de uma submissão específica
-  ///
-  /// Como o teu controller não expõe GET /forms/:id/submissions/:submissionId,
-  /// a gente tenta alguns padrões e, se todos derem 404, faz o fallback:
-  /// lista /forms/:id/submissions e procura o item.
   Future<Map<String, dynamic>> getFormSubmissionDetail(
     String formId,
     String submissionId, {
+    String? locale, // ATUALIZADO (Fase 3)
     CancelToken? cancelToken,
   }) async {
+    final qp = <String, dynamic>{
+      'companyId': companyId,
+      if (locale != null && locale.isNotEmpty)
+        'locale': locale, // Passa o locale
+    };
     final resp = await _dio.get(
       '/forms/$formId/submissions/$submissionId',
-      queryParameters: {'companyId': companyId},
+      queryParameters: qp,
       options: Options(
         validateStatus: (s) => s != null && (s >= 200 && s < 300),
       ),
@@ -762,6 +739,48 @@ class ApiClient {
     debugPrint('===== SUBMISSION DETAIL ($formId / $submissionId) =====');
     debugPrint(resp.data.toString());
 
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  // ==================================
+  // NOVO (Fase 1 - Chat S3)
+  // ==================================
+
+  /// Busca o histórico de chat para uma submissão
+  Future<Map<String, dynamic>> getFormChatHistory(
+    String formId,
+    String submissionId, {
+    required String actor, // 'user' ou 'rh'
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/forms/$formId/submissions/$submissionId/chat',
+      queryParameters: {
+        'companyId': companyId,
+        'actor': actor,
+      },
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  /// Envia uma mensagem no chat
+  Future<Map<String, dynamic>> postFormChatMessage(
+    String formId,
+    String submissionId, {
+    required Map<String, dynamic> payload, // { message, actor }
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.post(
+      '/forms/$formId/submissions/$submissionId/chat',
+      queryParameters: {'companyId': companyId},
+      data: payload,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
     return Map<String, dynamic>.from(resp.data as Map);
   }
 }

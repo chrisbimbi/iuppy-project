@@ -1,3 +1,5 @@
+// src/app/routing/PrivateRoutes.tsx
+
 import { FC, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TopBarProgress from 'react-topbar-progress-indicator'
@@ -27,10 +29,12 @@ import ContentsOverviewPage from 'src/app/modules/analytics/views/ContentsOvervi
 import ContentPage from '../modules/communication/controllers/ContentPage'
 
 // 🔥 FORMS
-import FormEditPage from 'src/app/modules/forms/controllers/FormEditPage'
 import FormsListPage from '../modules/forms/controllers/FormsListPage'
+import FormEditPage from '../modules/forms/controllers/FormEditPage'
 import FormSubmissionsPage from '../modules/forms/controllers/FormSubmissionsPage'
 import FormStatsPage from '../modules/forms/controllers/FormStatsPage'
+// 🔥 CORREÇÃO: Importação com caminho relativo
+import FormsDashboardPage from '../modules/forms/controllers/FormsDashboardPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -48,6 +52,16 @@ const PrivateRoutes: FC = () => {
 
         {/* Analytics – visão geral de conteúdos */}
         <Route path="analytics/contents" element={<ContentsOverviewPage />} />
+
+        {/* 🔥 NOVO: Analytics – visão geral de FORMS */}
+        <Route
+          path="forms/dashboard"
+          element={
+            <RequireModule moduleKey="forms">
+              <FormsDashboardPage />
+            </RequireModule>
+          }
+        />
 
         {/* Grupos */}
         <Route path="groups" element={<GroupsPage />} />
@@ -128,7 +142,7 @@ const PrivateRoutes: FC = () => {
             </RequireModule>
           }
         />
-        {/* FORMS — submissões */}
+        {/* FORMS — submissões (inbox) */}
         <Route
           path="forms/:formId/submissions"
           element={
@@ -137,7 +151,7 @@ const PrivateRoutes: FC = () => {
             </RequireModule>
           }
         />
-        {/* FORMS — estatísticas */}
+        {/* FORMS — estatísticas (deep-dive) */}
         <Route
           path="forms/:formId/stats"
           element={

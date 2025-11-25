@@ -1,99 +1,169 @@
-// src/modules/forms/services/api.ts
-import { api } from 'src/app/api'
+// src/app/modules/forms/services/api.ts
+import { api } from 'src/app/api';
+import { saveAs } from 'file-saver'; // (npm install file-saver @types/file-saver)
 
 // fonte única do companyId no CMS
 function resolveCompanyId(): string | undefined {
-  // 1) se a página injetar isso no window
   if (typeof window !== 'undefined') {
-    const anyWin = window as any
+    const anyWin = window as any;
     if (anyWin.__COMPANY_ID__ && typeof anyWin.__COMPANY_ID__ === 'string') {
-      return anyWin.__COMPANY_ID__
+      return anyWin.__COMPANY_ID__;
     }
-    // 2) se tiver salvo no localStorage (muito comum no CMS)
     try {
-      const fromLs = window.localStorage.getItem('companyId')
-      if (fromLs) return fromLs
-    } catch (_) {
-      // ignore
-    }
+      const fromLs = window.localStorage.getItem('companyId');
+      if (fromLs) return fromLs;
+    } catch (_) { }
   }
-  return undefined
+  return undefined;
+}
+
+// Helper para adicionar companyId aos parâmetros (APENAS PARA ROTAS S1)
+function withCompanyId(params: any = {}): any {
+  const baseCompanyId = resolveCompanyId();
+  return {
+    ...params,
+    ...(params.companyId ? {} : baseCompanyId ? { companyId: baseCompanyId } : {}),
+  };
+}
+
+// Helper para download de BLOB (Excel)
+const downloadBlob = (data: any, filename: string) => {
+  const blob = new Blob([data], { type: data.type || 'application/octet-stream' });
+  saveAs(blob, filename);
+};
+
+// ==================================
+// NOVO (Fase 3): Tipo para Traduções
+// ==================================
+export type TranslatableString = {
+  [locale: string]: string;
+};
+
+// ==================================
+// ATUALIZADO (Fase 3): Payloads de DTO
+// ==================================
+interface FormFieldPayloadDto {
+  type: string; // FormFieldType
+  label: TranslatableString; // MODIFICADO
+  required?: boolean;
+  options?: Record<string, any> | null;
+  order?: number;
+}
+
+interface CreateFormPayload {
+  companyId: string;
+  title: TranslatableString; // MODIFICADO
+  description?: TranslatableString | null; // MODIFICADO
+  status?: 'draft' | 'published' | 'archived';
+  scheduleStartAt?: string | null;
+  scheduleEndAt?: string | null;
+  deadlineAt?: string | null;
+  allowMultipleSubmissions?: boolean;
+  anonymous?: boolean;
+  allowExternal?: boolean;
+  audienceSpaceIds?: string[];
+  audienceGroupIds?: string[];
+  attachmentsAllowed?: boolean;
+  attachmentHelpText?: TranslatableString | null; // MODIFICADO
+  remindersConfig?: Record<string, any> | null;
+  notificationsConfig?: Record<string, any> | null;
+  acl?: Record<string, any> | null;
+  requiresApproval?: boolean;
+  allowTranslations?: boolean;
+  defaultLocale?: string | null;
+  fields: FormFieldPayloadDto[];
+}
+
+interface UpdateFormPayload {
+  title?: TranslatableString; // MODIFICADO
+  description?: TranslatableString | null; // MODIFICADO
+  status?: 'draft' | 'published' | 'archived';
+  scheduleStartAt?: string | null;
+  scheduleEndAt?: string | null;
+  deadlineAt?: string | null;
+  allowMultipleSubmissions?: boolean;
+  anonymous?: boolean;
+  allowExternal?: boolean;
+  audienceSpaceIds?: string[];
+  audienceGroupIds?: string[];
+  attachmentsAllowed?: boolean;
+  attachmentHelpText?: TranslatableString | null; // MODIFICADO
+  remindersConfig?: Record<string, any> | null;
+  notificationsConfig?: Record<string, any> | null;
+  acl?: Record<string, any> | null;
+  requiresApproval?: boolean;
+  allowTranslations?: boolean;
+  defaultLocale?: string | null;
+  fields?: FormFieldPayloadDto[];
 }
 
 export const FormsApi = {
-  // CRUD de formulários
+  // =============================================
+  // S1: CRUD de formulários (Usam withCompanyId)
+  // =============================================
   list: (params?: { status?: string; companyId?: string }) => {
-    const baseCompanyId = resolveCompanyId()
-    const finalParams = {
-      ...(params || {}),
-      // se o caller não passou companyId, a gente coloca
-      ...(params?.companyId ? {} : baseCompanyId ? { companyId: baseCompanyId } : {}),
-    }
-
-    return api.get('/forms', { params: finalParams }).then((r) => r.data)
+    return api
+      .get('/forms', { params: withCompanyId(params) })
+      .then((r) => r.data);
   },
 
   get: (formId: string, companyId?: string) => {
-    const baseCompanyId = companyId || resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.get(`/forms/${formId}`, { params }).then((r) => r.data)
+    return api
+      .get(`/forms/${formId}`, { params: withCompanyId({ companyId }) })
+      .then((r) => r.data);
   },
 
-  create: (payload: any) => {
-    // aqui é bom garantir que o payload tenha companyId
-    const baseCompanyId = resolveCompanyId()
+  create: (payload: CreateFormPayload) => { // TIPO ATUALIZADO
+    const baseCompanyId = resolveCompanyId();
     const body = baseCompanyId
       ? { ...payload, companyId: payload?.companyId ?? baseCompanyId }
-      : payload
-
-    return api.post('/forms', body).then((r) => r.data)
+      : payload;
+    return api.post('/forms', body, { params: withCompanyId() }).then((r) => r.data);
   },
 
-  update: (formId: string, payload: any) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.patch(`/forms/${formId}`, payload, { params }).then((r) => r.data)
+  update: (formId: string, payload: UpdateFormPayload) => { // TIPO ATUALIZADO
+    return api
+      .patch(`/forms/${formId}`, payload, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
   publish: (formId: string) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.post(`/forms/${formId}/publish`, null, { params }).then((r) => r.data)
+    return api
+      .post(`/forms/${formId}/publish`, null, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
   unpublish: (formId: string) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.post(`/forms/${formId}/unpublish`, null, { params }).then((r) => r.data)
+    return api
+      .post(`/forms/${formId}/unpublish`, null, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
   duplicate: (formId: string) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.post(`/forms/${formId}/duplicate`, null, { params }).then((r) => r.data)
+    return api
+      .post(`/forms/${formId}/duplicate`, null, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
   removeMany: (ids: string[]) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.post('/forms/remove-many', { ids }, { params }).then((r) => r.data)
+    return api
+      .post('/forms/remove-many', { ids }, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
-  // segmentação
+  // =============================================
+  // S1: Segmentação e Submissões (Usam withCompanyId)
+  // =============================================
   segmentationOptions: () => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.get('/forms/segments', { params }).then((r) => r.data)
+    return api.get('/forms/segments', { params: withCompanyId() }).then((r) => r.data);
   },
 
-  // submissões (CMS)
-  submissions: (formId: string, params: any = {}) => {
-    const baseCompanyId = resolveCompanyId()
-    const finalParams = {
-      ...params,
-      ...(params.companyId ? {} : baseCompanyId ? { companyId: baseCompanyId } : {}),
-    }
-    return api.get(`/forms/${formId}/submissions`, { params: finalParams }).then((r) => r.data)
+  getSubmissionDetail: (formId: string, submissionId: string) => {
+    return api
+      .get(`/forms/${formId}/submissions/${submissionId}`, {
+        params: withCompanyId(),
+      })
+      .then((r) => r.data);
   },
 
   respond: (
@@ -101,57 +171,147 @@ export const FormsApi = {
     submissionId: string,
     payload: { type: 'reply' | 'approve' | 'reject'; message?: string },
   ) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
     return api
-      .post(`/forms/${formId}/submissions/${submissionId}/respond`, payload, { params })
-      .then((r) => r.data)
+      .post(`/forms/${formId}/submissions/${submissionId}/respond`, payload, {
+        params: withCompanyId(),
+      })
+      .then((r) => r.data);
   },
 
-  // NOVO: analytics — casando com o que tem no backend (/v2/forms/analytics/...)
-  analyticsOverview: (params: { from?: string; to?: string; timezone?: string } = {}) => {
-    const baseCompanyId = resolveCompanyId()
-    const finalParams = {
-      ...params,
-      ...(baseCompanyId ? { companyId: baseCompanyId } : {}),
-    }
-    return api.get('/v2/forms/analytics/overview', { params: finalParams }).then((r) => r.data)
+  // =============================================
+  // 🔥 S3+: API de Chat (Usam S1)
+  // =============================================
+  getChatHistory: (formId: string, submissionId: string) => {
+    return api
+      .get(`/forms/${formId}/submissions/${submissionId}/chat`, {
+        params: withCompanyId(),
+      })
+      .then((r) => r.data);
+  },
+
+  postChatMessage: (
+    formId: string,
+    submissionId: string,
+    message: string,
+  ) => {
+    // O backend sabe que quem chama a API do CMS é 'rh'
+    const payload = { message, actor: 'rh' };
+    return api
+      .post(`/forms/${formId}/submissions/${submissionId}/chat`, payload, {
+        params: withCompanyId(),
+      })
+      .then((r) => r.data);
+  },
+
+  closeChat: (formId: string, submissionId: string) => {
+    return api
+      .post(`/forms/${formId}/submissions/${submissionId}/chat/close`, null, {
+        params: withCompanyId(),
+      })
+      .then((r) => r.data);
+  },
+
+  // =============================================
+  // S2: Analytics (NÃO USAM withCompanyId)
+  // =============================================
+  analyticsOverview: (params: any = {}) => {
+    return api
+      .get('/v2/forms/analytics/overview', { params })
+      .then((r) => r.data);
+  },
+
+  analyticsList: (params: any = {}) => {
+    return api
+      .get('/v2/forms/analytics/list', { params })
+      .then((r) => r.data);
   },
 
   analyticsStats: (formId: string, params: any = {}) => {
-    const baseCompanyId = resolveCompanyId()
-    const finalParams = {
-      ...params,
-      ...(baseCompanyId ? { companyId: baseCompanyId } : {}),
-    }
     return api
-      .get(`/v2/forms/analytics/${formId}/stats`, { params: finalParams })
-      .then((r) => r.data)
+      .get(`/v2/forms/analytics/${formId}/stats`, { params })
+      .then((r) => r.data);
   },
 
-  // NOVO: e-mails por formulário
+  analyticsSubmissions: (formId: string, params: any = {}) => {
+    return api
+      .get(`/v2/forms/analytics/${formId}/submissions`, {
+        params,
+      })
+      .then((r) => r.data);
+  },
+
+  // 🔥 SPRINT 3: Novo endpoint
+  analyticsFields: (formId: string, params: any = {}) => {
+    return api
+      .get(`/v2/forms/analytics/${formId}/fields`, { params })
+      .then((r) => r.data);
+  },
+
+  // ==================================
+  // NOVO (Fase 3 - Logs)
+  // ==================================
+  analyticsGetLogs: (formId: string, params: any = {}) => {
+    // TODO: Você precisa criar este endpoint no backend (forms-analytics.controller.ts)
+    // return api.get(`/v2/forms/analytics/${formId}/logs`, { params }).then((r) => r.data);
+
+    // Simulação enquanto o backend não tem o endpoint de GET Log:
+    console.warn("FormsApi.analyticsGetLogs: Endpoint não implementado, usando mock.");
+    const mockLogs = [
+      { id: '1', createdAt: new Date().toISOString(), actorUserId: 'user_rh_123', action: 'form_published', changes: { from: 'draft', to: 'published' } },
+      { id: '2', createdAt: new Date(Date.now() - 100000).toISOString(), actorUserId: 'user_rh_123', action: 'form_created' },
+      { id: '3', createdAt: new Date(Date.now() - 200000).toISOString(), actorUserId: 'user_rh_456', action: 'submission_approved', submissionId: 'sub_abc' },
+    ];
+    return Promise.resolve({ items: mockLogs, total: 3, page: 1, pageSize: 20 });
+  },
+  // ==================================
+
+  // 🔥 GAP S2: Novo endpoint de backfill
+  analyticsRunAggregation: (date: string, formId?: string) => {
+    return api
+      .post('/v2/forms/analytics/run-aggregation', { date, formId })
+      .then((r) => r.data);
+  },
+
+  // 🔥 GAP S2: Novo endpoint de exportação
+  analyticsExport: async (body: any = {}) => {
+    const res = await api.post('/v2/forms/analytics/export', body, {
+      responseType: 'blob',
+    });
+
+    // Extrai o nome do ficheiro do header (fallback para nome genérico)
+    const disposition = res.headers['content-disposition'];
+    let filename = `export-forms-${body.formId ?? 'all'}.xlsx`;
+    if (disposition && disposition.indexOf('attachment') !== -1) {
+      const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+      const matches = filenameRegex.exec(disposition);
+      if (matches != null && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    downloadBlob(res.data, filename);
+    return res.data;
+  },
+
+  // =============================================
+  // S2: Configurações de E-mail (Usa S1)
+  // =============================================
   getFormNotificationSettings: (formId: string) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
-    return api.get(`/forms/${formId}/notification-settings`, { params }).then((r) => r.data)
+    return api
+      .get(`/forms/${formId}/notification-settings`, { params: withCompanyId() })
+      .then((r) => r.data);
   },
 
   saveFormNotificationSettings: (
     formId: string,
     items: Array<{ spaceId: string | null; emails: string[] }>,
   ) => {
-    const baseCompanyId = resolveCompanyId()
-    const params = baseCompanyId ? { companyId: baseCompanyId } : undefined
     return api
       .post(
         `/forms/${formId}/notification-settings`,
-        {
-          // se alguém mandar itens vazios daqui, o backend vai receber mesmo assim,
-          // a filtragem de vazio vamos fazer no modal pra evitar o erro do índice único
-          items,
-        },
-        { params },
+        { items },
+        { params: withCompanyId() },
       )
-      .then((r) => r.data)
+      .then((r) => r.data);
   },
-}
+};

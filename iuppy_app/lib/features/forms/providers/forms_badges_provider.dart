@@ -4,7 +4,8 @@ import 'package:iuppy_app/core/providers.dart';
 
 final formsBadgesCountProvider = FutureProvider<int>((ref) async {
   final api = ref.read(apiClientProvider);
-  // adapta para o método que você tiver no ApiClient
-  final res = await api.getFormDetail('/v2/forms/analytics/badges');
+  // CORRIGIDO: Usa o endpoint de badges
+  final res = await api.getFormBadges();
+  // O backend S2/S3 (blueprint) retorna 'totalNew'
   return (res['totalNew'] as int?) ?? 0;
 });
