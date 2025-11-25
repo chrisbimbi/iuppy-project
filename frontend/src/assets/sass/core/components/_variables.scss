@@ -334,19 +334,19 @@ $border-radius-xl: 1rem !default;
 $border-radius-2xl: 2rem !default;
 $border-radius-pill: 50rem !default;
 
-// Keenthemes hover states
+// iuppy! hover states
 $component-hover-color: $primary !default;
 $component-hover-bg: $gray-100 !default;
 
-// Keenthemes active states
+// iuppy! active states
 $component-active-color: $primary-inverse !default;
 $component-active-bg: $primary !default;
 
-// Keenthemes checked states
+// iuppy! checked states
 $component-checked-color: $primary-inverse !default;
 $component-checked-bg: $primary !default;
 
-// Keenthemes custom transition settings
+// iuppy! custom transition settings
 $transition-link: color .2s ease !default;
 $transition-input: color .2s ease !default;
 
@@ -358,7 +358,7 @@ $box-shadow: 0 .5rem 1.5rem 0.5rem rgba($black, .075) !default;
 $box-shadow-lg: 0 1rem 2rem 1rem rgba($black, .1) !default;
 $box-shadow-inset: inset 0 1px 2px rgba($black, .075) !default;
 
-// Keenthemes custom gutter sizes
+// iuppy! custom gutter sizes
 $gutters: (
 	0: 0rem,
 	1: ($spacer * .25),
@@ -411,7 +411,7 @@ $line-height-base: 1.5 !default;
 $line-height-sm: 1.25 !default;
 $line-height-lg: 1.75 !default;
 
-// Keenthemes custom line heights
+// iuppy! custom line heights
 $line-height-xl: 2 !default;
 $line-height-xxl: 2.25 !default;
 
@@ -664,7 +664,7 @@ $input-plaintext-color: var(--#{$prefix}gray-700) !default;
 
 $inpur-autifill-bg-color: var(--#{$prefix}gray-100) !default;
 
-// Keenthemes solid input style
+// iuppy! solid input style
 $input-solid-color: var(--#{$prefix}gray-700) !default;
 $input-solid-bg: var(--#{$prefix}gray-100) !default;
 $input-solid-bg-focus: var(--#{$prefix}gray-200) !default;
@@ -1083,7 +1083,7 @@ $letter-spacing-values: (
 	n5: -0.5rem,
 	) !default;
 
-// Keenthemes hight and width sizes
+// iuppy! hight and width sizes
 $custom-sizes: (
 	unset: unset,
 	25: 25%,
@@ -1147,7 +1147,7 @@ $custom-sizes: (
 	1000px: 1000px) !default;
 
 
-// Keenthemes symbol component
+// iuppy! symbol component
 $symbol-sizes: (
 	20px: 20px,
 	25px: 25px,
@@ -1175,12 +1175,12 @@ $symbol-border-color: rgba(var(--#{$prefix}body-bg), 0.5
 $symbol-label-color: var(--#{$prefix}gray-800);
 $symbol-label-bg: var(--#{$prefix}gray-100);
 
-// Keenthemes timeline component
+// iuppy! timeline component
 $timeline-icon-size: 38px;
 $timeline-icon-space: 0.35rem;
 
 
-// Keenthemes bullet component
+// iuppy! bullet component
 $bullet-bg-color: var(--#{$prefix}gray-400) !default;
 $bullet-dot-size: 4px !default;
 $bullet-bar-height: 4px !default;
@@ -1190,7 +1190,7 @@ $bullet-line-height: 1px !default;
 $bullet-line-width: 5px !default;
 
 
-// Keenthemes scrolltop component
+// iuppy! scrolltop component
 $scrolltop-z-index: 105 !default;
 $scrolltop-opacity: 0 !default;
 $scrolltop-opacity-on: 0.3 !default;
@@ -1207,11 +1207,11 @@ $scrolltop-bg-color-hover: var(--#{$prefix}primary) !default;
 $scrolltop-icon-color: var(--#{$prefix}primary-inverse) !default;
 $scrolltop-icon-color-hover: var(--#{$prefix}primary-inverse) !default;
 
-// Keenthemes sticky toolbar component
+// iuppy! sticky toolbar component
 $sticky-toolbar-z-index: 95 !default;
 
 
-// Keenthemes drawer component
+// iuppy! drawer component
 $drawer-z-index: 110 !default;
 $drawer-box-shadow: 0px 1px 9px -3px rgba(0, 0, 0, 0.05) !default;
 $drawer-bg-color: $body-bg !default;
@@ -1219,7 +1219,7 @@ $drawer-transition-speed: 0.3s !default;
 $drawer-overlay-bg-color: rgba($black, 0.2) !default;
 $drawer-overlay-animation-speed: 0.3s !default;
 
-// Keenthemes menu component   
+// iuppy! menu component   
 $menu-dropdown-box-shadow: $dropdown-box-shadow !default;
 $menu-dropdown-z-index: 107 !default;
 $menu-dropdown-bg-color: $dropdown-bg !default;
@@ -1251,14 +1251,14 @@ $menu-arrow-size: 9px !default;
 $menu-arrow-space: 5px !default;
 $menu-heading-color: $text-muted !default;
 
-// Keenthemes tree component
+// iuppy! tree component
 $tree-icon-size: 16px !default;
 $tree-icon-gap: 14px !default;
 $tree-node-padding-y: 0.35rem !default;
 $tree-node-padding-x: 1.25rem !default;
 
 
-// Keenthemes scrollbar component 
+// iuppy! scrollbar component 
 $scrollbar-size: 5px !default;
 $scrollbar-overlay-size: 19px !default;
 $scrollbar-overlay-space: 7px !default;
@@ -1266,25 +1266,25 @@ $scrollbar-color: $gray-200 !default;
 $scrollbar-hover-color: $gray-300 !default;
 $body-scrollbar-width: 15px !default;
 
-// Keenthemes overlay component 
+// iuppy! overlay component 
 $overlay-bg: rgba($black, 0.05) !default;
 
-// Keenthemes blockui component 
+// iuppy! blockui component 
 $blockui-overlay-bg: rgba($black, 0.05) !default;
 $blockui-message-bg: $tooltip-bg !default;
 $blockui-message-box-shadow: $tooltip-box-shadow !default;
 
-// Keenthemes rating component 
+// iuppy! rating component 
 $rating-color-default: $gray-400 !default;
 $rating-color-active: #FFAD0F !default;
 
-// Keenthemes ribbon component 
+// iuppy! ribbon component 
 $ribbon-label-box-shadow: 0px -1px 5px 0px rgba($dark, 0.1) !default;
 $ribbon-label-bg: $primary !default;
 $ribbon-label-border-color: darken($primary, 20%) !default;
 $ribbon-clip-bg: $dark !default;
 
-// Keenthemes fixed component 
+// iuppy! fixed component 
 $fixed-z-index: 101 !default;
 
 // Engage panel

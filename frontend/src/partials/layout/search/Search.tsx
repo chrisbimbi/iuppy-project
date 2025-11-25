@@ -421,7 +421,7 @@ const Search: FC = () => {
 
                   <div className='d-flex flex-column'>
                     <a href='/#' className='fs-6 text-gray-800 text-hover-primary fw-bold'>
-                      BoomApp by Keenthemes
+                      BoomApp by iuppy!
                     </a>
                     <span className='fs-7 text-muted fw-bold'>#45789</span>
                   </div>

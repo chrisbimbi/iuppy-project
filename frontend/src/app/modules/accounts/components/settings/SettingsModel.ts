@@ -74,9 +74,9 @@ export const profileDetailsInitValues: IProfileDetails = {
   avatar: "media/avatars/300-1.jpg",
   fName: "Max",
   lName: "Smith",
-  company: "Keenthemes",
+  company: "iuppy!",
   contactPhone: "044 3276 454 935",
-  companySite: "keenthemes.com",
+  companySite: "iuppy.com.br",
   country: "",
   language: "",
   timeZone: "",
@@ -89,7 +89,7 @@ export const profileDetailsInitValues: IProfileDetails = {
 };
 
 export const updateEmail: IUpdateEmail = {
-  newEmail: "support@keenthemes.com",
+  newEmail: "support@iuppy.com.br",
   confirmPassword: "",
 };
 

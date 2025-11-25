@@ -241,7 +241,7 @@ export default function FormStatsPage() {
     ] ?? (data.form.title as string);
 
   return (
-    <>
+    <div className="container-xxl">
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
           <h1 className="mb-0 fs-2">{formTitle}</h1>
@@ -337,7 +337,7 @@ export default function FormStatsPage() {
           <AuditLogsTab formId={formId!} filters={filters} />
         </Tab>
       </Tabs>
-    </>
+    </div>
   );
 }
 

@@ -235,7 +235,7 @@ export function Settings() {
           <div className='row'>
             <label className='col-xl-3'></label>
             <div className='col-lg-9 col-xl-6'>
-              <h5 className='fw-bold mb-6'>Updates From Keenthemes:</h5>
+              <h5 className='fw-bold mb-6'>Updates From iuppy!:</h5>
             </div>
           </div>
 
@@ -249,18 +249,18 @@ export function Settings() {
                   className='form-check-input'
                   type='checkbox'
                   id='kt_checkbox_7'
-                  checked={data.updatesFromKeenthemes.newsAboutKTProducts}
+                  checked={data.updatesFromiuppy!.newsAboutKTProducts}
                   onChange={() =>
                     updateData({
-                      updatesFromKeenthemes: {
-                        ...data.updatesFromKeenthemes,
-                        newsAboutKTProducts: !data.updatesFromKeenthemes.newsAboutKTProducts,
+                      updatesFromiuppy!: {
+                        ...data.updatesFromiuppy!,
+                        newsAboutKTProducts: !data.updatesFromiuppy!.newsAboutKTProducts,
                       },
                     })
                   }
                 />
                 <label className='form-check-label fw-bold text-gray-600' htmlFor='kt_checkbox_7'>
-                  News about Keenthemes products and feature updates
+                  News about iuppy! products and feature updates
                 </label>
               </div>
               <div className='form-check form-check-custom form-check-solid mb-3'>
@@ -268,12 +268,12 @@ export function Settings() {
                   className='form-check-input'
                   type='checkbox'
                   id='kt_checkbox_8'
-                  checked={data.updatesFromKeenthemes.tipsOnGettingMore}
+                  checked={data.updatesFromiuppy!.tipsOnGettingMore}
                   onChange={() =>
                     updateData({
-                      updatesFromKeenthemes: {
-                        ...data.updatesFromKeenthemes,
-                        tipsOnGettingMore: !data.updatesFromKeenthemes.tipsOnGettingMore,
+                      updatesFromiuppy!: {
+                        ...data.updatesFromiuppy!,
+                        tipsOnGettingMore: !data.updatesFromiuppy!.tipsOnGettingMore,
                       },
                     })
                   }
@@ -287,12 +287,12 @@ export function Settings() {
                   className='form-check-input'
                   type='checkbox'
                   id='kt_checkbox_9'
-                  checked={data.updatesFromKeenthemes.thingsYouMissed}
+                  checked={data.updatesFromiuppy!.thingsYouMissed}
                   onChange={() =>
                     updateData({
-                      updatesFromKeenthemes: {
-                        ...data.updatesFromKeenthemes,
-                        tipsOnGettingMore: !data.updatesFromKeenthemes.thingsYouMissed,
+                      updatesFromiuppy!: {
+                        ...data.updatesFromiuppy!,
+                        tipsOnGettingMore: !data.updatesFromiuppy!.thingsYouMissed,
                       },
                     })
                   }
@@ -306,18 +306,18 @@ export function Settings() {
                   className='form-check-input'
                   type='checkbox'
                   id='kt_checkbox_10'
-                  checked={data.updatesFromKeenthemes.newsAboutKTPartners}
+                  checked={data.updatesFromiuppy!.newsAboutKTPartners}
                   onChange={() =>
                     updateData({
-                      updatesFromKeenthemes: {
-                        ...data.updatesFromKeenthemes,
-                        newsAboutKTPartners: !data.updatesFromKeenthemes.newsAboutKTPartners,
+                      updatesFromiuppy!: {
+                        ...data.updatesFromiuppy!,
+                        newsAboutKTPartners: !data.updatesFromiuppy!.newsAboutKTPartners,
                       },
                     })
                   }
                 />
                 <label className='form-check-label fw-bold text-gray-600' htmlFor='kt_checkbox_10'>
-                  News about Keenthemes on partner products and other services
+                  News about iuppy! on partner products and other services
                 </label>
               </div>
             </div>

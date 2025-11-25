@@ -127,6 +127,18 @@ export class FormsAnalyticsService implements OnModuleInit {
     }
   }
 
+  private formatMsToHuman(ms: number | null | undefined): string {
+    if (ms === null || ms === undefined) return 'N/A';
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds.toFixed(0)}s`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${minutes.toFixed(0)}m`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${hours.toFixed(1)}h`;
+    const days = hours / 24;
+    return `${days.toFixed(1)}d`;
+  }
+
   // --- AGGREGATION ---
   async runDailyAggregation(companyId: string, dateStr: string, formId?: string) {
     const date = new Date(dateStr);
@@ -187,7 +199,6 @@ export class FormsAnalyticsService implements OnModuleInit {
 
     const results = await Promise.allSettled([
       // 0: KPIs Gerais
-      // 🔥 CORREÇÃO: Contagem de RH Replies ignora 'submitted' (novo status) e 'pending'.
       this.safeQuery(`
         SELECT
           COUNT(*)::int AS "totalSubmissions",
@@ -207,7 +218,6 @@ export class FormsAnalyticsService implements OnModuleInit {
       // 1,2,3: Totais e Backlog
       this.safeQuery(`SELECT COUNT(*)::int AS c FROM form WHERE "companyId" = $1`, [companyId]),
       this.safeQuery(`SELECT COUNT(*)::int AS c FROM form_field WHERE "companyId" = $1`, [companyId]),
-      // Backlog inclui 'submitted' (novo) e 'pending'
       this.safeQuery(`SELECT COUNT(*)::int AS c FROM form_submission WHERE "companyId"=$1 AND status IN ('pending', 'submitted')`, [companyId]),
       // 4: Série Diária
       this.safeQuery(`
@@ -222,21 +232,21 @@ export class FormsAnalyticsService implements OnModuleInit {
         WHERE s."companyId"=$1 ${filters.where}
         GROUP BY s."formId", f.title ORDER BY submissions DESC LIMIT 10
       `, params),
-      // 6: Top Spaces (Engajamento)
+      // 6: Top Spaces
       this.safeQueryOptional(`
         WITH expanded AS (SELECT s."companyId", unnest(s."spaceIds") AS "spaceIdText" FROM form_submission s WHERE s."companyId"=$1 AND s."spaceIds" IS NOT NULL ${filters.where})
         SELECT e."spaceIdText" AS "spaceId", COALESCE(sp.name, e."spaceIdText") AS name, COUNT(*)::int AS submissions
         FROM expanded e LEFT JOIN ${this.tableNames.space} sp ON sp.id::text = e."spaceIdText" AND sp."companyId"=$1
         GROUP BY e."spaceIdText", name ORDER BY submissions DESC LIMIT 10
       `, params),
-      // 7: Top Grupos (Engajamento)
+      // 7: Top Grupos
       this.safeQueryOptional(`
         WITH expanded AS (SELECT s."companyId", unnest(s."groupIds") AS "groupIdText" FROM form_submission s WHERE s."companyId"=$1 AND s."groupIds" IS NOT NULL ${filters.where})
         SELECT e."groupIdText" AS "groupId", COALESCE(g.name, e."groupIdText") AS name, COUNT(*)::int AS submissions
         FROM expanded e LEFT JOIN ${this.tableNames.group} g ON g.id::text = e."groupIdText" AND g."companyId"=$1
         GROUP BY e."groupIdText", name ORDER BY submissions DESC LIMIT 10
       `, params),
-      // 8: Top Usuários (Engajamento)
+      // 8: Top Usuários
       this.safeQueryOptional(`
         SELECT s."userId", COALESCE(u.name, s."userId") AS name, COUNT(*)::int AS submissions
         FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id::text = s."userId"
@@ -258,7 +268,6 @@ export class FormsAnalyticsService implements OnModuleInit {
         formsWithSubmissions: Number(k.formsWithSubmissions || 0),
         onTimeRate: k.totalSubmissions > 0 ? Number(k.onTime || 0) / k.totalSubmissions : 0,
         externalRate: k.totalSubmissions > 0 ? Number(k.external || 0) / k.totalSubmissions : 0,
-        rhReplies: Number(k.rhReplies || 0),
         rhResponseRate: k.totalSubmissions > 0 ? Number(k.rhReplies || 0) / k.totalSubmissions : 0,
         attachmentsShare: k.totalSubmissions > 0 ? Number(k.attachments || 0) / k.totalSubmissions : 0,
         backlog: Number(getResult(3, [{ c: 0 }])[0]?.c || 0),
@@ -315,7 +324,7 @@ export class FormsAnalyticsService implements OnModuleInit {
     const results = await Promise.allSettled([
       // 0: Form
       this.safeQuery(`SELECT id, title, status, "deadlineAt", anonymous, "allowExternal", "defaultLocale" FROM form WHERE "companyId"=$1 AND id=$2::uuid LIMIT 1`, [companyId, formId]),
-      // 1: KPIs (RH Replies corrigido)
+      // 1: KPIs
       this.safeQuery(`
         SELECT
           COUNT(*)::int AS submissions,
@@ -456,36 +465,109 @@ export class FormsAnalyticsService implements OnModuleInit {
     const countOccurrences = (phrases: string[]) => { const counts = phrases.reduce((acc, p) => { acc[p] = (acc[p] || 0) + 1; return acc; }, {} as Record<string, number>); return Object.entries(counts).map(([phrase, count]) => ({ phrase, count })).sort((a, b) => b.count - a.count); };
     return { topWords, bigrams: countOccurrences(Ngrams.bigrams(validTokens).map((g) => g.join(' '))).slice(0, 20), trigrams: countOccurrences(Ngrams.trigrams(validTokens).map((g) => g.join(' '))).slice(0, 20) };
   }
+
   async submissions(companyId: string, formId: string, q: DateRange, from: string, to: string, page: number, pageSize: number) {
     const filters = this.buildFilterWhere(q, 's', 3); const params = [companyId, formId, ...filters.params];
     const items = await this.safeQuery(`SELECT s.id AS "submissionId", s."submittedAt", s.status, s."isOnTime", s.external, s."externalEmail", s."fileCount", s."spaceIds", s."groupIds", s."userId", u.name AS "userName", jsonb_agg(jsonb_build_object('fieldId', a."fieldId", 'value', a.value, 'type', a.type)) FILTER (WHERE a.id IS NOT NULL) AS answers FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id::text=s."userId" LEFT JOIN form_answer a ON a."submissionId"=s.id WHERE s."companyId"=$1 AND s."formId"=$2::uuid ${filters.where} GROUP BY s.id, u.name ORDER BY s."submittedAt" DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`, params);
     const totalRow = await this.safeQuery(`SELECT COUNT(*) AS c FROM form_submission s WHERE s."companyId"=$1 AND s."formId"=$2::uuid ${filters.where}`, params);
     return { total: Number(totalRow?.[0]?.c || 0), page, pageSize, items };
   }
+
   async analyticsGetLogs(companyId: string, formId: string, q: DateRange) {
     const { from, to } = this.normalizeRange(q);
     const logs = await this.safeQuery(`SELECT l.id, l."createdAt", l.action, l."formId", l."submissionId", l.changes, l."actorUserId", u.name AS "actorName" FROM form_audit_log l LEFT JOIN ${this.tableNames.user} u ON u.id::text = l."actorUserId" WHERE l."companyId"=$1 AND l."formId"=$2::uuid AND l."createdAt">=$3::timestamptz AND l."createdAt"<($4::date + INTERVAL '1 day') ORDER BY l."createdAt" DESC LIMIT 100`, [companyId, formId, from, to]);
     return { items: logs, total: logs.length };
   }
+
   async formNotifications(companyId: string, formId: string, q: DateRange) {
     const { from, to } = this.normalizeRange(q);
     const rows = await this.safeQuery(`SELECT id, "userId", channel, type, ts, meta FROM notification_event WHERE "companyId"=$1 AND "objectType"='form' AND "objectId"=$2::text AND ts>=$3::timestamptz AND ts<($4::date + INTERVAL '1 day') ORDER BY ts DESC LIMIT 200`, [companyId, formId, from, to]);
     return { items: rows };
   }
+
   async formReminders(companyId: string, formId: string, q: DateRange) {
     const { from, to } = this.normalizeRange(q);
     const events = await this.safeQuery(`SELECT id, "formId", kind, type, meta, ts FROM reminder_event WHERE "companyId"=$1 AND "formId"=$2::uuid AND ts>=$3::timestamptz AND ts<($4::date + INTERVAL '1 day') ORDER BY ts DESC`, [companyId, formId, from, to]);
     return { items: events };
   }
+
+  // =================================================================
+  // 🔥 BADGES INTELIGENTES (SLA + CHAT)
+  // =================================================================
   async badges(companyId: string, cmsUserId: string) {
-    const rows = await this.safeQuery(`SELECT b."formId", f.title, b."lastSeenAt", b."newCount" FROM form_badge_state b LEFT JOIN form f ON f.id=b."formId" AND f."companyId"=b."companyId" WHERE b."companyId"=$1 AND b."cmsUserId"=$2 ORDER BY b."lastSeenAt" DESC NULLS LAST`, [companyId, cmsUserId]);
-    return { totalNew: rows.reduce((a: number, r: any) => a + (r.newCount || 0), 0), byForm: rows };
+    // Lógica:
+    // 1. Fazemos LEFT JOIN com form_badge_state para saber quando o RH viu por último (lastSeenAt).
+    // 2. Contamos Submissões Novas (created > lastSeenAt).
+    // 3. Contamos Chats de Usuário Novos (created > lastSeenAt).
+    // 4. Somamos tudo.
+
+    const sql = `
+      WITH state AS (
+         SELECT "formId", "lastSeenAt" 
+         FROM form_badge_state 
+         WHERE "companyId" = $1 AND "cmsUserId" = $2
+      ),
+      counts AS (
+         SELECT 
+            f.id as "formId",
+            f.title->>COALESCE(f."defaultLocale", 'pt-BR') as title,
+            COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz) as last_seen,
+            
+            (SELECT COUNT(*) 
+             FROM form_submission s 
+             WHERE s."formId" = f.id 
+               AND s."createdAt" > COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz)
+            )::int as new_subs,
+            
+            (SELECT COUNT(*) 
+             FROM form_submission_chat c 
+             JOIN form_submission s2 ON s2.id = c."submissionId"
+             WHERE s2."formId" = f.id
+               AND c.actor = 'user'
+               AND c."createdAt" > COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz)
+            )::int as new_chats
+
+         FROM form f
+         LEFT JOIN state st ON st."formId" = f.id
+         WHERE f."companyId" = $1 
+           AND f.status = 'published'
+      )
+      SELECT 
+        "formId", 
+        title, 
+        (new_subs + new_chats)::int as "newCount",
+        last_seen as "lastSeenAt"
+      FROM counts
+      WHERE (new_subs + new_chats) > 0
+      ORDER BY "newCount" DESC
+    `;
+
+    const rows = await this.ds.query(sql, [companyId, cmsUserId]);
+
+    const totalNew = rows.reduce((acc: number, r: any) => acc + (r.newCount || 0), 0);
+
+    return {
+      totalNew,
+      byForm: rows
+    };
   }
+
   async ackBadges(companyId: string, cmsUserId: string, body: { formId?: string; all?: boolean }) {
-    if (body.all) await this.safeQuery(`UPDATE form_badge_state SET "lastSeenAt" = now(), "newCount" = 0 WHERE "companyId" = $1 AND "cmsUserId" = $2`, [companyId, cmsUserId]);
-    else if (body.formId) await this.safeQuery(`INSERT INTO form_badge_state("companyId","cmsUserId","formId","lastSeenAt","newCount") VALUES ($1,$2,$3,now(),0) ON CONFLICT ("companyId","cmsUserId","formId") DO UPDATE SET "lastSeenAt" = EXCLUDED."lastSeenAt", "newCount" = 0`, [companyId, cmsUserId, body.formId]);
+    // "Resolver": Atualiza o lastSeenAt para AGORA. Isso zera a contagem da query acima.
+    if (body.all) {
+      await this.safeQuery(`UPDATE form_badge_state SET "lastSeenAt" = now(), "newCount" = 0 WHERE "companyId" = $1 AND "cmsUserId" = $2`, [companyId, cmsUserId]);
+    } else if (body.formId) {
+      await this.ds.query(
+        `INSERT INTO form_badge_state("companyId", "cmsUserId", "formId", "lastSeenAt", "newCount") 
+         VALUES ($1, $2, $3, now(), 0) 
+         ON CONFLICT ("companyId", "cmsUserId", "formId") 
+         DO UPDATE SET "lastSeenAt" = now(), "newCount" = 0`,
+        [companyId, cmsUserId, body.formId]
+      );
+    }
     return { ok: true };
   }
+
   async exportAnalytics(companyId: string, body: ExportBody): Promise<Buffer> {
     const { from, to } = this.normalizeRange(body.filters ?? {}); const filters = body.filters ?? {};
     const [overviewData, listData, statsData, submissionsData, fieldsData] = await Promise.all([this.overview(companyId, filters), this.list(companyId, { ...filters, page: 1, pageSize: 99999 }), body.formId ? this.formStats(companyId, body.formId, filters) : Promise.resolve(null), body.formId ? this.submissions(companyId, body.formId, filters, from, to, 1, 99999) : Promise.resolve(null), body.formId ? this.getFieldsStats(companyId, body.formId, filters) : Promise.resolve(null)]);

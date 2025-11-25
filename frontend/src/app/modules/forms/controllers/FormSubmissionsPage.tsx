@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FormsApi, TranslatableString } from '../services/api';
 import { Card, Spinner, Alert, Button, Table } from 'react-bootstrap';
-import { SubmissionDetailModal } from '../components/SubmissionDetailModal'; 
+import { SubmissionDetailModal } from '../components/SubmissionDetailModal';
 
 type FormInfo = {
   id: string;
@@ -60,9 +60,9 @@ export default function FormSubmissionsPage() {
     setErr(null);
 
     Promise.all([
-      FormsApi.get(formId), 
+      FormsApi.get(formId),
       FormsApi.analyticsSubmissions(formId, {
-        pageSize: '100', 
+        pageSize: '100',
       }),
     ])
       .then(([formDetail, subResponse]) => {
@@ -82,18 +82,18 @@ export default function FormSubmissionsPage() {
 
   // 🔥 CORREÇÃO: Chamada REAL da API
   const handleLegacyResponse = async (
-    type: 'reply' | 'approve' | 'reject', 
+    type: 'reply' | 'approve' | 'reject',
     message: string
   ) => {
     if (!formId || !currentSubId) return;
-    
+
     try {
       // Chama a API real (mensagem é opcional no DTO, mas passamos string vazia se null)
       await FormsApi.respond(formId, currentSubId, { type, message: message || '' });
-      
+
       setDetailModalShow(false);
       setCurrentSubId(null);
-      loadData(); 
+      loadData();
     } catch (e: any) {
       console.error('Falha ao responder', e);
       alert('Erro ao processar ação: ' + (e.message || e));
@@ -138,56 +138,61 @@ export default function FormSubmissionsPage() {
   const formTitle = getTranslation(form.title, form.defaultLocale);
 
   return (
-    <>
-      <Card>
-        <Card.Header>
-          <h3 className="card-title">Envios de: {formTitle}</h3>
-          <div className="card-toolbar">
-            <Link to={`/forms/${formId}/stats`} className="btn btn-sm btn-light me-2">Ver Estatísticas</Link>
-            <Link to="/forms" className="btn btn-sm btn-light-primary">Voltar</Link>
-          </div>
-        </Card.Header>
-        <Card.Body className="p-0">
-          <div className="table-responsive">
-            <Table className="table table-row-dashed align-middle gs-0 gy-3 mb-0">
-              <thead>
-                <tr>
-                  {tableColumns.map(col => <th key={col.id}>{col.label}</th>)}
-                  <th className="text-end">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map(sub => (
-                  <tr key={sub.submissionId}>
-                    <td>{sub.userName || sub.userId || (sub.external ? sub.externalEmail : 'Anônimo')}</td>
-                    <td>{new Date(sub.submittedAt).toLocaleString()}</td>
-                    <td><span className={`badge badge-light-${sub.status === 'approved' ? 'success' : sub.status === 'rejected' ? 'danger' : 'warning'}`}>{sub.status}</span></td>
-                    {(form.fields || []).sort((a, b) => a.order - b.order).map(f => (
-                      <td key={f.id}>{getAnswerForField(sub, f.id)}</td>
-                    ))}
-                    <td className="text-end">
-                      <Button variant="primary" size="sm" onClick={() => openDetailModal(sub.submissionId)}>Ver Envio</Button>
-                    </td>
-                  </tr>
-                ))}
-                {submissions.length === 0 && (
-                  <tr><td colSpan={tableColumns.length + 1} className="text-center text-muted p-4">Nenhum envio encontrado.</td></tr>
-                )}
-              </tbody>
-            </Table>
-          </div>
-        </Card.Body>
-      </Card>
+    <div className="container-xxl">
+      <div className="app-page" id="kt_app_page">
 
-      {currentSubId && formId && (
-        <SubmissionDetailModal
-          show={detailModalShow}
-          onHide={() => setDetailModalShow(false)}
-          form={form}
-          submissionId={currentSubId}
-          onRespond={handleLegacyResponse}
-        />
-      )}
-    </>
+        <Card>
+          <Card.Header>
+            <h3 className="card-title">Envios de: {formTitle}</h3>
+            <div className="card-toolbar">
+              <Link to={`/forms/${formId}/stats`} className="btn btn-sm btn-light me-2">Ver Estatísticas</Link>
+              <Link to="/forms" className="btn btn-sm btn-light-primary">Voltar</Link>
+            </div>
+          </Card.Header>
+          <Card.Body className="p-0">
+            <div className="card-body py-3">
+              <div className="table-responsive">
+                <table className="table align-middle table-row-dashed fs-6 gy-5">
+                  <thead>
+                    <tr>
+                      {tableColumns.map(col => <th key={col.id}>{col.label}</th>)}
+                      <th className="text-end">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submissions.map(sub => (
+                      <tr key={sub.submissionId}>
+                        <td>{sub.userName || sub.userId || (sub.external ? sub.externalEmail : 'Anônimo')}</td>
+                        <td>{new Date(sub.submittedAt).toLocaleString()}</td>
+                        <td><span className={`badge badge-light-${sub.status === 'approved' ? 'success' : sub.status === 'rejected' ? 'danger' : 'warning'}`}>{sub.status}</span></td>
+                        {(form.fields || []).sort((a, b) => a.order - b.order).map(f => (
+                          <td key={f.id}>{getAnswerForField(sub, f.id)}</td>
+                        ))}
+                        <td className="text-end">
+                          <Button variant="primary" size="sm" onClick={() => openDetailModal(sub.submissionId)}>Ver Envio</Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {submissions.length === 0 && (
+                      <tr><td colSpan={tableColumns.length + 1} className="text-center text-muted p-4">Nenhum envio encontrado.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+
+        {currentSubId && formId && (
+          <SubmissionDetailModal
+            show={detailModalShow}
+            onHide={() => setDetailModalShow(false)}
+            form={form}
+            submissionId={currentSubId}
+            onRespond={handleLegacyResponse}
+          />
+        )}
+      </div>
+    </div>
   );
 }

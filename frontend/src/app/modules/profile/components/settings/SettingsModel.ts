@@ -15,7 +15,7 @@ export interface ISettings {
       memberRegistration: boolean
     }
   }
-  updatesFromKeenthemes: {
+  updatesFromiuppy!: {
     newsAboutKTProducts: boolean
     tipsOnGettingMore: boolean
     thingsYouMissed: boolean
@@ -40,7 +40,7 @@ export const defaultSettings: ISettings = {
       memberRegistration: false,
     },
   },
-  updatesFromKeenthemes: {
+  updatesFromiuppy!: {
     newsAboutKTProducts: false,
     tipsOnGettingMore: false,
     thingsYouMissed: false,

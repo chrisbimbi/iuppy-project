@@ -174,7 +174,7 @@ const Mixed: FC = () => {
               image='../media/svg/brand-logos/telegram.svg'
               time='10 days ago'
               title='ReactJS Admin Theme'
-              description='Keenthemes uses the latest and greatest frameworks<br/>with ReactJS for complete modernization and<br/>future.'
+              description='iuppy! uses the latest and greatest frameworks<br/>with ReactJS for complete modernization and<br/>future.'
             />
           </div>
           {/* end::Col */}

@@ -107,7 +107,6 @@ export class FormsService {
     groupIds: string[] | null,
   ): Promise<string[]> {
     if ((!spaceIds || spaceIds.length === 0) && (!groupIds || groupIds.length === 0)) {
-      // 🔥 CORREÇÃO: Removido "status='active'" para compatibilidade
       const allUsers = await this.ds.query(
         `SELECT id FROM "user_entity" WHERE "companyId" = $1`,
         [companyId],
@@ -206,9 +205,6 @@ export class FormsService {
     }
   }
 
-  // =========================================================
-  // 🔥 MÉTODO NOVO: HISTÓRICO GRANULAR DE INTERAÇÕES
-  // =========================================================
   async getMyInteractions(userId: string, companyId: string, limit = 50) {
     const sql = `
       SELECT * FROM (
@@ -234,7 +230,7 @@ export class FormsService {
         SELECT 
           a.id::text AS "id", 
           a."createdAt" AS "date", 
-          a.type AS "type", -- 'approve' / 'reject'
+          a.type AS "type",
           a.message AS "message",
           s.id::text AS "submissionId", 
           s."formId"::text AS "formId",
@@ -271,7 +267,6 @@ export class FormsService {
     return { ...form, fields, audienceAllCompany: (form.audienceSpaceIds?.length ?? 0) === 0 && (form.audienceGroupIds?.length ?? 0) === 0 };
   }
 
-  // 🔥 QUERY EXPANDIDA: Traz dados essenciais para os cards do App
   async listForms(companyId: string, status?: string) {
     const params: any[] = [companyId];
     const statusWhere = status ? 'AND f.status = $2' : '';
@@ -476,10 +471,6 @@ export class FormsService {
     });
   }
 
-  // =========================================================
-  // LIST SUBMISSIONS (ADMIN) & MY SUBMISSIONS (APP)
-  // =========================================================
-
   async listSubmissions(companyId: string, formId: string, userId: string | null, page = 1, pageSize = 50) {
     const qb = this.subRepo.createQueryBuilder('s').where('s.companyId = :companyId', { companyId });
     if (formId === 'my' || formId === 'mine') {
@@ -536,10 +527,6 @@ export class FormsService {
 
     return { total, page, pageSize, items: rows };
   }
-
-  // =========================================================
-  // CRUD FORMULÁRIOS
-  // =========================================================
 
   async createForm(companyId: string, createdBy: string, dto: CreateFormDto) {
     if (companyId !== dto.companyId) throw new ForbiddenException('companyId mismatch');
@@ -631,10 +618,41 @@ export class FormsService {
     return { ...sub, answers, attachments };
   }
 
+  // 🔥 ATUALIZADO: Mesma query UNION do getMyInteractions para consistência
   async getChatHistory(companyId: string, formId: string, submissionId: string, actorUserId: string, actor: FormChatActor) {
     const sub = await this.subRepo.findOne({ where: { id: submissionId } });
     if (actor === 'user' && sub?.userId === actorUserId) await this.subRepo.update({ id: submissionId }, { userUnreadChatCount: 0 });
-    return { chatStatus: sub?.chatStatus, messages: await this.chatRepo.find({ where: { submissionId }, order: { createdAt: 'ASC' } }) };
+
+    const sql = `
+       SELECT * FROM (
+         SELECT id::text, "createdAt", actor::text, message, 'chat' as type
+         FROM form_submission_chat
+         WHERE "submissionId" = $1
+
+         UNION ALL
+
+         SELECT id::text, "createdAt", 'rh' as actor, 
+           (CASE WHEN type='approve' THEN '✅ APROVADO: ' || COALESCE(message, '')
+                 WHEN type='reject' THEN '❌ REPROVADO: ' || COALESCE(message, '')
+                 ELSE message END) as message,
+           'action' as type
+         FROM form_rh_action
+         WHERE "submissionId" = $1
+       ) t
+       ORDER BY "createdAt" ASC
+    `;
+
+    const messages = await this.ds.query(sql, [submissionId]);
+
+    return {
+      chatStatus: sub?.chatStatus,
+      messages: messages.map((m: any) => ({
+        id: m.id,
+        actor: m.actor,
+        message: m.message,
+        createdAt: m.createdAt
+      }))
+    };
   }
 
   async closeChat(companyId: string, formId: string, submissionId: string, actorUserId: string) {
@@ -656,9 +674,6 @@ export class FormsService {
     return { items: rows.map(r => ({ spaceId: r.spaceId, emails: r.emails })) };
   }
 
-  // =========================================================
-  // CHAT & SLA
-  // =========================================================
   async postChatMessage(companyId: string, formId: string, submissionId: string, actorUserId: string, dto: ChatMessageDto) {
     const sub = await this.subRepo.findOne({ where: { id: submissionId, formId, companyId } });
     if (!sub) throw new NotFoundException('Submissão não encontrada');
@@ -723,7 +738,7 @@ export class FormsService {
 
     const newStatus = dto.type === 'reply' ? 'replied' : dto.type === 'approve' ? 'approved' : 'rejected';
 
-    // 🔥 ATUALIZADO: Incrementa contadores com query builder para atomicidade
+    // 🔥 CORREÇÃO: Incrementa userUnreadChatCount e replyCount
     await this.subRepo
       .createQueryBuilder()
       .update(FormSubmissionEntity)
@@ -737,6 +752,7 @@ export class FormsService {
 
     await this.logAudit(companyId, actorUserId, `submission_${newStatus}` as any, formId, submissionId);
 
+    // 🔥 CORREÇÃO: Push de resposta direciona para detalhes (?action=details)
     if (sub.userId && !sub.external) {
       const form = await this.formRepo.findOne({ where: { id: formId }, select: ['title'] });
       const title = (form?.title as any)?.['pt-BR'] ?? 'Formulário';
@@ -748,7 +764,8 @@ export class FormsService {
           userIds: [sub.userId],
           title: `Atualização: ${title}`,
           body: msgBody,
-          deepLinkMobile: `iuppy://forms/${formId}/submissions/${submissionId}`,
+          // Adicionado ?action=details
+          deepLinkMobile: `iuppy://forms/${formId}/submissions/${submissionId}?action=details`,
           kind: 'FORM_RESPONSE',
           entityId: submissionId
         });

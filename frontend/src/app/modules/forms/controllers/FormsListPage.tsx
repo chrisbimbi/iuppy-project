@@ -53,7 +53,7 @@ export default function FormsListPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  
+
   const [aggLoading, setAggLoading] = useState(false);
   const [aggErr, setAggErr] = useState<string | null>(null);
 
@@ -194,12 +194,13 @@ export default function FormsListPage() {
         </div>
       );
     if (err) return <div className="alert alert-danger m-6">{err}</div>;
-    
+
     if (!rows.length && !loading) {
-       return <div className="p-6">Nenhum formulário ainda.</div>;
+      return <div className="p-6">Nenhum formulário ainda.</div>;
     }
 
     return (
+
       <div className="table-responsive p-6" data-testid="forms-list">
         <table className="table table-row-dashed align-middle">
           <thead>
@@ -299,61 +300,63 @@ export default function FormsListPage() {
   }, [rows, loading, err, sel, selectedIds, nav, companyId]);
 
   return (
-    <div className="card">
-      <div className="card-header align-items-center gap-3 flex-wrap">
-        <h3 className="card-title">Formulários</h3>
-        <div className="card-toolbar d-flex gap-2">
-          <Button
-            variant="light"
-            onClick={handleRunAggregation}
-            disabled={aggLoading || loading}
-            title="Atualizar dados de hoje"
-          >
-            {aggLoading ? <Spinner animation="border" size="sm" /> : 'Atualizar Agora'}
-          </Button>
-          
-          <Button variant="info" onClick={() => nav('/forms/dashboard')}>
-             <i className="bi bi-bar-chart-fill me-1"></i> Dashboard Geral
-          </Button>
+    <div className="container-xxl">
+      <div className="card">
+        <div className="card-header align-items-center gap-3 flex-wrap">
+          <h3 className="card-title">Formulários</h3>
+          <div className="card-toolbar d-flex gap-2">
+            <Button
+              variant="light"
+              onClick={handleRunAggregation}
+              disabled={aggLoading || loading}
+              title="Atualizar dados de hoje"
+            >
+              {aggLoading ? <Spinner animation="border" size="sm" /> : 'Atualizar Agora'}
+            </Button>
 
-          <button className="btn btn-primary" onClick={() => nav('/forms/new')}>
-            + Criar formulário
-          </button>
-          {selectedIds.length > 0 && (
-            <>
-              <button className="btn btn-light" onClick={bulkDuplicate}>
-                Duplicar
-              </button>
-              {allDraft && (
-                <button className="btn btn-light" onClick={bulkPublish}>
-                  Publicar
+            <Button variant="info" onClick={() => nav('/forms/dashboard')}>
+              <i className="bi bi-bar-chart-fill me-1"></i> Dashboard Geral
+            </Button>
+
+            <button className="btn btn-primary" onClick={() => nav('/forms/new')}>
+              + Criar formulário
+            </button>
+            {selectedIds.length > 0 && (
+              <>
+                <button className="btn btn-light" onClick={bulkDuplicate}>
+                  Duplicar
                 </button>
-              )}
-              {allPublished && (
-                <button className="btn btn-light" onClick={bulkUnpublish}>
-                  Despublicar
+                {allDraft && (
+                  <button className="btn btn-light" onClick={bulkPublish}>
+                    Publicar
+                  </button>
+                )}
+                {allPublished && (
+                  <button className="btn btn-light" onClick={bulkUnpublish}>
+                    Despublicar
+                  </button>
+                )}
+                <button className="btn btn-danger" onClick={bulkDelete}>
+                  Apagar
                 </button>
-              )}
-              <button className="btn btn-danger" onClick={bulkDelete}>
-                Apagar
-              </button>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
+
+        {!loading && !err && (
+          <div className="px-6 pt-6">
+            <Alert variant="info" className="d-flex justify-content-between align-items-center mb-0">
+              <div>
+                As estatísticas são agregadas diariamente (às 2:00). Para dados em tempo real, use o botão "Atualizar Agora".
+                {aggErr && <div className="text-danger small mt-1">{aggErr}</div>}
+              </div>
+            </Alert>
+          </div>
+        )}
+
+        {content}
       </div>
-      
-      {!loading && !err && (
-        <div className="px-6 pt-6">
-          <Alert variant="info" className="d-flex justify-content-between align-items-center mb-0">
-            <div>
-              As estatísticas são agregadas diariamente (às 2:00). Para dados em tempo real, use o botão "Atualizar Agora".
-              {aggErr && <div className="text-danger small mt-1">{aggErr}</div>}
-            </div>
-          </Alert>
-        </div>
-      )}
-
-      {content}
     </div>
   );
 }

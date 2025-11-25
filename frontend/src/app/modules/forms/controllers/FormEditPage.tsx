@@ -476,50 +476,51 @@ export default function FormEditPage() {
 
   return (
     <>
-      <div className="card">
-        <div className="card-header align-items-center justify-content-between">
-          <h3 className="card-title">{isNew ? 'Criar formulário' : 'Editar formulário'}</h3>
-          <div className="d-flex gap-2">
-            <button className="btn btn-light" onClick={() => nav('/forms')} disabled={saving}>Cancelar</button>
-            {step !== 'review' ? (
+      <div className="container-xxl">
+        <div className="card">
+          <div className="card-header align-items-center justify-content-between">
+            <h3 className="card-title">{isNew ? 'Criar formulário' : 'Editar formulário'}</h3>
+            <div className="d-flex gap-2">
+              <button className="btn btn-light" onClick={() => nav('/forms')} disabled={saving}>Cancelar</button>
+              {step !== 'review' ? (
+                <>
+                  <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
+                    {saving ? 'Salvando…' : 'Salvar rascunho'}
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={saveAndNext} disabled={saving}>
+                    {saving ? 'Salvando…' : 'Salvar e continuar'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
+                    {saving ? 'Salvando…' : 'Salvar rascunho'}
+                  </button>
+                  <button type="button" className="btn btn-success" onClick={publish} disabled={saving}>
+                    {model.status === 'published' ? 'Publicar Agora' : 'Salvar Final'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="card-body">
+            {err && <div className="alert alert-danger mb-4">{err}</div>}
+            {loading ? <div>Carregando…</div> : (
               <>
-                <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
-                  {saving ? 'Salvando…' : 'Salvar rascunho'}
-                </button>
-                <button type="button" className="btn btn-primary" onClick={saveAndNext} disabled={saving}>
-                  {saving ? 'Salvando…' : 'Salvar e continuar'}
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
-                  {saving ? 'Salvando…' : 'Salvar rascunho'}
-                </button>
-                <button type="button" className="btn btn-success" onClick={publish} disabled={saving}>
-                  {model.status === 'published' ? 'Publicar Agora' : 'Salvar Final'}
-                </button>
+                <StepHeader steps={STEPS.map(s => ({ key: s.key, title: s.title }))} currentKey={step} onStepClick={(k) => setStep(k as StepKey)} />
+                {step === 'basics' && renderBasics()}
+                {step === 'audience' && renderAudience()}
+                {step === 'settings' && renderSettings()}
+                {step === 'fields' && renderFields()}
+                {step === 'review' && renderReview()}
               </>
             )}
           </div>
-        </div>
-        <div className="card-body">
-          {err && <div className="alert alert-danger mb-4">{err}</div>}
-          {loading ? <div>Carregando…</div> : (
-            <>
-              <StepHeader steps={STEPS.map(s => ({ key: s.key, title: s.title }))} currentKey={step} onStepClick={(k) => setStep(k as StepKey)} />
-              {step === 'basics' && renderBasics()}
-              {step === 'audience' && renderAudience()}
-              {step === 'settings' && renderSettings()}
-              {step === 'fields' && renderFields()}
-              {step === 'review' && renderReview()}
-            </>
-          )}
-        </div>
-        <div className="card-footer d-flex justify-content-between">
-          <button className="btn btn-light" onClick={() => goStep(-1)} disabled={STEPS.findIndex((s) => s.key === step) === 0}>Voltar</button>
+          <div className="card-footer d-flex justify-content-between">
+            <button className="btn btn-light" onClick={() => goStep(-1)} disabled={STEPS.findIndex((s) => s.key === step) === 0}>Voltar</button>
+          </div>
         </div>
       </div>
-
       {!isNew && <FormEmailSettingsModal show={showEmailModal} onHide={() => setShowEmailModal(false)} formId={formId!} />}
 
       <Modal show={showPushModal} onHide={() => setShowPushModal(false)}>
@@ -541,7 +542,9 @@ export default function FormEditPage() {
             setShowPushModal(false);
           }}>Salvar</Button>
         </Modal.Footer>
+
       </Modal>
     </>
+
   );
 }

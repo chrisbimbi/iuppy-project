@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../notifications/notifications_provider.dart';
 import 'providers/forms_provider.dart';
 import 'providers/forms_storage_provider.dart';
+import '../forms/local_form_store.dart'; // 🔥 Import
+import '../../core/providers.dart'; // 🔥 Import
 import 'package:iuppy_app/features/surveys/widgets/question_widgets.dart';
 
 String _readTranslatable(dynamic jsonField, [String locale = 'pt-BR']) {
@@ -41,6 +44,17 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
   double _uploadProgress = 0;
   final _imagePicker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+    // 🔥 CORREÇÃO: Marca como visto assim que entra na tela de preenchimento
+    // Usamos addPostFrameCallback para evitar erro de build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(localFormStoreProvider).markAsSeen(widget.formId);
+      ref.read(formsSeenVersionProvider.notifier).state++;
+    });
+  }
+
   Future<bool> _maybeLeave() async {
     if (!_dirty && _pendingFiles.isEmpty) return true;
     final leave = await showDialog<bool>(
@@ -71,7 +85,6 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
     }
   }
 
-  // 🔥 NOVO: Date Picker Nativo
   Future<void> _pickDate(String fieldId) async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -218,7 +231,6 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
             ])));
   }
 
-  // ... (manter _chooseAttachmentSource, _pickFromGallery, etc iguais) ...
   Future<void> _chooseAttachmentSource() async {
     showModalBottomSheet(
         context: context,
@@ -501,6 +513,10 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
             answers,
             attachments: attachmentsAllowed ? _uploadedAttachments : [],
           );
+      // 🔥 Limpa os badges assim que envia (pois você já viu o form ao preencher)
+      ref.invalidate(myFormsSubmissionsProvider);
+      ref.invalidate(notificationsListProvider);
+
       if (!mounted) return;
       _dirty = false;
       await showDialog<void>(

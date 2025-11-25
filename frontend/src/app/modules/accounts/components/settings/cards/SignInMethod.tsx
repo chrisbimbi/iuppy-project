@@ -92,7 +92,7 @@ const SignInMethod: React.FC = () => {
           <div className='d-flex flex-wrap align-items-center'>
             <div id='kt_signin_email' className={' ' + (showEmailForm && 'd-none')}>
               <div className='fs-6 fw-bolder mb-1'>Email Address</div>
-              <div className='fw-bold text-gray-600'>support@keenthemes.com</div>
+              <div className='fw-bold text-gray-600'>support@iuppy.com.br</div>
             </div>
 
             <div

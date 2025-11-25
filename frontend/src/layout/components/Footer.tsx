@@ -1,11 +1,11 @@
 
 
-import {FC} from 'react'
+import { FC } from 'react'
 import clsx from 'clsx'
-import {useLayout} from '../core'
+import { useLayout } from '../core'
 
 const Footer: FC = () => {
-  const {classes} = useLayout()
+  const { classes } = useLayout()
   return (
     <div className={'footer py-4 d-flex flex-lg-column'} id='kt_footer'>
       {/*begin::Container*/}
@@ -18,8 +18,8 @@ const Footer: FC = () => {
         {/*begin::Copyright*/}
         <div className='text-gray-900 order-2 order-md-1'>
           <span className='text-muted fw-bold me-1'>{new Date().getFullYear()}&copy;</span>
-          <a href='Keenthemes.com' target='_blank' className='text-gray-800 text-hover-primary'>
-            Keenthemes
+          <a href='iuppy.com.br' target='_blank' className='text-gray-800 text-hover-primary'>
+            iuppy! | Todos os direitos reservados.
           </a>
         </div>
         {/*end::Copyright*/}
@@ -27,22 +27,17 @@ const Footer: FC = () => {
         {/*begin::Menu*/}
         <ul className='menu menu-gray-600 menu-hover-primary fw-bold order-1'>
           <li className='menu-item'>
-            <a href='https://keenthemes.com/metronic' target='_blank' className='menu-link px-2'>
-              About
+            <a href='https://iuppy.com.br/' target='_blank' className='menu-link px-2'>
+              Sobre nós
             </a>
           </li>
 
           <li className='menu-item'>
-            <a href='https://keenthemes.com/metronic' target='_blank' className='menu-link px-2'>
-              Support
+            <a href='https://iuppy.com.br' target='_blank' className='menu-link px-2'>
+              Suporte
             </a>
           </li>
 
-          <li className='menu-item'>
-            <a href='https://keenthemes.com/metronic' target='_blank' className='menu-link px-2'>
-              Purchase
-            </a>
-          </li>
         </ul>
         {/*end::Menu*/}
       </div>
@@ -51,4 +46,4 @@ const Footer: FC = () => {
   )
 }
 
-export {Footer}
+export { Footer }
