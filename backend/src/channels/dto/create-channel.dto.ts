@@ -10,7 +10,6 @@ import {
   IsBoolean,
 } from 'class-validator';
 
-
 export class CreateChannelDto {
   @IsOptional()
   @IsBoolean()

@@ -4,33 +4,33 @@ import {
   Column,
   Index,
   CreateDateColumn,
-} from 'typeorm'
+} from 'typeorm';
 
 @Entity('form_answer')
 @Index(['companyId', 'submissionId'])
 @Index(['companyId', 'formId', 'fieldId'])
 export class FormAnswerEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  submissionId: string
+  submissionId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('uuid')
-  fieldId: string
+  fieldId: string;
 
   @Column('text', { nullable: true })
-  type: string | null
+  type: string | null;
 
   @Column('jsonb')
-  value: any
+  value: any;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  createdAt: Date;
 }

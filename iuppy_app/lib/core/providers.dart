@@ -1,12 +1,16 @@
 // lib/core/providers.dart
 import 'dart:async';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:iuppy_app/features/surveys/survey_providers.dart';
 
 import '../app/theme/theme.dart';
 import '../data/local/app_database.dart';
@@ -15,19 +19,31 @@ import '../features/news/local_news_store.dart';
 import '../features/surveys/local_survey_store.dart';
 import '../push_service.dart';
 import '../features/forms/providers/forms_provider.dart';
-// 🔥 IMPORT NOVO
 import '../features/forms/local_form_store.dart';
 
-/// =============== NAV KEY (compartilhado) ===============
+/// =============== NAV KEY ===============
 final rootNavigatorKeyProvider =
     Provider<GlobalKey<NavigatorState>>((ref) => GlobalKey<NavigatorState>());
 
 /// ================= ENV =================
 final envProvider = Provider<EnvConfig>((ref) {
-  return const EnvConfig(
-    apiBaseUrl: AppEnv.apiBaseUrl,
+  var baseUrl = AppEnv.apiBaseUrl;
+
+  // 🔥 AUTO-FIX: Se for Web ou iOS e estiver apontando para 10.0.2.2 (Android Emulator), troca para localhost
+  if ((kIsWeb || (Platform.isIOS && !kIsWeb)) && baseUrl.contains('10.0.2.2')) {
+    baseUrl = baseUrl.replaceFirst('10.0.2.2', 'localhost');
+  }
+
+  var cid = AppEnv.companyId;
+  if (cid.isEmpty) {
+    debugPrint('⚠️ [EnvProvider] COMPANY_ID is empty! Using fallback.');
+    cid = '000c0911-58b3-4c80-84bc-fe015eec1961';
+  }
+
+  return EnvConfig(
+    apiBaseUrl: baseUrl,
     appScheme: AppEnv.appScheme,
-    companyId: AppEnv.companyId,
+    companyId: cid,
     companyKey: AppEnv.companyKey,
     appName: AppEnv.appName,
   );
@@ -57,12 +73,27 @@ class AuthState {
 class AuthController extends StateNotifier<AuthState> {
   final Dio _authDio;
   final CookieJar _cookieJar;
+  final SharedPreferences _prefs;
 
-  AuthController(this._authDio, this._cookieJar) : super(const AuthState()) {
-    _authDio.interceptors.add(CookieManager(_cookieJar));
+  static const _tokenKey = 'auth_access_token';
+
+  AuthController(this._authDio, this._cookieJar, this._prefs)
+      : super(const AuthState()) {
+    if (!kIsWeb) {
+      _authDio.interceptors.add(CookieManager(_cookieJar));
+    }
+    _restoreToken();
+  }
+
+  void _restoreToken() {
+    final savedToken = _prefs.getString(_tokenKey);
+    if (savedToken != null && savedToken.isNotEmpty) {
+      state = state.copyWith(accessToken: savedToken);
+    }
   }
 
   final _ctrl = StreamController<AuthState>.broadcast();
+  @override
   Stream<AuthState> get stream => _ctrl.stream;
 
   Future<void> login(String email, String password) async {
@@ -71,11 +102,19 @@ class AuthController extends StateNotifier<AuthState> {
     final token = (resp.data is Map && resp.data['accessToken'] != null)
         ? resp.data['accessToken'] as String
         : '';
+
+    if (token.isNotEmpty) {
+      await _prefs.setString(_tokenKey, token);
+    }
+
     state = AuthState(accessToken: token, userName: email.split('@').first);
     _ctrl.add(state);
   }
 
   void setAccessToken(String? token) {
+    if (token != null && token.isNotEmpty) {
+      _prefs.setString(_tokenKey, token);
+    }
     state = state.copyWith(accessToken: token ?? '');
     _ctrl.add(state);
   }
@@ -84,6 +123,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState();
     try {
       await _cookieJar.deleteAll();
+      await _prefs.remove(_tokenKey);
     } catch (_) {}
     _ctrl.add(state);
   }
@@ -99,6 +139,11 @@ final cookieJarProvider = Provider<CookieJar>((ref) {
   throw StateError('cookieJarProvider deve ser sobrescrito no main.dart');
 });
 
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw StateError(
+      'sharedPreferencesProvider deve ser sobrescrito no main.dart');
+});
+
 final dioProvider = Provider<Dio>((ref) {
   final env = ref.watch(envProvider);
   final auth = ref.watch(authControllerProvider);
@@ -110,7 +155,9 @@ final dioProvider = Provider<Dio>((ref) {
     headers: {'Accept': 'application/json'},
   ));
 
-  dio.interceptors.add(CookieManager(jar));
+  // if (!kIsWeb) {
+  //   dio.interceptors.add(CookieManager(jar));
+  // }
 
   dio.interceptors.add(InterceptorsWrapper(onRequest: (o, h) {
     final token = auth.accessToken;
@@ -120,15 +167,18 @@ final dioProvider = Provider<Dio>((ref) {
     h.next(o);
   }));
 
-  Completer<String?>? _refreshing;
+  Completer<String?>? refreshing;
 
   final refreshDio = Dio(BaseOptions(
     baseUrl: env.apiBaseUrl,
     headers: {'Accept': 'application/json'},
-  ))
-    ..interceptors.add(CookieManager(jar));
+  ));
 
-  Future<String?> _doRefresh() async {
+  if (!kIsWeb) {
+    refreshDio.interceptors.add(CookieManager(jar));
+  }
+
+  Future<String?> doRefresh() async {
     try {
       final r = await refreshDio.post('/auth/refresh');
       final newToken = (r.data is Map && r.data['accessToken'] != null)
@@ -144,7 +194,7 @@ final dioProvider = Provider<Dio>((ref) {
     }
   }
 
-  Future<Response> _retry(Dio client, RequestOptions ro) {
+  Future<Response> retry(Dio client, RequestOptions ro) {
     return client.request(
       ro.path,
       data: ro.data,
@@ -175,17 +225,17 @@ final dioProvider = Provider<Dio>((ref) {
     final retried = err.requestOptions.extra['__ret'] == true;
 
     if (status == 401 && !isAuth && !retried) {
-      if (_refreshing == null) {
-        _refreshing = Completer<String?>();
-        _refreshing!.complete(await _doRefresh());
+      if (refreshing == null) {
+        refreshing = Completer<String?>();
+        refreshing!.complete(await doRefresh());
       }
-      final newTok = await _refreshing!.future;
-      _refreshing = null;
+      final newTok = await refreshing!.future;
+      refreshing = null;
 
       if (newTok != null && newTok.isNotEmpty) {
         err.requestOptions.extra['__ret'] = true;
         try {
-          final resp = await _retry(dio, err.requestOptions);
+          final resp = await retry(dio, err.requestOptions);
           return handler.resolve(resp);
         } catch (_) {}
       }
@@ -203,6 +253,7 @@ final dioProvider = Provider<Dio>((ref) {
         final router = GoRouter.of(ctx);
         final routeInfo = router.routeInformationProvider.value;
         final currentLocation = (routeInfo.location ?? '/home');
+
         final from = Uri.encodeComponent(currentLocation);
         final target = currentLocation.startsWith('/login')
             ? '/login'
@@ -212,6 +263,7 @@ final dioProvider = Provider<Dio>((ref) {
       }
       return;
     }
+
     return handler.next(err);
   }));
 
@@ -223,13 +275,10 @@ final localSurveyStoreProvider =
     Provider<LocalSurveyStore>((ref) => LocalSurveyStore());
 final localNewsStoreProvider =
     Provider<LocalNewsStore>((ref) => LocalNewsStore());
-
-// 🔥 NOVO: Store de Formulários Vistos
 final localFormStoreProvider =
     Provider<LocalFormStore>((ref) => LocalFormStore());
-// 🔥 NOVO: Gatilho de atualização visual ao marcar como visto
-final formsSeenVersionProvider = StateProvider<int>((_) => 0);
 
+final formsSeenVersionProvider = StateProvider<int>((_) => 0);
 final newsSeenVersionProvider = StateProvider<int>((_) => 0);
 final feedVersionProvider = StateProvider<int>((_) => 0);
 
@@ -237,19 +286,26 @@ final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final env = ref.watch(envProvider);
   final jar = ref.watch(cookieJarProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+
   final dio = Dio(BaseOptions(
     baseUrl: env.apiBaseUrl,
     headers: {'Accept': 'application/json'},
-  ))
-    ..interceptors.add(CookieManager(jar))
-    ..interceptors.add(LogInterceptor(
-      request: true,
-      requestBody: true,
-      error: true,
-      responseBody: false,
-      logPrint: (o) => debugPrint('[AUTH DIO] $o'),
-    ));
-  return AuthController(dio, jar);
+  ));
+
+  // if (!kIsWeb) {
+  //   dio.interceptors.add(CookieManager(jar));
+  // }
+
+  dio.interceptors.add(LogInterceptor(
+    request: true,
+    requestBody: true,
+    error: true,
+    responseBody: false,
+    logPrint: (o) => debugPrint('[AUTH DIO] $o'),
+  ));
+
+  return AuthController(dio, jar, prefs);
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -259,38 +315,64 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// ================= USER PROFILE =================
+
 class UserProfile {
   final String? id;
   final String? email;
   final String? name;
   final String? displayName;
+  final String? bio;
+  final String? linkedin;
+  final String? phone;
+  final String? department;
+  final String? jobTitle;
+  final String? location;
+  final String? avatarUrl;
   final Set<String> groups;
+  final Map<String, dynamic>? customAttributes;
 
   const UserProfile({
     this.id,
     this.email,
     this.name,
     this.displayName,
+    this.bio,
+    this.linkedin,
+    this.phone,
+    this.department,
+    this.jobTitle,
+    this.location,
+    this.avatarUrl,
     required this.groups,
+    this.customAttributes,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> j) {
-    List<String> _toStrList(dynamic v) {
+    List<String> toStrList(dynamic v) {
       if (v == null) return const [];
       if (v is List) return v.map((e) => '$e').toList();
       return const [];
     }
 
     final g = <String>{
-      ..._toStrList(j['groups']),
-      ..._toStrList(j['visibleGroups']),
+      ...toStrList(j['groups']),
+      ...toStrList(j['visibleGroups']),
     }..removeWhere((e) => e.trim().isEmpty);
+
     return UserProfile(
       id: j['id']?.toString(),
       email: j['email']?.toString(),
       name: j['name']?.toString(),
       displayName: j['displayName']?.toString(),
+      bio: j['customAttributes']?['bio']?.toString(),
+      linkedin: j['customAttributes']?['linkedin']?.toString(),
+      phone: j['phone']?.toString(),
+      department: j['department']?.toString(),
+      jobTitle: j['jobTitle']?.toString(),
+      location: j['location']?.toString(),
+      avatarUrl: j['avatarUrl']?.toString(),
       groups: g,
+      customAttributes: j['customAttributes'] as Map<String, dynamic>?,
     );
   }
 }
@@ -298,6 +380,7 @@ class UserProfile {
 final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
   final token = ref.watch(authControllerProvider).accessToken;
   if (token == null || token.isEmpty) return null;
+
   final api = ref.read(apiClientProvider);
   try {
     final raw = await api.getMe();
@@ -316,23 +399,31 @@ final userGroupsProvider = Provider<Set<String>>((ref) {
   return me;
 });
 
+final groupsListProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  // Attempt fetch fresh, fallback to cache
+  await ref.read(groupsRepoProvider).fetchAndCache();
+  return ref.read(groupsRepoProvider).getCached();
+});
+
 bool _isVisibleForGroups(Map item, Set<String> userGroups) {
-  Iterable<String> _extract(dynamic v) {
+  Iterable<String> extract(dynamic v) {
     if (v == null) return const <String>[];
     if (v is List) return v.map((e) => '$e');
     return const <String>[];
   }
 
   final req = <String>{
-    ..._extract(item['visibleGroups']),
-    ..._extract(item['groups']),
-    ..._extract(item['visibleGroupIds']),
+    ...extract(item['visibleGroups']),
+    ...extract(item['groups']),
+    ...extract(item['visibleGroupIds']),
   }..removeWhere((e) => e.trim().isEmpty);
+
   if (req.isEmpty) return true;
   return req.any(userGroups.contains);
 }
 
-/// ================= SETTINGS + THEME =================
+/// ================= SETTINGS =================
 class CompanyBranding {
   final String? logoUrl;
   final String appTitle;
@@ -407,6 +498,7 @@ final appThemeProvider = StateProvider<AppThemePair>((ref) {
 
 /// ================= REPOSITORIES =================
 final spacesRepoProvider = Provider((ref) => SpacesRepo(ref));
+final groupsRepoProvider = Provider((ref) => GroupsRepo(ref));
 final channelsRepoProvider = Provider((ref) => ChannelsRepo(ref));
 final newsRepoProvider = Provider((ref) => NewsRepo(ref));
 final surveysRepoProvider = Provider((ref) => SurveysRepo(ref));
@@ -414,11 +506,14 @@ final surveysRepoProvider = Provider((ref) => SurveysRepo(ref));
 class SpacesRepo {
   final Ref ref;
   SpacesRepo(this.ref);
+
   Future<List<Map<String, dynamic>>> fetchAndCache() async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final list = await api.getSpaces();
-    await db.cacheSpaces(list);
+    if (!kIsWeb) {
+      await db.cacheSpaces(list);
+    }
     return list;
   }
 
@@ -426,34 +521,81 @@ class SpacesRepo {
       ref.read(dbProvider).getSpaces();
 }
 
+class GroupsRepo {
+  final Ref ref;
+  GroupsRepo(this.ref);
+
+  Future<List<Map<String, dynamic>>> fetchAndCache() async {
+    final api = ref.read(apiClientProvider);
+    final db = ref.read(dbProvider);
+    try {
+      final list = await api.getGroups();
+      if (!kIsWeb) {
+        await db.cacheGroups(list);
+      }
+      return list;
+    } catch (e) {
+      return getCached();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCached() =>
+      ref.read(dbProvider).getGroups();
+}
+
 class ChannelsRepo {
   final Ref ref;
   ChannelsRepo(this.ref);
+
+  List<Map<String, dynamic>>? _memCache;
+
   Future<List<Map<String, dynamic>>> fetchAndCache({String? spaceId}) async {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final userGroups = ref.read(userGroupsProvider);
+
     final list = await api.getChannels(spaceId: spaceId);
+
+    if (list.isNotEmpty) {
+      debugPrint(
+          '[ChannelsRepo] First channel keys: ${list.first.keys.toList()}');
+      debugPrint(
+          '[ChannelsRepo] First channel spaceIds: ${list.first['spaceIds']}');
+      debugPrint(
+          '[ChannelsRepo] First channel space_ids: ${list.first['space_ids']}');
+    }
+
     final filtered =
         list.where((c) => _isVisibleForGroups(c, userGroups)).toList();
-    await db.cacheChannels(filtered);
+
+    _memCache = filtered;
+    if (!kIsWeb) {
+      await db.cacheChannels(filtered);
+    }
     return filtered;
   }
 
-  Future<List<Map<String, dynamic>>> getCached({String? spaceId}) =>
-      ref.read(dbProvider).getChannels(spaceId: spaceId);
+  Future<List<Map<String, dynamic>>> getCached({String? spaceId}) async {
+    if (_memCache != null && (spaceId == null || spaceId.isEmpty)) {
+      return _memCache!;
+    }
+    return ref.read(dbProvider).getChannels(spaceId: spaceId);
+  }
 }
 
 class NewsRepo {
   final Ref ref;
   NewsRepo(this.ref);
+
   static const _fallbackThumb =
       'https://iuppy.com.br/wp-content/uploads/2025/05/automacao-fluxos-1.png';
+
   Map<String, dynamic> _normalize(
-      Map raw,
-      String baseUrl,
-      Map<String, Map<String, dynamic>> channelById,
-      Map<String, String> spaceNameById) {
+    Map raw,
+    String baseUrl,
+    Map<String, Map<String, dynamic>> channelById,
+    Map<String, String> spaceNameById,
+  ) {
     final m = Map<String, dynamic>.from(raw);
     final imgsDyn = (m['highlightImages'] as List?) ?? const [];
     final imgs = <String>[];
@@ -470,18 +612,47 @@ class NewsRepo {
       if (url.startsWith('http')) atts.add(url);
     }
     m['attachments'] = atts;
+    m['hashtags'] = (m['hashtags'] as List?)?.map((e) => '$e').toList() ??
+        []; // Ensure hashtags are preserved
     final channelId = (m['channelId'] ?? '').toString();
     final ch = channelById[channelId];
     if (ch != null) {
       m['channelName'] = (ch['name'] ?? '').toString();
+
       final spId = (ch['spaceId'] ?? '').toString();
+      final spIds =
+          (ch['spaceIds'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      if (spIds.isEmpty && spId.isNotEmpty) {
+        spIds.add(spId);
+      }
+
       m['spaceId'] = spId;
+      m['spaceIds'] = spIds;
       m['spaceName'] = spaceNameById[spId] ?? '';
     } else {
       m['channelName'] = (m['channelName'] ?? '').toString();
       m['spaceId'] = (m['spaceId'] ?? '').toString();
+      m['spaceIds'] = [];
       m['spaceName'] = (m['spaceName'] ?? '').toString();
     }
+
+    // Metrics & Favorites
+    m['viewsTotal'] = (m['viewsTotal'] ?? m['metrics']?['viewsTotal'] ?? 0);
+    m['isFavorited'] =
+        (m['isFavorited'] ?? m['userState']?['isFavorited'] ?? false) == true;
+    m['myReaction'] = m['myReaction'] ?? m['userState']?['myReaction'];
+
+    // Preserve interaction flags
+    final us = (m['userState'] as Map?) ?? {};
+    if (us.isNotEmpty) {
+      m['userState'] = {
+        ...us,
+        'hasViewed': us['hasViewed'] ?? false,
+        'hasCommented': us['hasCommented'] ?? false,
+        'hasShared': us['hasShared'] ?? false,
+      };
+    }
+
     return m;
   }
 
@@ -514,22 +685,30 @@ class NewsRepo {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final base = ref.read(apiBaseUrlProvider);
+
     try {
       final remote = await api.getNewsByChannel(channelId);
       final channelsMap = await _channelsById();
       final spacesMap = await _spacesNameById();
+
       final filtered = remote
           .where((n) => (n['isPublished'] ?? false) == true)
           .where(
               (n) => channelsMap.containsKey((n['channelId'] ?? '').toString()))
           .map((n) => _normalize(n, base, channelsMap, spacesMap))
           .toList();
-      await db.cacheNews(filtered);
+
+      if (!kIsWeb) {
+        await db.cacheNews(filtered);
+      }
       return filtered;
     } catch (_) {
+      if (kIsWeb) return const [];
       final cached = await db.getNews();
-      return cached
-          .map((e) => Map<String, dynamic>.from(e))
+      final List<Map<String, dynamic>> list =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      return list
           .where((n) =>
               (n['channelId']?.toString() ?? '') == channelId &&
               (n['isPublished'] ?? false) == true)
@@ -541,16 +720,19 @@ class NewsRepo {
     final api = ref.read(apiClientProvider);
     final db = ref.read(dbProvider);
     final base = ref.read(apiBaseUrlProvider);
+
     try {
       final remote = await api.getNews();
       final channelsMap = await _channelsById();
       final spacesMap = await _spacesNameById();
+
       final visible = remote
           .where((n) => (n['isPublished'] ?? false) == true)
           .where(
               (n) => channelsMap.containsKey((n['channelId'] ?? '').toString()))
           .map((n) => _normalize(n, base, channelsMap, spacesMap))
           .toList();
+
       visible.sort((a, b) {
         final da = _parseDate(a['updatedAt']) ??
             _parseDate(a['createdAt']) ??
@@ -560,17 +742,23 @@ class NewsRepo {
             DateTime.fromMillisecondsSinceEpoch(0);
         return dbb.compareTo(da);
       });
-      await db.cacheNews(visible);
+
+      if (!kIsWeb) {
+        await db.cacheNews(visible);
+      }
       return (limit > 0 && visible.length > limit)
           ? visible.take(limit).toList()
           : visible;
     } catch (_) {
+      if (kIsWeb) return const [];
       final cached =
           (limit > 0) ? await db.getNews(limit: limit) : await db.getNews();
-      final filtered = cached
-          .map((e) => Map<String, dynamic>.from(e))
-          .where((n) => (n['isPublished'] ?? false) == true)
-          .toList();
+      final List<Map<String, dynamic>> list =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      final filtered =
+          list.where((n) => (n['isPublished'] ?? false) == true).toList();
+
       filtered.sort((a, b) {
         final da = _parseDate(a['updatedAt']) ??
             _parseDate(a['createdAt']) ??
@@ -580,19 +768,46 @@ class NewsRepo {
             DateTime.fromMillisecondsSinceEpoch(0);
         return dbb.compareTo(da);
       });
+
       return (limit > 0 && filtered.length > limit)
           ? filtered.take(limit).toList()
           : filtered;
     }
   }
 
-  Future<List<Map<String, dynamic>>> homeFeedRemoteFirst(
-      {String? spaceId, int limit = 10, int? maxItems}) async {
+  Future<List<Map<String, dynamic>>> homeFeedRemoteFirst({
+    String? spaceId,
+    int limit = 10,
+    int? maxItems,
+  }) async {
     final cap = (maxItems != null && maxItems > 0) ? maxItems : limit;
     final all = await listLatest(limit: 0);
+
+    // DEBUG LOGGING
+    if (spaceId != null && spaceId.isNotEmpty) {
+      debugPrint('[NewsRepo] Filtering by spaceId: $spaceId');
+      final count = all.where((n) {
+        final ids =
+            (n['spaceIds'] as List?)?.map((e) => e.toString()).toSet() ?? {};
+        final sId = (n['spaceId'] ?? '').toString();
+        if (sId.isNotEmpty) ids.add(sId);
+        return ids.contains(spaceId);
+      }).length;
+      debugPrint(
+          '[NewsRepo] Found $count items for space $spaceId out of ${all.length} total');
+    }
+
     final filtered = (spaceId == null || spaceId.isEmpty)
         ? all
-        : all.where((n) => (n['spaceId'] ?? '').toString() == spaceId).toList();
+        : all.where((n) {
+            final ids =
+                (n['spaceIds'] as List?)?.map((e) => e.toString()).toSet() ??
+                    {};
+            final sId = (n['spaceId'] ?? '').toString();
+            if (sId.isNotEmpty) ids.add(sId);
+            return ids.contains(spaceId);
+          }).toList();
+
     return (cap > 0 && filtered.length > cap)
         ? filtered.take(cap).toList()
         : filtered;
@@ -601,37 +816,82 @@ class NewsRepo {
   Future<Map<String, dynamic>> getById(String id) async {
     final api = ref.read(apiClientProvider);
     final base = ref.read(apiBaseUrlProvider);
+    final db = ref.read(dbProvider);
+
     try {
       final n = await api.getNewsDetail(id);
+
+      // 🔥 FIX: Atualiza o cache local com os dados frescos da API
+      // Isso garante que se a lista sobrescreveu com dados parciais, agora temos o completo.
+      if (!kIsWeb) {
+        await db.cacheNews([n]);
+      }
+
       final channelsMap = await _channelsById();
       final spacesMap = await _spacesNameById();
       return _normalize(n, base, channelsMap, spacesMap);
     } catch (_) {
       final cached = await ref.read(dbProvider).getNews();
-      return cached.map((e) => Map<String, dynamic>.from(e)).firstWhere(
-          (e) => (e['id'] ?? '').toString() == id,
-          orElse: () => <String, dynamic>{});
+      final List<Map<String, dynamic>> all =
+          cached.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      return all.firstWhere(
+        (e) => (e['id'] ?? '').toString() == id,
+        orElse: () => <String, dynamic>{},
+      );
     }
   }
 
   Future<UnreadCounters> unreadCounters() async {
     final db = ref.read(dbProvider);
     final store = ref.read(localNewsStoreProvider);
+
     final visibleChannels = await ref.read(channelsRepoProvider).getCached();
     final visibleChannelIds =
         visibleChannels.map((c) => (c['id'] ?? '').toString()).toSet();
+
+    if (kIsWeb) {
+      return const UnreadCounters(total: 0, bySpace: {}, byChannel: {});
+    }
+
     final all = await db.getNews(limit: 1000);
-    final news = all
-        .map((e) => Map<String, dynamic>.from(e))
+    final List<Map<String, dynamic>> list =
+        all.map((e) => Map<String, dynamic>.from(e)).toList();
+
+    final news = list
         .where((n) => (n['isPublished'] ?? true) == true)
         .where((n) =>
             visibleChannelIds.contains((n['channelId'] ?? '').toString()))
         .toList();
+
     final total =
         await store.countUnread(news.map((n) => (n['id'] ?? '').toString()));
     final bySpace = await store.countUnreadByKey(news, 'spaceId');
     final byChannel = await store.countUnreadByKey(news, 'channelId');
+
     return UnreadCounters(total: total, bySpace: bySpace, byChannel: byChannel);
+  }
+
+  Future<Map<String, dynamic>> toggleFavorite(String id) async {
+    final api = ref.read(apiClientProvider);
+    final res = await api.toggleFavoriteNews(id);
+    api.invalidateNewsCache(id);
+    return res;
+  }
+
+  Future<List<Map<String, dynamic>>> getFavorites({int page = 1}) async {
+    final api = ref.read(apiClientProvider);
+    final base = ref.read(apiBaseUrlProvider);
+    final channelsMap = await _channelsById();
+    final spacesMap = await _spacesNameById();
+
+    final resp = await api.getFavoriteNews(page: page);
+    final list = (resp['data'] as List?) ?? [];
+
+    return list
+        .map((e) => Map<String, dynamic>.from(e))
+        .map((n) => _normalize(n, base, channelsMap, spacesMap))
+        .toList();
   }
 }
 
@@ -639,18 +899,24 @@ class UnreadCounters {
   final int total;
   final Map<String, int> bySpace;
   final Map<String, int> byChannel;
-  const UnreadCounters(
-      {required this.total, required this.bySpace, required this.byChannel});
+  const UnreadCounters({
+    required this.total,
+    required this.bySpace,
+    required this.byChannel,
+  });
 }
 
 class SurveysRepo {
   final Ref ref;
   SurveysRepo(this.ref);
+
   bool _isVisible(Map<String, dynamic> s) {
     final status = (s['status'] ?? '').toString().toLowerCase();
     if (status != 'published' && status != 'active') return false;
+
     final schedule = (s['scheduleSurvey'] ?? false) == true;
     final expire = (s['expireSurvey'] ?? false) == true;
+
     DateTime? startsAt;
     DateTime? endsAt;
     try {
@@ -659,7 +925,9 @@ class SurveysRepo {
       final ea = s['endsAt']?.toString();
       if (ea != null && ea.isNotEmpty) endsAt = DateTime.tryParse(ea);
     } catch (_) {}
+
     final now = DateTime.now().toUtc();
+
     if (schedule && startsAt != null && startsAt.isAfter(now)) return false;
     if (expire && endsAt != null && endsAt.isBefore(now)) return false;
     return true;
@@ -672,42 +940,43 @@ class SurveysRepo {
       final remote = await api.getSurveys();
       final filtered = remote.where(_isVisible).toList();
       await db.cacheSurveys(filtered);
-      return (limit > 0 && filtered.length > limit)
-          ? filtered.take(limit).toList()
-          : filtered;
+      if (limit > 0 && filtered.length > limit) {
+        return filtered.take(limit).toList();
+      }
+      return filtered;
     } catch (_) {
       final cached = (limit > 0)
           ? await db.getSurveys(limit: limit)
           : await db.getSurveys();
       final filtered = cached.where(_isVisible).toList();
-      return (limit > 0 && filtered.length > limit)
-          ? filtered.take(limit).toList()
-          : filtered;
+      if (limit > 0 && filtered.length > limit) {
+        return filtered.take(limit).toList();
+      }
+      return filtered;
     }
   }
 
   Future<Map<String, dynamic>> getById(String id) =>
       ref.read(apiClientProvider).getSurveyDetail(id);
-  Future<void> sendResponse(
-          {required String surveyId,
-          required List<Map<String, dynamic>> answers,
-          String? userId}) =>
+
+  Future<void> sendResponse({
+    required String surveyId,
+    required List<Map<String, dynamic>> answers,
+    String? userId,
+  }) =>
       ref.read(apiClientProvider).postSurveyResponse(
-          surveyId: surveyId, answers: answers, userId: userId);
+            surveyId: surveyId,
+            answers: answers,
+            userId: userId,
+          );
 }
 
-// ====================================================
-// 🔥 PROVIDER DE NOVOS FORMULÁRIOS (Para aba Disponíveis)
-// ====================================================
 final newFormsCountProvider = FutureProvider.autoDispose<int>((ref) async {
   ref.watch(formsRefreshProvider);
   ref.watch(feedVersionProvider);
-  // Assiste mudanças na lista de IDs vistos
   ref.watch(formsSeenVersionProvider);
 
-  // Pega lista de formulários disponíveis
   final visibleForms = await ref.watch(formsListProvider.future);
-  // Pega lista de IDs já vistos
   final seenIds = await ref.read(localFormStoreProvider).getSeenIds();
 
   final now = DateTime.now();
@@ -716,10 +985,8 @@ final newFormsCountProvider = FutureProvider.autoDispose<int>((ref) async {
   int count = 0;
   for (final f in visibleForms) {
     final pid = f['id']?.toString() ?? '';
-    // Se já viu, ignora
     if (seenIds.contains(pid)) continue;
 
-    // Se for recente (< 3 dias), conta
     final pubStr = f['publishedAt']?.toString();
     if (pubStr != null) {
       final pubDate = DateTime.tryParse(pubStr);
@@ -731,39 +998,45 @@ final newFormsCountProvider = FutureProvider.autoDispose<int>((ref) async {
   return count;
 });
 
-// ====================================================
-// 🔥 BADGE GLOBAL (Sininho/Menu)
-// ====================================================
 final formsBadgesProvider = FutureProvider<int>((ref) async {
-  // 1. Novos Formulários (Aba Disponíveis)
   final newForms = await ref.watch(newFormsCountProvider.future);
-
-  // 2. Respostas Não Lidas (Aba Minhas Respostas)
   final unreadReplies = await ref.watch(userFormsUnreadCountProvider.future);
-
   return newForms + unreadReplies;
 });
 
-/// ===== Home badges =====
 class HomeBadges {
   final int newsNew;
   final int formsNew;
   final int surveysPending;
-  const HomeBadges(
-      {this.newsNew = 0, this.formsNew = 0, this.surveysPending = 0});
+  const HomeBadges({
+    this.newsNew = 0,
+    this.formsNew = 0,
+    this.surveysPending = 0,
+  });
 }
 
 final homeBadgesProvider = Provider<HomeBadges>((ref) {
   final counters = ref.watch(unreadCountersProvider);
-  final newsNew = counters.maybeWhen(data: (d) => d.total, orElse: () => 0);
+  final newsNew = counters.maybeWhen(
+    data: (d) => d.total,
+    orElse: () => 0,
+  );
 
-  final formsNew =
-      ref.watch(formsBadgesProvider).maybeWhen(data: (v) => v, orElse: () => 0);
+  final formsNew = ref.watch(formsBadgesProvider).maybeWhen(
+        data: (v) => v,
+        orElse: () => 0,
+      );
 
-  final surveysPending = 0;
+  final surveysNew = ref.watch(newSurveysCountProvider).maybeWhen(
+        data: (v) => v,
+        orElse: () => 0,
+      );
 
   return HomeBadges(
-      newsNew: newsNew, formsNew: formsNew, surveysPending: surveysPending);
+    newsNew: newsNew,
+    formsNew: formsNew,
+    surveysPending: surveysNew,
+  );
 });
 
 final unreadCountersProvider = FutureProvider<UnreadCounters>((ref) async {
@@ -778,22 +1051,21 @@ final homeFeedProvider =
   return ref.read(newsRepoProvider).homeFeedRemoteFirst(spaceId: spaceId);
 });
 
-/// ========= PUSH BOOTSTRAP =========
-/// Observa (1) o token de backend pra manter o Bearer no PushService
-/// e (2) o /auth/me pra registrar o FCM assim que o usuário estiver resolvido.
-/// (3) Registra o listener para atualizar Badges em tempo real.
+// ========= PUSH BOOTSTRAP =========
 final pushBootstrapProvider = Provider<void>((ref) {
-  // 1) Sincroniza token Auth
+  // 1) Mantém token atualizado
   ref.listen<AuthState>(authControllerProvider, (prev, next) async {
     final tok = next.accessToken;
-    await PushService.instance.init();
-    PushService.instance.updateBackendAuthToken(tok);
+    if (tok != null && tok.isNotEmpty) {
+      await PushService.instance.init();
+      PushService.instance.updateBackendAuthToken(tok);
+    }
   });
 
-  // 2) Registra FCM ao logar
-  ref.listen<AsyncValue<UserProfile?>>(userProfileProvider, (prev, next) async {
-    if (!next.hasValue) return;
-    final me = next.value;
+  // 2) Registro e Handler
+  final userAsync = ref.watch(userProfileProvider);
+
+  userAsync.whenData((me) async {
     if (me?.id == null || me!.id!.isEmpty) return;
 
     final env = ref.read(envProvider);
@@ -802,23 +1074,30 @@ final pushBootstrapProvider = Provider<void>((ref) {
     await PushService.instance.init();
     PushService.instance.updateBackendAuthToken(auth.accessToken);
 
-    // 🔥 NOVO: Registra o handler de refresh global
-    PushService.instance.setNotificationRefreshHandler(() {
-      debugPrint('[BOOTSTRAP] Push recebido! Atualizando badges e listas...');
+    // 🔥 HANDLER INTELIGENTE: Sync antes de Refresh
+    // 🔥 HANDLER INTELIGENTE: Sync antes de Refresh
+    PushService.instance.setNotificationRefreshHandler((message) async {
+      debugPrint('[BOOTSTRAP] Push recebido! Sincronizando dados...');
 
-      // 1. Invalida Badge Global e News
+      // If chat message, ignore heavy refresh in this global bootstrap handler
+      // HomePage will handle chat specific updates if active
+      if (message?.data['type'] == 'chat') {
+        return;
+      }
+
+      // 1. Força busca das notícias mais recentes (Garante badge correto)
+      await ref.read(newsRepoProvider).listLatest(limit: 10);
+
+      // 2. Invalida os providers para UI atualizar
       ref.invalidate(unreadCountersProvider);
       ref.invalidate(formsBadgesProvider);
-      ref.invalidate(newFormsCountProvider);
+      ref.invalidate(newSurveysCountProvider);
       ref.invalidate(userFormsUnreadCountProvider);
 
-      // 2. Invalida Listas (Para aparecer o item novo ou mudar status)
       ref.invalidate(formsListProvider);
+      ref.invalidate(surveysListProvider);
       ref.invalidate(myFormsSubmissionsProvider);
       ref.invalidate(homeFeedProvider);
-
-      // 3. Opcional: Bump versão do feed se necessário
-      // ref.read(feedVersionProvider.notifier).state++;
     });
 
     await PushService.instance.askPermissionAndRegister(
@@ -832,7 +1111,6 @@ final pushBootstrapProvider = Provider<void>((ref) {
   });
 });
 
-/// ========= Utils =========
 class AppEnv {
   static const apiBaseUrl = String.fromEnvironment('API_BASE_URL',
       defaultValue: 'http://10.0.2.2:4000');
@@ -852,10 +1130,12 @@ class EnvConfig {
   final String companyId;
   final String companyKey;
   final String appName;
-  const EnvConfig(
-      {required this.apiBaseUrl,
-      required this.appScheme,
-      required this.companyId,
-      required this.companyKey,
-      required this.appName});
+
+  const EnvConfig({
+    required this.apiBaseUrl,
+    required this.appScheme,
+    required this.companyId,
+    required this.companyKey,
+    required this.appName,
+  });
 }

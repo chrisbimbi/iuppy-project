@@ -16,14 +16,14 @@ class _FormsRepo {
   _FormsRepo(this.ref);
 
   bool _matchesAudience(Map item, Set<String> myGroups, Set<String> mySpaces) {
-    Iterable<String> _arr(dynamic v) {
+    Iterable<String> arr(dynamic v) {
       if (v is List) return v.map((e) => '$e');
       return const <String>[];
     }
 
-    final aSpaces = <String>{..._arr(item['audienceSpaceIds'])}
+    final aSpaces = <String>{...arr(item['audienceSpaceIds'])}
       ..removeWhere((e) => e.trim().isEmpty);
-    final aGroups = <String>{..._arr(item['audienceGroupIds'])}
+    final aGroups = <String>{...arr(item['audienceGroupIds'])}
       ..removeWhere((e) => e.trim().isEmpty);
 
     if (aSpaces.isEmpty && aGroups.isEmpty) return true;
@@ -46,7 +46,7 @@ class _FormsRepo {
     return true;
   }
 
-  Future<List<Map<String, dynamic>>> listVisible() async {
+  Future<List<Map<String, dynamic>>> listVisible({String? template}) async {
     final apiClient = ref.read(apiClientProvider);
     final api = FormsApi(apiClient);
     final userLocale = ref.read(userLocaleProvider);
@@ -61,13 +61,21 @@ class _FormsRepo {
         .where((e) => e.isNotEmpty)
         .toSet();
 
-    final all = await api.list(queryParameters: {'locale': userLocale});
+    final all = await api.list(queryParameters: {
+      'locale': userLocale,
+      'visibility': 'all', // 🔥 DEBUG: Traz tudo
+      if (template != null) 'template': template,
+    });
 
+    // 🔥 DEBUG: Removendo filtros locais para ver se chega algo
+    return all.toList();
+    /*
     return all
         .where((f) => (f['status'] ?? 'draft') == 'published')
         .where(_matchesSchedule)
         .where((f) => _matchesAudience(f, userGroups, visibleSpaces))
         .toList();
+    */
   }
 
   Future<Map<String, dynamic>> mySubmissions() async {

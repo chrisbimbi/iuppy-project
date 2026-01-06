@@ -86,12 +86,24 @@ describe('NewsService', () => {
     }).compile();
 
     service = module.get<NewsService>(NewsService);
-    newsRepo = module.get<Repository<NewsEntity>>(getRepositoryToken(NewsEntity));
-    newsAudienceRepo = module.get<Repository<NewsAudienceEntity>>(getRepositoryToken(NewsAudienceEntity));
-    pushDeliveryRepo = module.get<Repository<PushDeliveryEntity>>(getRepositoryToken(PushDeliveryEntity));
-    userDeviceRepo = module.get<Repository<UserDeviceEntity>>(getRepositoryToken(UserDeviceEntity));
-    interactionEventRepo = module.get<Repository<InteractionEventEntity>>(getRepositoryToken(InteractionEventEntity));
-    audienceResolverService = module.get<AudienceResolverService>(AudienceResolverService);
+    newsRepo = module.get<Repository<NewsEntity>>(
+      getRepositoryToken(NewsEntity),
+    );
+    newsAudienceRepo = module.get<Repository<NewsAudienceEntity>>(
+      getRepositoryToken(NewsAudienceEntity),
+    );
+    pushDeliveryRepo = module.get<Repository<PushDeliveryEntity>>(
+      getRepositoryToken(PushDeliveryEntity),
+    );
+    userDeviceRepo = module.get<Repository<UserDeviceEntity>>(
+      getRepositoryToken(UserDeviceEntity),
+    );
+    interactionEventRepo = module.get<Repository<InteractionEventEntity>>(
+      getRepositoryToken(InteractionEventEntity),
+    );
+    audienceResolverService = module.get<AudienceResolverService>(
+      AudienceResolverService,
+    );
 
     jest.clearAllMocks();
   });
@@ -118,11 +130,17 @@ describe('NewsService', () => {
         mode: AudienceMode.COMPANY,
         identifiers: {},
       });
-      mockAudienceResolverService.resolve.mockResolvedValue(['user-1', 'user-2', 'user-3']);
-      mockUserDeviceRepo.createQueryBuilder().getRawMany.mockResolvedValue([
-        { userId: 'user-1' },
-        { userId: 'user-2' },
+      mockAudienceResolverService.resolve.mockResolvedValue([
+        'user-1',
+        'user-2',
+        'user-3',
       ]);
+      mockUserDeviceRepo
+        .createQueryBuilder()
+        .getRawMany.mockResolvedValue([
+          { userId: 'user-1' },
+          { userId: 'user-2' },
+        ]);
       mockNewsAudienceRepo.create.mockImplementation((dto) => dto);
       mockPushDeliveryRepo.create.mockImplementation((dto) => dto);
 
@@ -139,24 +157,41 @@ describe('NewsService', () => {
       expect(newsRepo.manager.transaction).toHaveBeenCalled();
       expect(mockNewsAudienceRepo.save).toHaveBeenCalledTimes(3);
       expect(mockPushDeliveryRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({ userId: 'user-1', status: 'queued', channel: 'news_publish' }),
-        expect.objectContaining({ userId: 'user-2', status: 'queued', channel: 'news_publish' }),
+        expect.objectContaining({
+          userId: 'user-1',
+          status: 'queued',
+          channel: 'news_publish',
+        }),
+        expect.objectContaining({
+          userId: 'user-2',
+          status: 'queued',
+          channel: 'news_publish',
+        }),
       ]);
     });
 
     it('should throw error if news not found', async () => {
       mockNewsRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.publish(newsId, companyId)).rejects.toThrow(NotFoundException);
+      await expect(service.publish(newsId, companyId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error if news already published', async () => {
-      mockNewsRepo.findOneBy.mockResolvedValue({ ...mockNews, isPublished: true });
-      await expect(service.publish(newsId, companyId)).rejects.toThrow('News is already published.');
+      mockNewsRepo.findOneBy.mockResolvedValue({
+        ...mockNews,
+        isPublished: true,
+      });
+      await expect(service.publish(newsId, companyId)).rejects.toThrow(
+        'News is already published.',
+      );
     });
 
     it('should throw error if audience mode not set', async () => {
       mockNewsRepo.findOneBy.mockResolvedValue({ ...mockNews, settings: {} });
-      await expect(service.publish(newsId, companyId)).rejects.toThrow('Audience mode not set for this news.');
+      await expect(service.publish(newsId, companyId)).rejects.toThrow(
+        'Audience mode not set for this news.',
+      );
     });
   });
 
@@ -180,16 +215,20 @@ describe('NewsService', () => {
       (interactionEventRepo.find as jest.Mock).mockResolvedValue([
         { userId: 'user-1', type: 'OPEN' },
       ]);
-      mockUserDeviceRepo.createQueryBuilder().getRawMany.mockResolvedValue([
-        { userId: 'user-2' },
-      ]);
+      mockUserDeviceRepo
+        .createQueryBuilder()
+        .getRawMany.mockResolvedValue([{ userId: 'user-2' }]);
       mockPushDeliveryRepo.create.mockImplementation((dto) => dto);
 
       const result = await service.resendToUnopened(newsId, companyId);
 
       expect(result).toEqual(mockNews);
       expect(mockPushDeliveryRepo.save).toHaveBeenCalledWith([
-        expect.objectContaining({ userId: 'user-2', status: 'queued', channel: 'news_resend' }),
+        expect.objectContaining({
+          userId: 'user-2',
+          status: 'queued',
+          channel: 'news_resend',
+        }),
       ]);
     });
 
@@ -234,12 +273,19 @@ describe('NewsService', () => {
 
     it('should throw error if news not found', async () => {
       mockNewsRepo.findOneBy.mockResolvedValue(null);
-      await expect(service.resendToUnopened(newsId, companyId)).rejects.toThrow(NotFoundException);
+      await expect(service.resendToUnopened(newsId, companyId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw error if news not published', async () => {
-      mockNewsRepo.findOneBy.mockResolvedValue({ ...mockNews, isPublished: false });
-      await expect(service.resendToUnopened(newsId, companyId)).rejects.toThrow('News must be published to be resent.');
+      mockNewsRepo.findOneBy.mockResolvedValue({
+        ...mockNews,
+        isPublished: false,
+      });
+      await expect(service.resendToUnopened(newsId, companyId)).rejects.toThrow(
+        'News must be published to be resent.',
+      );
     });
   });
 });

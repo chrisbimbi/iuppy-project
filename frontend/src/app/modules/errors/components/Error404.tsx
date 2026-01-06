@@ -1,16 +1,18 @@
-import {FC} from 'react'
-import {Link} from 'react-router-dom'
-import {toAbsoluteUrl} from '../../../..//helpers'
+import { FC } from 'react'
+import { Link } from 'react-router-dom'
+import { toAbsoluteUrl } from '../../../..//helpers'
+import { useIntl } from 'react-intl'
 
 const Error404: FC = () => {
+  const intl = useIntl()
   return (
     <>
       {/* begin::Title */}
-      <h1 className='fw-bolder fs-2hx text-gray-900 mb-4'>Oops!</h1>
+      <h1 className='fw-bolder fs-2hx text-gray-900 mb-4'>{intl.formatMessage({ id: 'ERRORS.404.TITLE', defaultMessage: 'Oops!' })}</h1>
       {/* end::Title */}
 
       {/* begin::Text */}
-      <div className='fw-semibold fs-6 text-gray-500 mb-7'>We can't find that page.</div>
+      <div className='fw-semibold fs-6 text-gray-500 mb-7'>{intl.formatMessage({ id: 'ERRORS.404.MESSAGE', defaultMessage: "We can't find that page." })}</div>
       {/* end::Text */}
 
       {/* begin::Illustration */}
@@ -31,7 +33,7 @@ const Error404: FC = () => {
       {/* begin::Link */}
       <div className='mb-0'>
         <Link to='/dashboard' className='btn btn-sm btn-primary'>
-          Return Home
+          {intl.formatMessage({ id: 'ERRORS.BUTTON.HOME', defaultMessage: 'Return Home' })}
         </Link>
       </div>
       {/* end::Link */}
@@ -39,4 +41,4 @@ const Error404: FC = () => {
   )
 }
 
-export {Error404}
+export { Error404 }

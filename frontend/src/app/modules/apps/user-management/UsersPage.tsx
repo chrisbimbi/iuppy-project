@@ -1,23 +1,25 @@
-import {Route, Routes, Outlet, Navigate} from 'react-router-dom'
-import {PageLink, PageTitle} from '../../../..//layout/core'
-import {UsersListWrapper} from './users-list/UsersList'
-
-const usersBreadcrumbs: Array<PageLink> = [
-  {
-    title: 'User Management',
-    path: '/apps/user-management/users',
-    isSeparator: false,
-    isActive: false,
-  },
-  {
-    title: '',
-    path: '',
-    isSeparator: true,
-    isActive: false,
-  },
-]
+import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
+import { PageLink, PageTitle } from '../../../..//layout/core'
+import { UsersListWrapper } from './users-list/UsersList'
+import { useIntl } from 'react-intl'
 
 const UsersPage = () => {
+  const intl = useIntl()
+  const usersBreadcrumbs: Array<PageLink> = [
+    {
+      title: intl.formatMessage({ id: 'USER_MANAGEMENT.BREADCRUMBS.TITLE' }),
+      path: '/apps/user-management/users',
+      isSeparator: false,
+      isActive: false,
+    },
+    {
+      title: '',
+      path: '',
+      isSeparator: true,
+      isActive: false,
+    },
+  ]
+
   return (
     <Routes>
       <Route element={<Outlet />}>
@@ -25,7 +27,9 @@ const UsersPage = () => {
           path='users'
           element={
             <>
-              <PageTitle breadcrumbs={usersBreadcrumbs}>Users list</PageTitle>
+              <PageTitle breadcrumbs={usersBreadcrumbs}>
+                {intl.formatMessage({ id: 'USER_MANAGEMENT.BREADCRUMBS.USERS_LIST' })}
+              </PageTitle>
               <UsersListWrapper />
             </>
           }

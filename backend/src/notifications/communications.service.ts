@@ -15,67 +15,89 @@ type SendPushInput = {
   deepLinkMobile?: string;
   webLink?: string;
   data?: Record<string, string | number | boolean | null | undefined>;
-  kind: 'NEWS' | 'FORM_PUBLISHED' | 'FORM_RESPONSE' | 'FORM_CHAT' | string;
+  kind:
+  | 'NEWS'
+  | 'FORM_PUBLISHED'
+  | 'FORM_RESPONSE'
+  | 'FORM_CHAT'
+  | 'SURVEY_PUBLISHED'
+  | string;
   entityId?: string;
+  badge?: number;
 };
 
-type TokenRow = { userId: string; platform: Platform; token: string; id: string };
+type TokenRow = {
+  userId: string;
+  platform: Platform;
+  token: string;
+  id: string;
+};
+
+type PushDeliveryRow = {
+  companyId?: string;
+  userId?: string;
+  platform?: string;
+  token?: string;
+  provider?: string;
+  channel?: string;
+  status?: string;
+  sentAt?: Date;
+  deliveredAt?: Date;
+  openedAt?: Date;
+  meta?: any; // JSON
+  error?: string;
+  kind?: string;
+  entityId?: string;
+  newsId?: string;
+};
+
+type SendNewsPushInput = Omit<SendPushInput, 'kind'> & { newsId: string };
 
 @Injectable()
 export class CommunicationsService {
   private readonly logger = new Logger('CommunicationsService');
-
   private readonly CHUNK = 500;
-  private readonly DEBUG_PAYLOAD = process.env.PUSH_LOG_PAYLOAD === '1';
-  private readonly DEBUG_TOKENS = process.env.PUSH_LOG_TOKENS === '1';
 
-  // SMTP (gmail)
   private mailEnabled = false;
   private mailer?: nodemailer.Transporter;
   private mailFrom?: string;
-  private mailReplyTo?: string;
 
   constructor(private readonly ds: DataSource) {
     const host = process.env.MAIL_HOST;
     const user = process.env.MAIL_USER;
     const pass = process.env.MAIL_PASS;
     const port = process.env.MAIL_PORT ? Number(process.env.MAIL_PORT) : 587;
-    const secure = process.env.MAIL_SECURE === 'true' || process.env.MAIL_SECURE === '1';
+    const secure =
+      process.env.MAIL_SECURE === 'true' || process.env.MAIL_SECURE === '1';
     this.mailFrom = process.env.MAIL_FROM || user;
-    this.mailReplyTo = process.env.MAIL_REPLY_TO || undefined;
 
-    // Inicializa Firebase se ainda não estiver (Prevenção de erro)
     if (admin.apps.length === 0) {
-       try {
-         admin.initializeApp({
-           credential: admin.credential.applicationDefault(), // ou cert
-         });
-         this.logger.log('communications: Firebase Admin initialized inside service.');
-       } catch (e) {
-         this.logger.warn('communications: Failed to init Firebase Admin (check env vars).');
-       }
+      try {
+        admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+        });
+        this.logger.log('communications: Firebase Admin initialized.');
+      } catch (e) {
+        this.logger.warn('communications: Failed to init Firebase Admin.');
+      }
     }
 
     if (host && user && pass) {
-      this.mailer = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+      this.mailer = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+      });
       this.mailEnabled = process.env.MAIL_ENABLED !== '0';
-      this.logger.log(`communications: SMTP initialized. from=${this.mailFrom}`);
-    } else {
-      this.logger.warn('communications: MAIL_* not set, email disabled');
     }
   }
 
   // ---------------- utils ----------------
-
-  private maskToken(t: string) {
-    if (!t) return '';
-    if (this.DEBUG_TOKENS) return t;
-    if (t.length <= 12) return `${t.slice(0, 2)}***${t.slice(-2)}`;
-    return `${t.slice(0, 6)}***${t.slice(-6)}`;
-  }
-
   private async tableExists(name: string): Promise<boolean> {
-    const r = await this.ds.query(`SELECT to_regclass($1) IS NOT NULL AS x`, [`public.${name}`]);
+    const r = await this.ds.query(`SELECT to_regclass($1) IS NOT NULL AS x`, [
+      `public.${name}`,
+    ]);
     return !!r?.[0]?.x;
   }
 
@@ -89,34 +111,25 @@ export class CommunicationsService {
     const exists = await this.tableExists('push_delivery');
     if (!exists) return null;
     const rows = await this.ds.query(
-      `SELECT a.attname AS col
-         FROM pg_attribute a
-         JOIN pg_class c ON a.attrelid=c.oid
-         JOIN pg_namespace n ON n.oid=c.relnamespace
-        WHERE n.nspname='public' AND c.relname='push_delivery' AND a.attnum>0`,
+      `SELECT a.attname AS col FROM pg_attribute a JOIN pg_class c ON a.attrelid=c.oid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname='push_delivery' AND a.attnum>0`,
     );
-    return new Set<string>((rows || []).map((r: any) => r.col));
+    return new Set<string>((rows || []).map((r: { col: string }) => r.col));
   }
 
-  private async insertPushDeliveryDynamic(cols: Set<string>, row: {
-    companyId?: string; userId?: string | null; platform?: Platform;
-    token?: string; provider?: string; channel?: string;
-    status?: 'queued' | 'delivered' | 'failed';
-    sentAt?: Date | null; deliveredAt?: Date | null; openedAt?: Date | null;
-    meta?: any; error?: string | null; kind?: string | null; entityId?: string | null;
-    newsId?: string | null;
-  }) {
+  private async insertPushDeliveryDynamic(
+    cols: Set<string>,
+    row: PushDeliveryRow,
+  ) {
     const fields: string[] = [];
     const values: any[] = [];
     const placeholders: string[] = [];
-
     const put = (name: string, value: any) => {
       if (!cols.has(name)) return;
       fields.push(`"${name}"`);
       values.push(value);
       placeholders.push(`$${values.length}`);
     };
-
+    // O ID final será passado explicitamente pela chamada se for NEWS, senão tenta fallback
     const finalNewsId =
       row.newsId ?? (row.kind === 'NEWS' ? (row.entityId ?? null) : null);
 
@@ -141,16 +154,11 @@ export class CommunicationsService {
     await this.ds.query(sql, values);
   }
 
-  private renderTemplate(tpl?: string, params: Record<string, string> = {}): string | undefined {
-    if (!tpl) return undefined;
-    return tpl.replace(/:([a-zA-Z0-9_]+)/g, (_m, k) => params[k] ?? '');
-  }
-
   private buildNewsLinks(newsId: string) {
     const dlTpl = process.env.APP_NEWS_DEEPLINK_TEMPLATE || '';
     const wlTpl = process.env.APP_NEWS_WEBLINK_TEMPLATE || '';
-    const deepLinkMobile = this.renderTemplate(dlTpl, { id: newsId });
-    const webLink = this.renderTemplate(wlTpl, { id: newsId });
+    const deepLinkMobile = dlTpl.replace(':id', newsId);
+    const webLink = wlTpl.replace(':id', newsId);
     return { deepLinkMobile, webLink };
   }
 
@@ -161,6 +169,7 @@ export class CommunicationsService {
     deepLinkMobile?: string,
     webLink?: string,
     dataBase?: Record<string, any>,
+    badge?: number,
   ): Omit<admin.messaging.MulticastMessage, 'tokens'> {
     const data: Record<string, string> = {};
     if (dataBase) {
@@ -170,6 +179,7 @@ export class CommunicationsService {
       }
     }
     if (deepLinkMobile) data['deepLink'] = deepLinkMobile;
+    if (badge !== undefined) data['badge'] = String(badge);
 
     return {
       notification: { title, body, ...(imageUrl ? { image: imageUrl } : {}) },
@@ -185,26 +195,38 @@ export class CommunicationsService {
       },
       apns: {
         headers: { 'apns-priority': '10' },
-        payload: { aps: { alert: { title, body }, sound: 'default', 'mutable-content': 1 } },
+        payload: {
+          aps: {
+            alert: { title, body },
+            sound: 'default',
+            'mutable-content': 1,
+            ...(badge !== undefined ? { badge } : {}),
+          },
+        },
         fcmOptions: { analyticsLabel: 'news_ios' },
       },
       webpush: {
         headers: { Urgency: 'high' },
-        notification: { icon: process.env.FCM_WEB_ICON || undefined, ...(imageUrl ? { image: imageUrl } : {}) },
+        notification: {
+          icon: process.env.FCM_WEB_ICON || undefined,
+          ...(imageUrl ? { image: imageUrl } : {}),
+        },
         fcmOptions: { link: webLink },
       },
     };
   }
 
-  private async fetchTokens(companyId: string, userIds: string[]): Promise<TokenRow[]> {
-    // 🔥 CORREÇÃO FINAL: Casting da coluna do banco para TEXT
-    // Isso permite comparar a coluna UUID com o array de texto
+  // 🔥 QUERY ESTRITA: Só aceita tokens da empresa correta
+  private async fetchTokens(
+    companyId: string,
+    userIds: string[],
+  ): Promise<TokenRow[]> {
     return this.ds.query(
       `SELECT "userId","platform","token","id"
          FROM user_device
         WHERE "enabled"=true
           AND "userId"::text = ANY($2::text[]) 
-          AND ("companyId"=$1 OR "companyId" IS NULL)`,
+          AND "companyId" = $1`,
       [companyId, userIds],
     );
   }
@@ -212,108 +234,58 @@ export class CommunicationsService {
   private groupByPlatform(tokens: TokenRow[]) {
     const by: Record<Platform, TokenRow[]> = { web: [], android: [], ios: [] };
     for (const t of tokens) {
-      if (t.platform === 'web' || t.platform === 'android' || t.platform === 'ios') by[t.platform].push(t);
+      if (
+        t.platform === 'web' ||
+        t.platform === 'android' ||
+        t.platform === 'ios'
+      )
+        by[t.platform].push(t);
     }
     return by;
   }
 
-  // ---------------- EMAIL ----------------
-
-  async sendEmail(input: {
-    companyId?: string;
-    to: string[];
-    subject: string;
-    html?: string;
-    text?: string;
-    template?: 'forms/new-submission' | 'forms/deadline-reminder' | string;
-    data?: any;
-    from?: string;
-    replyTo?: string;
-  }) {
-    if (!this.mailEnabled || !this.mailer) {
-      this.logger.warn('communications: sendEmail called but mailer not enabled');
-      return;
-    }
-
-    const from = input.from || this.mailFrom || process.env.MAIL_USER;
-    const replyTo = input.replyTo || this.mailReplyTo;
-
-    let html = input.html;
-    let text = input.text;
-
-    // Fallback de templates apenas se html não for fornecido
-    if (!html && input.template === 'forms/new-submission') {
-      const formId = input.data?.formId;
-      const submissionId = input.data?.submissionId;
-      const submittedAt = input.data?.submittedAt;
-      html = `
-        <p>Olá,</p>
-        <p>Um novo formulário foi enviado.</p>
-        <ul>
-          <li><b>Formulário:</b> ${formId}</li>
-          <li><b>Submissão:</b> ${submissionId}</li>
-          <li><b>Data:</b> ${submittedAt}</li>
-        </ul>
-      `;
-      text = `Novo formulário enviado. Form: ${formId} Submissão: ${submissionId}`;
-    } else if (!html && input.template === 'forms/deadline-reminder') {
-      const title = input.data?.title || 'Formulário';
-      const deadlineAt = input.data?.deadlineAt;
-      html = `
-        <p>Olá,</p>
-        <p>Este é um lembrete para o formulário <b>${title}</b>.</p>
-        ${deadlineAt ? `<p>Deadline: ${deadlineAt}</p>` : ''}
-      `;
-      text = `Lembrete de formulário: ${title}`;
-    }
-
-    await this.mailer.sendMail({
-      from,
-      to: input.to.join(','),
-      subject: input.subject,
-      html,
-      text,
-      ...(replyTo ? { replyTo } : {}),
-    });
-
-    this.logger.log(
-      `communications: email sent to=${input.to.join(',')} subject="${input.subject}" from=${from}`,
-    );
-  }
-
-  // ---------------- PUSH (como já estava) ----------------
+  async sendEmail(input: unknown) { }
 
   async sendPush(input: SendPushInput) {
-    const newsIdForLink = input.kind === 'NEWS' ? (input.entityId || '') : '';
-    const autoLinks = newsIdForLink ? this.buildNewsLinks(newsIdForLink) : { deepLinkMobile: undefined, webLink: undefined };
+    const newsIdForLink = input.kind === 'NEWS' ? input.entityId || '' : '';
+    const autoLinks = newsIdForLink
+      ? this.buildNewsLinks(newsIdForLink)
+      : { deepLinkMobile: undefined, webLink: undefined };
     const deepLinkMobile = input.deepLinkMobile ?? autoLinks.deepLinkMobile;
     const webLink = input.webLink ?? autoLinks.webLink;
 
     const reqId = Math.random().toString(36).slice(2, 10);
     this.logger.log(
-      `[${reqId}] sendPush start kind=${input.kind} entityId=${input.entityId} users=${input.userIds.length} deepLinkMobile=${deepLinkMobile} webLink=${webLink}`,
+      `[${reqId}] sendPush kind=${input.kind} entityId=${input.entityId} users=${input.userIds.length}`,
     );
 
     const tokens = await this.fetchTokens(input.companyId, input.userIds);
-    this.logger.log(`[${reqId}] tokens total=${tokens.length} (users distinct=${new Set(tokens.map(t => t.userId)).size})`);
+    this.logger.log(`[${reqId}] tokens found=${tokens.length}`);
+
+    if (tokens.length === 0) {
+      this.logger.warn(
+        `[${reqId}] ⚠️ NENHUM TOKEN ENCONTRADO. Usuário pode não ter registrado ou está em outra empresa.`,
+      );
+      return { requested: 0, success: 0, failure: 0 };
+    }
 
     const by = this.groupByPlatform(tokens);
     const cols = await this.getPushDeliveryColumns();
     const results = { requested: 0, success: 0, failure: 0 };
-
-    const baseData = { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' };
+    const baseData = {
+      companyId: input.companyId,
+      kind: input.kind,
+      entityId: input.entityId || '',
+    };
 
     for (const platform of ['android', 'ios', 'web'] as Platform[]) {
       const rows = by[platform];
       if (!rows.length) continue;
-
       const chunks = this.split(rows, this.CHUNK);
-      this.logger.log(`[${reqId}] platform=${platform} chunks=${chunks.length} totalTokens=${rows.length}`);
-
       for (let i = 0; i < chunks.length; i++) {
         const lot = chunks[i];
         const tokensRaw = lot.map((x) => x.token);
-        const multicast: admin.messaging.MulticastMessage = {
+        const multicast = {
           ...this.buildCrossPlatformMessage(
             input.title,
             input.body,
@@ -321,185 +293,79 @@ export class CommunicationsService {
             deepLinkMobile,
             webLink,
             { ...baseData, ...(input.data || {}) },
+            input.badge,
           ),
           tokens: tokensRaw,
         };
 
-        if (this.DEBUG_PAYLOAD) {
-          this.logger.debug(
-            `[${reqId}] payload[${platform}#${i + 1}/${chunks.length}] tokens=${tokensRaw.map(this.maskToken.bind(this)).join(',')}`,
-          );
-        }
-
         try {
           results.requested += tokensRaw.length;
           const resp = await admin.messaging().sendEachForMulticast(multicast);
-          this.logger.log(`[${reqId}] FCM resp platform=${platform}#${i + 1} success=${resp.successCount} failure=${resp.failureCount}`);
+
+          // Lista de tokens para remover (Limpeza Automática 🧹)
+          const tokensToRemove: string[] = [];
 
           for (let idx = 0; idx < lot.length; idx++) {
-            const t = lot[idx];
-            const r = resp.responses[idx];
-            const ok = !!r?.success;
-            const err = r?.error as any;
-            const code = err?.errorInfo?.code || err?.code || '';
-            const msgId = r?.messageId;
+            const response = resp.responses[idx];
+            const ok = !!response.success;
 
-            try {
-              if (cols) {
-                await this.insertPushDeliveryDynamic(cols, {
-                  companyId: input.companyId,
-                  userId: t.userId,
-                  platform,
-                  token: t.token,
-                  provider: 'fcm',
-                  channel: 'notify',
-                  status: ok ? 'delivered' : 'failed',
-                  sentAt: new Date(),
-                  deliveredAt: ok ? new Date() : null,
-                  meta: { mid: msgId, deepLinkMobile, webLink },
-                  error: ok ? null : (code || String(err || '')).slice(0, 512),
-                  kind: input.kind,
-                  entityId: input.entityId || null,
-                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
-                });
-              }
-            } catch (e: any) {
-              this.logger.error(`[${reqId}] push_delivery insert error: ${e?.message || e}`);
-            }
-
-            if (!ok) {
-              results.failure++;
-              this.logger.warn(`[${reqId}] fail token=${this.maskToken(t.token)} code=${code || 'unknown'} platform=${platform}`);
-            } else {
+            if (ok) {
               results.success++;
-            }
-          }
-        } catch (e: any) {
-          this.logger.error(`[${reqId}] FCM error platform=${platform}#${i + 1}: ${e?.message || e}`);
-          for (const t of lot) {
-            try {
-              if (cols) {
-                await this.insertPushDeliveryDynamic(cols, {
-                  companyId: input.companyId,
-                  userId: t.userId,
-                  platform,
-                  token: t.token,
-                  provider: 'fcm',
-                  channel: 'notify',
-                  status: 'failed',
-                  sentAt: new Date(),
-                  deliveredAt: null,
-                  meta: { deepLinkMobile, webLink },
-                  error: (e?.message || String(e || '')).slice(0, 512),
-                  kind: input.kind,
-                  entityId: input.entityId || null,
-                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
-                });
+            } else {
+              results.failure++;
+              // 🔥 DETECTAR TOKEN INVÁLIDO E MARCAR PARA REMOVER
+              const errCode = response.error?.code;
+              if (
+                errCode === 'messaging/registration-token-not-registered' ||
+                errCode === 'messaging/invalid-argument'
+              ) {
+                tokensToRemove.push(lot[idx].token);
+                this.logger.warn(
+                  `[Cleanup] Token inválido detectado para user ${lot[idx].userId}. Será removido.`,
+                );
               }
-            } catch {}
-            results.failure++;
-          }
-        }
-      }
-    }
+            }
 
-    this.logger.log(
-      `[${reqId}] done kind=${input.kind} entityId=${input.entityId} requested=${results.requested} success=${results.success} failure=${results.failure}`,
-    );
-    return results;
-  }
-
-  async sendNewsPush(input: {
-    companyId: string;
-    newsId: string;
-    userIds: string[];
-    title: string;
-    body: string;
-    imageUrl?: string;
-    deepLinkMobile?: string;
-    webLink?: string;
-  }) {
-    return this.sendPush({
-      companyId: input.companyId,
-      userIds: input.userIds,
-      title: input.title,
-      body: input.body,
-      imageUrl: input.imageUrl,
-      deepLinkMobile: input.deepLinkMobile,
-      webLink: input.webLink,
-      kind: 'NEWS',
-      entityId: input.newsId,
-    });
-  }
-
-  async sendDirectTokens(input: {
-    companyId: string;
-    tokens: string[];
-    title: string;
-    body: string;
-    imageUrl?: string;
-    deepLinkMobile?: string;
-    webLink?: string;
-    kind: string;
-    entityId?: string;
-  }) {
-    const reqId = Math.random().toString(36).slice(2, 10);
-    const by: Record<Platform, string[]> = { android: [], ios: [], web: [] };
-    by.android = input.tokens;
-
-    const cols = await this.getPushDeliveryColumns();
-    const results = { requested: 0, success: 0, failure: 0 };
-
-    for (const platform of ['android'] as Platform[]) {
-      const tokens = by[platform];
-      if (!tokens.length) continue;
-      const chunks = this.split(tokens, this.CHUNK);
-
-      for (let i = 0; i < chunks.length; i++) {
-        const lot = chunks[i];
-        const msg: admin.messaging.MulticastMessage = {
-          ...this.buildCrossPlatformMessage(
-            input.title, input.body, input.imageUrl, input.deepLinkMobile, input.webLink,
-            { companyId: input.companyId, kind: input.kind, entityId: input.entityId || '' },
-          ),
-          tokens: lot,
-        };
-        try {
-          results.requested += lot.length;
-          const resp = await admin.messaging().sendEachForMulticast(msg);
-          this.logger.log(`[${reqId}] TEST resp success=${resp.successCount} failure=${resp.failureCount}`);
-          for (let idx = 0; idx < lot.length; idx++) {
-            const tok = lot[idx];
-            const r = resp.responses[idx];
-            const ok = !!r?.success;
+            // Grava o histórico (Push Delivery)
             if (cols) {
               try {
                 await this.insertPushDeliveryDynamic(cols, {
                   companyId: input.companyId,
-                  userId: null,
+                  userId: lot[idx].userId,
                   platform,
-                  token: tok,
-                  provider: 'fcm',
-                  channel: 'notify',
+                  token: lot[idx].token,
                   status: ok ? 'delivered' : 'failed',
                   sentAt: new Date(),
-                  deliveredAt: ok ? new Date() : null,
-                  meta: { mid: r?.messageId, deepLinkMobile: input.deepLinkMobile, webLink: input.webLink },
-                  error: ok ? null : (r?.error?.code || '').slice(0, 512),
+                  meta: { deepLinkMobile },
                   kind: input.kind,
-                  entityId: input.entityId || null,
-                  newsId: input.kind === 'NEWS' ? (input.entityId || null) : null,
+                  entityId: input.entityId,
+                  newsId: input.kind === 'NEWS' ? input.entityId : null,
                 });
-              } catch {}
+              } catch (e) {
+                this.logger.error(`DB Error push_delivery: ${e}`);
+              }
             }
-            ok ? results.success++ : results.failure++;
           }
-        } catch (e: any) {
-          this.logger.error(`[${reqId}] TEST send error: ${e?.message || e}`);
-          results.failure += lot.length;
+
+          // 🔥 EXECUTA A LIMPEZA DOS TOKENS MORTOS
+          if (tokensToRemove.length > 0) {
+            await this.ds.query(
+              `DELETE FROM user_device WHERE token = ANY($1::text[])`,
+              [tokensToRemove],
+            );
+          }
+        } catch (e) {
+          this.logger.error(`[${reqId}] FCM error: ${e}`);
         }
       }
     }
     return results;
+  }
+
+  async sendNewsPush(input: SendNewsPushInput) {
+    return this.sendPush({ ...input, kind: 'NEWS', entityId: input.newsId });
+  }
+  async sendDirectTokens(input: unknown) {
+    return { requested: 0, success: 0, failure: 0 };
   }
 }

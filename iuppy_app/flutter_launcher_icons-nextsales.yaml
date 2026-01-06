@@ -1,0 +1,5 @@
+flutter_launcher_icons:
+  android: true
+  ios: "AppIcon-nextsales"
+  image_path: assets/icons/nextsales.png
+  remove_alpha_ios: true

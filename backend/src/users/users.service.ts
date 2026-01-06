@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { UserEntity } from './user.entity';
@@ -14,13 +15,16 @@ export class UsersService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   // ===== CRUD =====
   async create(createUserDto: CreateUserDto): Promise<UserEntity> {
     const user = this.userRepository.create(createUserDto);
     user.password = await argon2.hash(user.password);
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+    this.eventEmitter.emit('user.created', savedUser);
+    return savedUser;
   }
 
   async findAll(): Promise<UserEntity[]> {
@@ -79,23 +83,27 @@ export class UsersService {
       // Usamos alias simples e cast para garantir
       const groupRows = await this.dataSource.query(
         `SELECT group_id FROM user_group_members WHERE user_id = $1`,
-        [id]
+        [id],
       );
       realGroupIds = groupRows.map((r: any) => r.group_id);
     } catch (e) {
-      this.logger.warn(`[UsersService] Erro ao buscar grupos: ${(e as any).message}`);
+      this.logger.warn(
+        `[UsersService] Erro ao buscar grupos: ${(e as any).message}`,
+      );
     }
 
     try {
-      // 2. Spaces: Como não há tabela de relação user-space, 
+      // 2. Spaces: Como não há tabela de relação user-space,
       // assumimos que o usuário tem acesso aos spaces da empresa.
       const spaceRows = await this.dataSource.query(
         `SELECT id FROM space WHERE "companyId" = $1 AND COALESCE(active, true) = true`,
-        [user.companyId]
+        [user.companyId],
       );
       realSpaceIds = spaceRows.map((r: any) => r.id);
     } catch (e) {
-      this.logger.warn(`[UsersService] Erro ao buscar spaces: ${(e as any).message}`);
+      this.logger.warn(
+        `[UsersService] Erro ao buscar spaces: ${(e as any).message}`,
+      );
     }
 
     return {
@@ -126,5 +134,72 @@ export class UsersService {
       { id: userId },
       { refreshTokenHash: hash || null },
     );
+  }
+
+  async updateLoginStats(userId: string) {
+    if (!userId) return;
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      this.logger.warn(`[UsersService] User ${userId} not found for stats update`);
+      return;
+    }
+
+    const now = new Date();
+    user.lastLoginAt = now;
+    if (!user.firstLoginAt) {
+      user.firstLoginAt = now;
+    }
+
+    try {
+      await this.userRepository.save(user);
+      this.logger.log(`[UsersService] Updated login stats for ${userId}: lastLoginAt=${now}`);
+    } catch (e) {
+      this.logger.error(`[UsersService] Failed to update login stats for ${userId}`, e);
+    }
+  }
+
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return this.userRepository.findOne({ where: { email } });
+  }
+
+  async findByPhone(phone: string): Promise<UserEntity | null> {
+    return this.userRepository.findOne({ where: { phone } });
+  }
+
+  async updateOtp(userId: string, code: string | null, expiresAt: Date | null) {
+    await this.userRepository.update(userId, {
+      otpCode: code,
+      otpExpiresAt: expiresAt,
+    });
+  }
+
+  async findByEmailWithOtp(email: string) {
+    return this.userRepository
+      .createQueryBuilder('u')
+      .addSelect('u.otpCode')
+      .addSelect('u.otpExpiresAt')
+      .where('u.email = :email', { email })
+      .getOne();
+  }
+
+  async findByIdentifier(identifier: string) {
+    // Search by Email OR SyncKey (Matricula) OR CPF (in customAttributes)
+    // Note: Searching in JSONB customAttributes can be tricky depending on DB, 
+    // but here we try basic fields first.
+    return this.userRepository.findOne({
+      where: [
+        { email: identifier },
+        { syncKey: identifier },
+        // { customAttributes: { cpf: identifier } } // TypeORM jsonb query might need raw query
+      ],
+    });
+  }
+
+  async updatePhone(userId: string, phone: string) {
+    await this.userRepository.update(userId, { phone });
   }
 }

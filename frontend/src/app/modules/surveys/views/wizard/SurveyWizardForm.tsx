@@ -1,5 +1,7 @@
+// (Copie o código abaixo)
 import { FC, useEffect, useMemo, useState } from 'react'
-import { CreateSurveyDto, Survey } from '@shared/types'
+import { useIntl } from 'react-intl'
+import { CreateSurveyDto, Survey, SurveyStatus } from '@shared/types'
 import { SurveyService } from '../../services/surveys.service'
 import SurveyStep1Basic from './SurveyStep1Basic'
 import SurveyStep2Publish from './SurveyStep2Publish'
@@ -11,12 +13,10 @@ type Props = {
     surveyId?: string
     initialValues: CreateSurveyDto
     onFinished: () => void
-    /** passo inicial (1..3), usado quando abrimos com ?step=3 */
     initialStep?: number
 }
 
 const cleanDto = (v: CreateSurveyDto): Partial<Survey> => ({
-    // somente campos aceitos pelo backend
     companyId: v.companyId,
     title: v.title,
     description: v.description || '',
@@ -53,8 +53,8 @@ const SurveyWizardForm: FC<Props> = ({
     const [data, setData] = useState<CreateSurveyDto>(initialValues)
     const [step, setStep] = useState<number>(clampStep(initialStep))
     const [saving, setSaving] = useState(false)
+    const intl = useIntl()
 
-    // Se o query param mudar (ou ao trocar de survey), sincroniza o passo
     useEffect(() => {
         setStep(clampStep(initialStep))
     }, [initialStep, surveyId])
@@ -64,30 +64,35 @@ const SurveyWizardForm: FC<Props> = ({
 
     const canGoQuestions = !!surveyId
 
-    const saveStep = async () => {
+    const saveStep = async (forcePublish = false) => {
         setSaving(true)
         try {
-            const payload = cleanDto({
-                ...data,
-                companyId,
-                authorId: data.authorId || userId,
-                adminIds: (data.adminIds && data.adminIds.length) ? data.adminIds : [userId],
-            })
+            // 🔥 GARANTIA: Se for publicar, força o status E mantém os campos de push
+            const finalData = { ...data };
+            if (forcePublish) {
+                finalData.status = SurveyStatus.Published;
+            }
+
+            const payload = cleanDto(finalData);
+
+            // Debug para garantir que o front está mandando
+            console.log('[Wizard] Payload:', payload);
 
             if (!payload.spaceIds?.length) {
-                alert('Selecione pelo menos 1 espaço')
-                return
+                alert(intl.formatMessage({ id: 'SURVEYS.WIZARD.ERROR.NO_SPACE', defaultMessage: 'Selecione pelo menos 1 espaço' }))
+                return false
             }
 
             if (surveyId) {
                 await SurveyService.update(companyId, surveyId, payload)
             } else {
                 const created = await SurveyService.create(companyId, payload)
-                // após criar, vá direto ao passo 3 (perguntas)
-                window.location.assign(`/modules/surveys/${created.id}/edit?step=3`)
-                return
+                if (!forcePublish) {
+                    window.location.assign(`/modules/surveys/${created.id}/edit?step=2`)
+                }
+                return true
             }
-            return
+            return true
         } finally {
             setSaving(false)
         }
@@ -104,47 +109,28 @@ const SurveyWizardForm: FC<Props> = ({
         setStep(prev => Math.max(prev - 1, 1))
     }
 
-    const handleFinish = async (e: React.FormEvent) => {
+    const handleSaveDraft = async (e: React.FormEvent) => {
         e.preventDefault()
         await saveStep()
         onFinished()
+    }
+
+    const handlePublishAndFinish = async () => {
+        const ok = await saveStep(true);
+        if (ok) onFinished();
     }
 
     const header = useMemo(
         () => (
             <div className="d-flex align-items-center justify-content-between mb-6">
                 <div className="btn-group" role="group" aria-label="steps">
-                    <button
-                        type="button"
-                        className={`btn ${step === 1 ? 'btn-primary' : 'btn-light'}`}
-                        onClick={() => setStep(1)}
-                    >
-                        1
-                    </button>
-                    <button
-                        type="button"
-                        className={`btn ${step === 2 ? 'btn-primary' : 'btn-light'}`}
-                        onClick={() => setStep(2)}
-                    >
-                        2
-                    </button>
-                    <button
-                        type="button"
-                        className={`btn ${step === 3 ? 'btn-primary' : 'btn-light'}`}
-                        onClick={() => setStep(3)}
-                    >
-                        3
-                    </button>
+                    <button type="button" className={`btn ${step === 1 ? 'btn-primary' : 'btn-light'}`} onClick={() => setStep(1)}>1</button>
+                    <button type="button" className={`btn ${step === 2 ? 'btn-primary' : 'btn-light'} `} onClick={() => setStep(2)} disabled={!surveyId}>2</button>
+                    <button type="button" className={`btn ${step === 3 ? 'btn-primary' : 'btn-light'}`} onClick={() => setStep(3)} disabled={!surveyId}>3</button>
                 </div>
-
-                {canGoQuestions && step !== 3 && (
-                    <button className="btn btn-outline-primary" onClick={() => setStep(3)}>
-                        Ir para perguntas
-                    </button>
-                )}
             </div>
         ),
-        [step, canGoQuestions],
+        [step, surveyId],
     )
 
     return (
@@ -152,13 +138,12 @@ const SurveyWizardForm: FC<Props> = ({
             <div className="card-body">
                 {header}
 
-                {/* Step 1 e 2 ficam dentro de <form>; Step 3 sem <form> */}
                 {step === 1 && (
                     <form onSubmit={handleNext}>
                         <SurveyStep1Basic data={data} setFieldValue={setFieldValue as any} />
                         <div className="d-flex justify-content-end gap-2 mt-6">
                             <button className="btn btn-primary" type="submit" disabled={saving}>
-                                Continuar
+                                {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.CONTINUE', defaultMessage: 'Continuar' })}
                             </button>
                         </div>
                     </form>
@@ -169,14 +154,14 @@ const SurveyWizardForm: FC<Props> = ({
                         <SurveyStep2Publish data={data} setFieldValue={setFieldValue as any} />
                         <div className="d-flex justify-content-between gap-2 mt-6">
                             <button className="btn btn-light" onClick={handlePrev}>
-                                Voltar
+                                {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.BACK', defaultMessage: 'Voltar' })}
                             </button>
                             <div className="d-flex gap-2">
-                                <button className="btn btn-light" onClick={handleFinish} disabled={saving}>
-                                    Salvar
+                                <button className="btn btn-light" onClick={handleSaveDraft} disabled={saving}>
+                                    {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.SAVE_DRAFT', defaultMessage: 'Salvar Rascunho' })}
                                 </button>
                                 <button className="btn btn-primary" type="submit" disabled={saving}>
-                                    Continuar
+                                    {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.CONTINUE', defaultMessage: 'Continuar' })}
                                 </button>
                             </div>
                         </div>
@@ -188,11 +173,16 @@ const SurveyWizardForm: FC<Props> = ({
                         <SurveyStep3Questions companyId={companyId} surveyId={surveyId} />
                         <div className="d-flex justify-content-between gap-2 mt-6">
                             <button className="btn btn-light" onClick={() => setStep(2)}>
-                                Voltar
+                                {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.BACK', defaultMessage: 'Voltar' })}
                             </button>
-                            <button className="btn btn-success" onClick={() => onFinished()}>
-                                Concluir
-                            </button>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-light" onClick={() => onFinished()}>
+                                    {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.EXIT_DRAFT', defaultMessage: 'Sair (Manter Rascunho)' })}
+                                </button>
+                                <button className="btn btn-success" onClick={handlePublishAndFinish} disabled={saving}>
+                                    {intl.formatMessage({ id: 'SURVEYS.WIZARD.BUTTON.PUBLISH', defaultMessage: '🚀 Publicar Agora' })}
+                                </button>
+                            </div>
                         </div>
                     </>
                 )}

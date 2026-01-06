@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class StarRating extends StatelessWidget {
   final int value; // 1..5
-  final ValueChanged<int> onChanged;
+  final ValueChanged<int>? onChanged;
   final int max;
   final double size;
   const StarRating({
@@ -21,10 +21,11 @@ class StarRating extends StatelessWidget {
         final idx = i + 1;
         final filled = idx <= value;
         return InkResponse(
-          onTap: () => onChanged(idx),
+          onTap: onChanged != null ? () => onChanged!(idx) : null,
           child: Icon(
             filled ? Icons.star_rounded : Icons.star_border_rounded,
             size: size,
+            color: onChanged == null ? Colors.grey : null,
           ),
         );
       }),
@@ -35,7 +36,7 @@ class StarRating extends StatelessWidget {
 /// Escala NPS de 0 a 10
 class NpsSlider extends StatelessWidget {
   final int value; // 0..10
-  final ValueChanged<int> onChanged;
+  final ValueChanged<int>? onChanged;
   const NpsSlider({super.key, required this.value, required this.onChanged});
 
   @override
@@ -48,7 +49,7 @@ class NpsSlider extends StatelessWidget {
           divisions: 10,
           label: '$value',
           value: value.toDouble(),
-          onChanged: (v) => onChanged(v.round()),
+          onChanged: onChanged != null ? (v) => onChanged!(v.round()) : null,
         ),
         const SizedBox(height: 4),
         const Row(

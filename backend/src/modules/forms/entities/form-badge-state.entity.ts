@@ -1,22 +1,22 @@
-import { Column, Entity, PrimaryGeneratedColumn, Index } from 'typeorm'
+import { Column, Entity, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('form_badge_state')
 @Index(['companyId', 'cmsUserId', 'formId'], { unique: true })
 export class FormBadgeStateEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  cmsUserId: string
+  cmsUserId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('timestamptz', { nullable: true })
-  lastSeenAt: Date | null
+  lastSeenAt: Date | null;
 
   // badge azul (novas submissões)
   @Column({ type: 'int', default: 0 })

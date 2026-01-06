@@ -32,9 +32,10 @@ class FormsStorageService {
     File file, {
     required String formId,
     String? companyId,
+    String? customFileName,
   }) async {
     final mime = lookupMimeType(file.path) ?? 'application/octet-stream';
-    final fileName =
+    final fileName = customFileName ??
         '${DateTime.now().millisecondsSinceEpoch}${p.extension(file.path)}';
 
     // você pode mudar esse path pra bater com o CMS

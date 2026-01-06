@@ -12,13 +12,14 @@ import {
   UpdateSurveyQuestionDto,
 } from '@shared/types'
 
-export type Filters = { spaceId?: string; spaceIds?: string[]; includeGlobal?: boolean }
+export type Filters = { spaceId?: string; spaceIds?: string[]; includeGlobal?: boolean; visibility?: string }
 
 function pathWithFilters(path: string, filters?: Filters) {
   const u = new URL(path, 'http://_') // base fake só para montar query
   if (filters?.spaceId) u.searchParams.set('spaceId', filters.spaceId)
   if (filters?.spaceIds?.length) u.searchParams.set('spaceIds', filters.spaceIds.join(','))
   if (filters?.includeGlobal) u.searchParams.set('includeGlobal', 'true')
+  if (filters?.visibility) u.searchParams.set('visibility', filters.visibility)
   return u.pathname + u.search
 }
 

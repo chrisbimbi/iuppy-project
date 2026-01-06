@@ -1,88 +1,99 @@
 // backend/src/modules/surveys/dto/create-survey.dto.ts
 import {
-    IsNotEmpty,
-    IsString,
-    IsArray,
-    ArrayNotEmpty,
-    IsBoolean,
-    IsDateString,
-    IsUUID,
-    IsOptional,
-    IsEnum,
-    ValidateIf,
-} from 'class-validator'
-import { SurveyStatus } from '../entities/survey.entity'
+  IsNotEmpty,
+  IsString,
+  IsArray,
+  ArrayNotEmpty,
+  IsBoolean,
+  IsDateString,
+  IsUUID,
+  IsOptional,
+  IsEnum,
+  ValidateIf,
+} from 'class-validator';
+import { SurveyStatus } from '../entities/survey.entity';
 
 export class CreateSurveyDto {
-    @IsNotEmpty() @IsUUID()
-    companyId: string
+  @IsNotEmpty()
+  @IsUUID()
+  companyId: string;
 
-    @IsNotEmpty() @IsString()
-    title: string
+  @IsNotEmpty()
+  @IsString()
+  title: string;
 
-    @IsOptional() @IsString()
-    description?: string
+  @IsOptional()
+  @IsString()
+  description?: string;
 
-    @IsNotEmpty() @IsUUID()
-    authorId: string
+  @IsNotEmpty()
+  @IsUUID()
+  authorId: string;
 
-    @IsArray() @ArrayNotEmpty() @IsUUID('all', { each: true })
-    adminIds: string[]
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('all', { each: true })
+  adminIds: string[];
 
-    @IsArray() @ArrayNotEmpty() @IsUUID('all', { each: true })
-    spaceIds: string[]
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('all', { each: true })
+  spaceIds: string[];
 
-    // --- visibilidade / grupos ---
-    @IsEnum(['public', 'private', 'specific_groups'])
-    visibility: 'public' | 'private' | 'specific_groups'
+  // --- visibilidade / grupos ---
+  @IsEnum(['public', 'private', 'specific_groups', 'journey_only'])
+  visibility: 'public' | 'private' | 'specific_groups' | 'journey_only';
 
-    @IsOptional()
-    @IsArray()
-    @IsUUID('all', { each: true })
-    @ValidateIf(o => o.visibility === 'specific_groups')
-    @ArrayNotEmpty()
-    groupIds?: string[]
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @ValidateIf((o) => o.visibility === 'specific_groups')
+  @ArrayNotEmpty()
+  groupIds?: string[];
 
-    // --- notificações / entrega ---
-    @IsBoolean()
-    notifyUsers: boolean
+  // --- notificações / entrega ---
+  @IsBoolean()
+  notifyUsers: boolean;
 
-    @IsBoolean()
-    emailNotification: boolean
+  @IsBoolean()
+  emailNotification: boolean;
 
-    @IsBoolean()
-    inAppNotification: boolean
+  @IsBoolean()
+  inAppNotification: boolean;
 
-    @IsBoolean()
-    pushNotification: boolean
+  @IsBoolean()
+  pushNotification: boolean;
 
-    @IsOptional() @IsString()
-    pushTitle?: string
+  @IsOptional()
+  @IsString()
+  pushTitle?: string;
 
-    @IsOptional() @IsString()
-    pushContent?: string
+  @IsOptional()
+  @IsString()
+  pushContent?: string;
 
-    @IsBoolean()
-    acknowledgementRequired: boolean
+  @IsBoolean()
+  acknowledgementRequired: boolean;
 
-    // --- agendamento / expiração ---
-    @IsBoolean()
-    scheduleSurvey: boolean
+  // --- agendamento / expiração ---
+  @IsBoolean()
+  scheduleSurvey: boolean;
 
-    @IsBoolean()
-    expireSurvey: boolean
+  @IsBoolean()
+  expireSurvey: boolean;
 
-    @ValidateIf(o => o.scheduleSurvey === true)
-    @IsDateString()
-    startsAt: string
+  @ValidateIf((o) => o.scheduleSurvey === true)
+  @IsDateString()
+  startsAt: string;
 
-    @ValidateIf(o => o.expireSurvey === true)
-    @IsDateString()
-    endsAt: string
+  @ValidateIf((o) => o.expireSurvey === true)
+  @IsDateString()
+  endsAt: string;
 
-    @IsBoolean()
-    isAnonymous: boolean
+  @IsBoolean()
+  isAnonymous: boolean;
 
-    @IsOptional() @IsString()
-    status?: SurveyStatus
+  @IsOptional()
+  @IsString()
+  status?: SurveyStatus;
 }

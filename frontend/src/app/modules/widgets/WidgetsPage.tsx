@@ -1,28 +1,31 @@
-import {Navigate, Outlet, Route, Routes} from 'react-router-dom'
-import {PageLink, PageTitle} from '../../..//layout/core'
-import {Charts} from './components/Charts'
-import {Feeds} from './components/Feeds'
-import {Lists} from './components/Lists'
-import {Tables} from './components/Tables'
-import {Mixed} from './components/Mixed'
-import {Statistics} from './components/Statistics'
-
-const widgetsBreadCrumbs: Array<PageLink> = [
-  {
-    title: 'Widgets',
-    path: '/crafted/widgets/charts',
-    isSeparator: false,
-    isActive: false,
-  },
-  {
-    title: '',
-    path: '',
-    isSeparator: true,
-    isActive: false,
-  },
-]
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { PageLink, PageTitle } from '../../..//layout/core'
+import { Charts } from './components/Charts'
+import { Feeds } from './components/Feeds'
+import { Lists } from './components/Lists'
+import { Tables } from './components/Tables'
+import { Mixed } from './components/Mixed'
+import { Statistics } from './components/Statistics'
+import { useIntl } from 'react-intl'
 
 const WidgetsPage = () => {
+  const intl = useIntl()
+
+  const widgetsBreadCrumbs: Array<PageLink> = [
+    {
+      title: intl.formatMessage({ id: 'MENU.WIDGETS', defaultMessage: 'Widgets' }),
+      path: '/crafted/widgets/charts',
+      isSeparator: false,
+      isActive: false,
+    },
+    {
+      title: '',
+      path: '',
+      isSeparator: true,
+      isActive: false,
+    },
+  ]
+
   return (
     <Routes>
       <Route element={<Outlet />}>
@@ -30,7 +33,7 @@ const WidgetsPage = () => {
           path='charts'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Charts</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.CHARTS', defaultMessage: 'Charts' })}</PageTitle>
               <Charts />
             </>
           }
@@ -39,7 +42,7 @@ const WidgetsPage = () => {
           path='feeds'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Feeds</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.FEEDS', defaultMessage: 'Feeds' })}</PageTitle>
               <Feeds />
             </>
           }
@@ -48,7 +51,7 @@ const WidgetsPage = () => {
           path='lists'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Lists</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.LISTS', defaultMessage: 'Lists' })}</PageTitle>
               <Lists />
             </>
           }
@@ -57,7 +60,7 @@ const WidgetsPage = () => {
           path='mixed'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Mixed</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.MIXED', defaultMessage: 'Mixed' })}</PageTitle>
               <Mixed />
             </>
           }
@@ -66,7 +69,7 @@ const WidgetsPage = () => {
           path='tables'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Tables</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.TABLES', defaultMessage: 'Tables' })}</PageTitle>
               <Tables />
             </>
           }
@@ -75,7 +78,7 @@ const WidgetsPage = () => {
           path='statistics'
           element={
             <>
-              <PageTitle breadcrumbs={widgetsBreadCrumbs}>Statiscics</PageTitle>
+              <PageTitle breadcrumbs={widgetsBreadCrumbs}>{intl.formatMessage({ id: 'WIDGETS.STATISTICS', defaultMessage: 'Statistics' })}</PageTitle>
               <Statistics />
             </>
           }

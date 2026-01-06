@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 Future<void> openYoutubeDialog(BuildContext context, String videoId) async {
-  final controller = YoutubePlayerController.fromVideoId(
-    videoId: videoId,
-    autoPlay: true,
-    params: const YoutubePlayerParams(showFullscreenButton: true),
+  final controller = YoutubePlayerController(
+    initialVideoId: videoId,
+    flags: const YoutubePlayerFlags(
+      autoPlay: true,
+      mute: false,
+      forceHD: true,
+    ),
   );
 
   await showDialog(
@@ -13,14 +16,19 @@ Future<void> openYoutubeDialog(BuildContext context, String videoId) async {
     barrierDismissible: true,
     builder: (_) => Dialog(
       insetPadding: const EdgeInsets.all(16),
+      backgroundColor: Colors.black,
       child: AspectRatio(
         aspectRatio: 16 / 9,
-        child: YoutubePlayer(controller: controller),
+        child: YoutubePlayer(
+          controller: controller,
+          showVideoProgressIndicator: true,
+          progressIndicatorColor: Colors.amber,
+        ),
       ),
     ),
   );
 
-  controller.close();
+  controller.dispose();
 }
 
 /// tenta extrair id de uma URL youtube/embed ou watch

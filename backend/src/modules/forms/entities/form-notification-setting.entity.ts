@@ -5,30 +5,30 @@ import {
   Index,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm'
+} from 'typeorm';
 
 @Entity('form_notification_setting')
 @Index(['companyId'])
 @Index(['companyId', 'formId'])
 export class FormNotificationSettingEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid', { nullable: true })
-  formId: string | null
+  formId: string | null;
 
   @Column('text', { nullable: true })
-  spaceId: string | null
+  spaceId: string | null;
 
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
-  emails: string[]
+  emails: string[];
 
   @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt: Date
+  updatedAt: Date;
 }

@@ -1,13 +1,15 @@
-import {KTIcon} from '../../../../../..//helpers'
-import {useListView} from '../core/ListViewProvider'
+import { KTIcon } from '../../../../../..//helpers'
+import { useListView } from '../core/ListViewProvider'
+import { useIntl } from 'react-intl'
 
 const UserEditModalHeader = () => {
-  const {setItemIdForUpdate} = useListView()
+  const intl = useIntl()
+  const { setItemIdForUpdate } = useListView()
 
   return (
     <div className='modal-header'>
       {/* begin::Modal title */}
-      <h2 className='fw-bolder'>Add User</h2>
+      <h2 className='fw-bolder'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.TITLE' })}</h2>
       {/* end::Modal title */}
 
       {/* begin::Close */}
@@ -15,7 +17,7 @@ const UserEditModalHeader = () => {
         className='btn btn-icon btn-sm btn-active-icon-primary'
         data-kt-users-modal-action='close'
         onClick={() => setItemIdForUpdate(undefined)}
-        style={{cursor: 'pointer'}}
+        style={{ cursor: 'pointer' }}
       >
         <KTIcon iconName='cross' className='fs-1' />
       </div>
@@ -24,4 +26,4 @@ const UserEditModalHeader = () => {
   )
 }
 
-export {UserEditModalHeader}
+export { UserEditModalHeader }

@@ -22,13 +22,25 @@ import { UploadsModule } from './uploads/uploads.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { AccessGrantsModule } from './modules/access-grants/access-grants.module';
 import { V2Module } from './v2/common/v2.module';
+import { JourneysModule } from './modules/journeys/journeys.module';
+import { GamificationModule } from './modules/gamification/gamification.module';
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MailModule } from './mail/mail.module';
 
 // ⬇️ IMPORTANTE: habilita cron no Nest
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { SearchModule } from './search/search.module';
+import { ChatModule } from './chat/chat.module';
+import { SocialModule } from './modules/social/social.module';
+import { VacationsModule } from './modules/vacations/vacations.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { Nr1Module } from './modules/nr1/nr1.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -40,6 +52,13 @@ import { ScheduleModule } from '@nestjs/schedule';
 
     // habilita scheduler global
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT) || 6379,
+      },
+    }),
 
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
@@ -47,6 +66,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
 
     NotificationsModule,
+    MailModule,
 
     ThrottlerModule.forRoot([{ ttl: 60, limit: 60 }]),
 
@@ -89,11 +109,17 @@ import { ScheduleModule } from '@nestjs/schedule';
     CompaniesModule,
     AccessControlModule,
     AccessGrantsModule,
+    SearchModule,
+    JourneysModule,
+    GamificationModule,
+    ChatModule,
+    SocialModule,
+    VacationsModule,
+    PerformanceModule,
+    Nr1Module,
+    IntegrationsModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
-export class AppModule {}
+export class AppModule { }

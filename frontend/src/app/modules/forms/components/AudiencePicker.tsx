@@ -3,11 +3,13 @@
 
 import React from 'react';
 import { FormsApi } from '../services/api';
+import { useAuth } from '../../auth';
 
 type Value = { spaceIds: string[]; groupIds: string[] };
 type Props = { value: Value; onChange: (v: Value) => void };
 
 export default function AudiencePicker({ value, onChange }: Props) {
+  const { currentUser } = useAuth();
   const [segments, setSegments] = React.useState<{ spaces: any[]; groups: any[] }>({
     spaces: [],
     groups: [],
@@ -26,7 +28,7 @@ export default function AudiencePicker({ value, onChange }: Props) {
     let mounted = true;
     setLoading(true);
     setErr(null);
-    FormsApi.segmentationOptions()
+    FormsApi.segmentationOptions(currentUser?.companyId)
       .then((res) => {
         if (!mounted) return;
         const spaces = Array.isArray(res?.spaces) ? res.spaces : [];
@@ -47,7 +49,7 @@ export default function AudiencePicker({ value, onChange }: Props) {
             setSegments({ spaces, groups });
             return;
           }
-        } catch (_) {}
+        } catch (_) { }
         setErr(String(e?.message || 'Falha ao carregar segmentos'));
       })
       .finally(() => mounted && setLoading(false));

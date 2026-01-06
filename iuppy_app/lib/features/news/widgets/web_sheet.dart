@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 Future<void> openWebSheet(BuildContext context, String url,
@@ -52,6 +54,11 @@ Future<void> openWebSheet(BuildContext context, String url,
                         onPageFinished: (_) =>
                             setState(() => isLoading = false),
                       )),
+                    gestureRecognizers: {
+                      Factory<VerticalDragGestureRecognizer>(
+                        () => VerticalDragGestureRecognizer(),
+                      ),
+                    },
                   ),
                   if (isLoading)
                     const Center(child: CircularProgressIndicator()),

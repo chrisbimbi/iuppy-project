@@ -5,12 +5,16 @@ import type { Request } from 'express';
 
 function accessTokenExtractor(req: Request): string | null {
   if (!req) return null;
-  const fromCookie = (req.cookies?.access_token as string) || (req.cookies?.at as string);
+  const fromCookie =
+    (req.cookies?.access_token as string) || (req.cookies?.at as string);
   return fromCookie || null;
 }
 
 @Injectable()
-export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') {
+export class JwtAccessStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-access',
+) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -24,7 +28,7 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
 
   async validate(payload: any) {
     const roles = payload?.role ? [payload.role] : [];
-    // req.user => { sub, email, role, companyId, roles, iat, exp }
-    return { ...payload, roles };
+    // req.user => { id, sub, email, role, companyId, roles, iat, exp }
+    return { ...payload, id: payload.sub, roles };
   }
 }

@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "iuppy_app (Simulator iPhone 15)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "5F84DBC8-382F-4D5B-94DE-53925EDFE10D",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "iuppy_app (Physical iPhone)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "00008030-000E308A0120C02E",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "iuppy_app (Android Emulator)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "emulator-5554",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "iuppy_app (Auto Select)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        }
+    ]
+}

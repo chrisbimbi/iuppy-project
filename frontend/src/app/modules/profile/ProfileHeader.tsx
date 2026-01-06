@@ -1,13 +1,15 @@
 
 import React from 'react'
-import {KTIcon, toAbsoluteUrl} from '../../..//helpers'
-import {Link, useLocation} from 'react-router-dom'
-import {Dropdown1} from '../../..//partials'
+import { useIntl } from 'react-intl'
+import { KTIcon, toAbsoluteUrl } from '../../..//helpers'
+import { Link, useLocation } from 'react-router-dom'
+import { Dropdown1 } from '../../..//partials'
 import { Toolbar } from '../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../..//layout/components/Content'
 
 const ProfileHeader: React.FC = () => {
   const location = useLocation()
+  const intl = useIntl()
 
   return (
     <>
@@ -64,9 +66,9 @@ const ProfileHeader: React.FC = () => {
                     <a href='#' className='btn btn-sm btn-light me-2' id='kt_user_follow_button'>
                       <KTIcon iconName='check' className='fs-3 d-none' />
 
-                      <span className='indicator-label'>Follow</span>
+                      <span className='indicator-label'>{intl.formatMessage({ id: 'PROFILE.HEADER.BUTTON.FOLLOW', defaultMessage: 'Follow' })}</span>
                       <span className='indicator-progress'>
-                        Please wait...
+                        {intl.formatMessage({ id: 'PROFILE.HEADER.STATE.WAITING', defaultMessage: 'Please wait...' })}
                         <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
                       </span>
                     </a>
@@ -76,7 +78,7 @@ const ProfileHeader: React.FC = () => {
                       data-bs-toggle='modal'
                       data-bs-target='#kt_modal_offer_a_deal'
                     >
-                      Hire Me
+                      {intl.formatMessage({ id: 'PROFILE.HEADER.BUTTON.HIRE_ME', defaultMessage: 'Hire Me' })}
                     </a>
                     <div className='me-0'>
                       <button
@@ -101,7 +103,7 @@ const ProfileHeader: React.FC = () => {
                           <div className='fs-2 fw-bolder'>4500$</div>
                         </div>
 
-                        <div className='fw-bold fs-6 text-gray-500'>Earnings</div>
+                        <div className='fw-bold fs-6 text-gray-500'>{intl.formatMessage({ id: 'PROFILE.HEADER.KPI.EARNINGS', defaultMessage: 'Earnings' })}</div>
                       </div>
 
                       <div className='border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
@@ -110,7 +112,7 @@ const ProfileHeader: React.FC = () => {
                           <div className='fs-2 fw-bolder'>75</div>
                         </div>
 
-                        <div className='fw-bold fs-6 text-gray-500'>Projects</div>
+                        <div className='fw-bold fs-6 text-gray-500'>{intl.formatMessage({ id: 'PROFILE.HEADER.KPI.PROJECTS', defaultMessage: 'Projects' })}</div>
                       </div>
 
                       <div className='border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3'>
@@ -119,21 +121,21 @@ const ProfileHeader: React.FC = () => {
                           <div className='fs-2 fw-bolder'>60%</div>
                         </div>
 
-                        <div className='fw-bold fs-6 text-gray-500'>Success Rate</div>
+                        <div className='fw-bold fs-6 text-gray-500'>{intl.formatMessage({ id: 'PROFILE.HEADER.KPI.SUCCESS_RATE', defaultMessage: 'Success Rate' })}</div>
                       </div>
                     </div>
                   </div>
 
                   <div className='d-flex align-items-center w-200px w-sm-300px flex-column mt-3'>
                     <div className='d-flex justify-content-between w-100 mt-auto mb-2'>
-                      <span className='fw-bold fs-6 text-gray-500'>Profile Compleation</span>
+                      <span className='fw-bold fs-6 text-gray-500'>{intl.formatMessage({ id: 'PROFILE.HEADER.KPI.COMPLETION', defaultMessage: 'Profile Completion' })}</span>
                       <span className='fw-bolder fs-6'>50%</span>
                     </div>
                     <div className='h-5px mx-3 w-100 bg-light mb-3'>
                       <div
                         className='bg-success rounded h-5px'
                         role='progressbar'
-                        style={{width: '50%'}}
+                        style={{ width: '50%' }}
                       ></div>
                     </div>
                   </div>
@@ -151,7 +153,7 @@ const ProfileHeader: React.FC = () => {
                     }
                     to='/crafted/pages/profile/overview'
                   >
-                    Overview
+                    {intl.formatMessage({ id: 'PROFILE.TABS.OVERVIEW', defaultMessage: 'Overview' })}
                   </Link>
                 </li>
                 <li className='nav-item'>
@@ -162,7 +164,7 @@ const ProfileHeader: React.FC = () => {
                     }
                     to='/crafted/pages/profile/projects'
                   >
-                    Projects
+                    {intl.formatMessage({ id: 'PROFILE.TABS.PROJECTS', defaultMessage: 'Projects' })}
                   </Link>
                 </li>
                 <li className='nav-item'>
@@ -173,7 +175,7 @@ const ProfileHeader: React.FC = () => {
                     }
                     to='/crafted/pages/profile/campaigns'
                   >
-                    Campaigns
+                    {intl.formatMessage({ id: 'PROFILE.TABS.CAMPAIGNS', defaultMessage: 'Campaigns' })}
                   </Link>
                 </li>
                 <li className='nav-item'>
@@ -184,7 +186,7 @@ const ProfileHeader: React.FC = () => {
                     }
                     to='/crafted/pages/profile/documents'
                   >
-                    Documents
+                    {intl.formatMessage({ id: 'PROFILE.TABS.DOCUMENTS', defaultMessage: 'Documents' })}
                   </Link>
                 </li>
                 <li className='nav-item'>
@@ -195,7 +197,7 @@ const ProfileHeader: React.FC = () => {
                     }
                     to='/crafted/pages/profile/connections'
                   >
-                    Connections
+                    {intl.formatMessage({ id: 'PROFILE.TABS.CONNECTIONS', defaultMessage: 'Connections' })}
                   </Link>
                 </li>
               </ul>
@@ -207,4 +209,4 @@ const ProfileHeader: React.FC = () => {
   )
 }
 
-export {ProfileHeader}
+export { ProfileHeader }

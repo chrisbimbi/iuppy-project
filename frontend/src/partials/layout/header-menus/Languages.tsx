@@ -1,4 +1,3 @@
-
 import clsx from 'clsx'
 import { FC } from 'react'
 import { toAbsoluteUrl } from '../../../helpers'
@@ -11,28 +10,25 @@ const languages = [
     flag: toAbsoluteUrl('media/flags/brazil.svg'),
   },
   {
-    lang: 'it',
-    name: 'Italiano',
-    flag: toAbsoluteUrl('media/flags/italy.svg'),
-  },
-  {
     lang: 'en',
     name: 'English',
     flag: toAbsoluteUrl('media/flags/united-states.svg'),
   },
-
   {
     lang: 'es',
-    name: 'Spanish',
+    name: 'Español',
     flag: toAbsoluteUrl('media/flags/spain.svg'),
   },
-
   {
     lang: 'de',
-    name: 'German',
+    name: 'Deutsch',
     flag: toAbsoluteUrl('media/flags/germany.svg'),
   },
-
+  {
+    lang: 'it',
+    name: 'Italiano',
+    flag: toAbsoluteUrl('media/flags/italy.svg'),
+  },
 ]
 
 const Languages: FC = () => {

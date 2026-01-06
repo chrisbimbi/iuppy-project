@@ -689,6 +689,12 @@ class $NewsItemsTable extends NewsItems
   late final GeneratedColumn<String> channelId = GeneratedColumn<String>(
       'channel_id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _hashtagsMeta =
+      const VerificationMeta('hashtags');
+  @override
+  late final GeneratedColumn<String> hashtags = GeneratedColumn<String>(
+      'hashtags', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -707,7 +713,7 @@ class $NewsItemsTable extends NewsItems
       defaultValue: const Constant(true));
   @override
   List<GeneratedColumn> get $columns =>
-      [id, title, content, channelId, createdAt, isPublished];
+      [id, title, content, channelId, hashtags, createdAt, isPublished];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -739,6 +745,10 @@ class $NewsItemsTable extends NewsItems
     } else if (isInserting) {
       context.missing(_channelIdMeta);
     }
+    if (data.containsKey('hashtags')) {
+      context.handle(_hashtagsMeta,
+          hashtags.isAcceptableOrUnknown(data['hashtags']!, _hashtagsMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -766,6 +776,8 @@ class $NewsItemsTable extends NewsItems
           .read(DriftSqlType.string, data['${effectivePrefix}content']),
       channelId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}channel_id'])!,
+      hashtags: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}hashtags']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
       isPublished: attachedDatabase.typeMapping
@@ -784,6 +796,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
   final String title;
   final String? content;
   final String channelId;
+  final String? hashtags;
   final DateTime? createdAt;
   final bool isPublished;
   const NewsItem(
@@ -791,6 +804,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
       required this.title,
       this.content,
       required this.channelId,
+      this.hashtags,
       this.createdAt,
       required this.isPublished});
   @override
@@ -802,6 +816,9 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
       map['content'] = Variable<String>(content);
     }
     map['channel_id'] = Variable<String>(channelId);
+    if (!nullToAbsent || hashtags != null) {
+      map['hashtags'] = Variable<String>(hashtags);
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
     }
@@ -817,6 +834,9 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
           ? const Value.absent()
           : Value(content),
       channelId: Value(channelId),
+      hashtags: hashtags == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hashtags),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -832,6 +852,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
       title: serializer.fromJson<String>(json['title']),
       content: serializer.fromJson<String?>(json['content']),
       channelId: serializer.fromJson<String>(json['channelId']),
+      hashtags: serializer.fromJson<String?>(json['hashtags']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       isPublished: serializer.fromJson<bool>(json['isPublished']),
     );
@@ -844,6 +865,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
       'title': serializer.toJson<String>(title),
       'content': serializer.toJson<String?>(content),
       'channelId': serializer.toJson<String>(channelId),
+      'hashtags': serializer.toJson<String?>(hashtags),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'isPublished': serializer.toJson<bool>(isPublished),
     };
@@ -854,6 +876,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
           String? title,
           Value<String?> content = const Value.absent(),
           String? channelId,
+          Value<String?> hashtags = const Value.absent(),
           Value<DateTime?> createdAt = const Value.absent(),
           bool? isPublished}) =>
       NewsItem(
@@ -861,6 +884,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
         title: title ?? this.title,
         content: content.present ? content.value : this.content,
         channelId: channelId ?? this.channelId,
+        hashtags: hashtags.present ? hashtags.value : this.hashtags,
         createdAt: createdAt.present ? createdAt.value : this.createdAt,
         isPublished: isPublished ?? this.isPublished,
       );
@@ -870,6 +894,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
       title: data.title.present ? data.title.value : this.title,
       content: data.content.present ? data.content.value : this.content,
       channelId: data.channelId.present ? data.channelId.value : this.channelId,
+      hashtags: data.hashtags.present ? data.hashtags.value : this.hashtags,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       isPublished:
           data.isPublished.present ? data.isPublished.value : this.isPublished,
@@ -883,6 +908,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('channelId: $channelId, ')
+          ..write('hashtags: $hashtags, ')
           ..write('createdAt: $createdAt, ')
           ..write('isPublished: $isPublished')
           ..write(')'))
@@ -890,8 +916,8 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, content, channelId, createdAt, isPublished);
+  int get hashCode => Object.hash(
+      id, title, content, channelId, hashtags, createdAt, isPublished);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -900,6 +926,7 @@ class NewsItem extends DataClass implements Insertable<NewsItem> {
           other.title == this.title &&
           other.content == this.content &&
           other.channelId == this.channelId &&
+          other.hashtags == this.hashtags &&
           other.createdAt == this.createdAt &&
           other.isPublished == this.isPublished);
 }
@@ -909,6 +936,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
   final Value<String> title;
   final Value<String?> content;
   final Value<String> channelId;
+  final Value<String?> hashtags;
   final Value<DateTime?> createdAt;
   final Value<bool> isPublished;
   final Value<int> rowid;
@@ -917,6 +945,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
     this.title = const Value.absent(),
     this.content = const Value.absent(),
     this.channelId = const Value.absent(),
+    this.hashtags = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.isPublished = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -926,6 +955,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
     required String title,
     this.content = const Value.absent(),
     required String channelId,
+    this.hashtags = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.isPublished = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -937,6 +967,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
     Expression<String>? title,
     Expression<String>? content,
     Expression<String>? channelId,
+    Expression<String>? hashtags,
     Expression<DateTime>? createdAt,
     Expression<bool>? isPublished,
     Expression<int>? rowid,
@@ -946,6 +977,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
       if (title != null) 'title': title,
       if (content != null) 'content': content,
       if (channelId != null) 'channel_id': channelId,
+      if (hashtags != null) 'hashtags': hashtags,
       if (createdAt != null) 'created_at': createdAt,
       if (isPublished != null) 'is_published': isPublished,
       if (rowid != null) 'rowid': rowid,
@@ -957,6 +989,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
       Value<String>? title,
       Value<String?>? content,
       Value<String>? channelId,
+      Value<String?>? hashtags,
       Value<DateTime?>? createdAt,
       Value<bool>? isPublished,
       Value<int>? rowid}) {
@@ -965,6 +998,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
       title: title ?? this.title,
       content: content ?? this.content,
       channelId: channelId ?? this.channelId,
+      hashtags: hashtags ?? this.hashtags,
       createdAt: createdAt ?? this.createdAt,
       isPublished: isPublished ?? this.isPublished,
       rowid: rowid ?? this.rowid,
@@ -986,6 +1020,9 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
     if (channelId.present) {
       map['channel_id'] = Variable<String>(channelId.value);
     }
+    if (hashtags.present) {
+      map['hashtags'] = Variable<String>(hashtags.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1005,6 +1042,7 @@ class NewsItemsCompanion extends UpdateCompanion<NewsItem> {
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('channelId: $channelId, ')
+          ..write('hashtags: $hashtags, ')
           ..write('createdAt: $createdAt, ')
           ..write('isPublished: $isPublished, ')
           ..write('rowid: $rowid')
@@ -1591,6 +1629,231 @@ class SurveyQuestionsCompanion extends UpdateCompanion<SurveyQuestion> {
   }
 }
 
+class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+      'active', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("active" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  @override
+  List<GeneratedColumn> get $columns => [id, name, active];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'groups';
+  @override
+  VerificationContext validateIntegrity(Insertable<Group> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('active')) {
+      context.handle(_activeMeta,
+          active.isAcceptableOrUnknown(data['active']!, _activeMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Group map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Group(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      active: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}active'])!,
+    );
+  }
+
+  @override
+  $GroupsTable createAlias(String alias) {
+    return $GroupsTable(attachedDatabase, alias);
+  }
+}
+
+class Group extends DataClass implements Insertable<Group> {
+  final String id;
+  final String name;
+  final bool active;
+  const Group({required this.id, required this.name, required this.active});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  GroupsCompanion toCompanion(bool nullToAbsent) {
+    return GroupsCompanion(
+      id: Value(id),
+      name: Value(name),
+      active: Value(active),
+    );
+  }
+
+  factory Group.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Group(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  Group copyWith({String? id, String? name, bool? active}) => Group(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        active: active ?? this.active,
+      );
+  Group copyWithCompanion(GroupsCompanion data) {
+    return Group(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Group(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, active);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Group &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.active == this.active);
+}
+
+class GroupsCompanion extends UpdateCompanion<Group> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const GroupsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GroupsCompanion.insert({
+    required String id,
+    required String name,
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name);
+  static Insertable<Group> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GroupsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? name,
+      Value<bool>? active,
+      Value<int>? rowid}) {
+    return GroupsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('active: $active, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1600,12 +1863,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SurveysTable surveys = $SurveysTable(this);
   late final $SurveyQuestionsTable surveyQuestions =
       $SurveyQuestionsTable(this);
+  late final $GroupsTable groups = $GroupsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [spaces, channels, newsItems, surveys, surveyQuestions];
+      [spaces, channels, newsItems, surveys, surveyQuestions, groups];
 }
 
 typedef $$SpacesTableCreateCompanionBuilder = SpacesCompanion Function({
@@ -1958,6 +2222,7 @@ typedef $$NewsItemsTableCreateCompanionBuilder = NewsItemsCompanion Function({
   required String title,
   Value<String?> content,
   required String channelId,
+  Value<String?> hashtags,
   Value<DateTime?> createdAt,
   Value<bool> isPublished,
   Value<int> rowid,
@@ -1967,6 +2232,7 @@ typedef $$NewsItemsTableUpdateCompanionBuilder = NewsItemsCompanion Function({
   Value<String> title,
   Value<String?> content,
   Value<String> channelId,
+  Value<String?> hashtags,
   Value<DateTime?> createdAt,
   Value<bool> isPublished,
   Value<int> rowid,
@@ -1992,6 +2258,9 @@ class $$NewsItemsTableFilterComposer
 
   ColumnFilters<String> get channelId => $composableBuilder(
       column: $table.channelId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hashtags => $composableBuilder(
+      column: $table.hashtags, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2021,6 +2290,9 @@ class $$NewsItemsTableOrderingComposer
   ColumnOrderings<String> get channelId => $composableBuilder(
       column: $table.channelId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get hashtags => $composableBuilder(
+      column: $table.hashtags, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2048,6 +2320,9 @@ class $$NewsItemsTableAnnotationComposer
 
   GeneratedColumn<String> get channelId =>
       $composableBuilder(column: $table.channelId, builder: (column) => column);
+
+  GeneratedColumn<String> get hashtags =>
+      $composableBuilder(column: $table.hashtags, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2083,6 +2358,7 @@ class $$NewsItemsTableTableManager extends RootTableManager<
             Value<String> title = const Value.absent(),
             Value<String?> content = const Value.absent(),
             Value<String> channelId = const Value.absent(),
+            Value<String?> hashtags = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<bool> isPublished = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2092,6 +2368,7 @@ class $$NewsItemsTableTableManager extends RootTableManager<
             title: title,
             content: content,
             channelId: channelId,
+            hashtags: hashtags,
             createdAt: createdAt,
             isPublished: isPublished,
             rowid: rowid,
@@ -2101,6 +2378,7 @@ class $$NewsItemsTableTableManager extends RootTableManager<
             required String title,
             Value<String?> content = const Value.absent(),
             required String channelId,
+            Value<String?> hashtags = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<bool> isPublished = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2110,6 +2388,7 @@ class $$NewsItemsTableTableManager extends RootTableManager<
             title: title,
             content: content,
             channelId: channelId,
+            hashtags: hashtags,
             createdAt: createdAt,
             isPublished: isPublished,
             rowid: rowid,
@@ -2457,6 +2736,141 @@ typedef $$SurveyQuestionsTableProcessedTableManager = ProcessedTableManager<
     ),
     SurveyQuestion,
     PrefetchHooks Function()>;
+typedef $$GroupsTableCreateCompanionBuilder = GroupsCompanion Function({
+  required String id,
+  required String name,
+  Value<bool> active,
+  Value<int> rowid,
+});
+typedef $$GroupsTableUpdateCompanionBuilder = GroupsCompanion Function({
+  Value<String> id,
+  Value<String> name,
+  Value<bool> active,
+  Value<int> rowid,
+});
+
+class $$GroupsTableFilterComposer
+    extends Composer<_$AppDatabase, $GroupsTable> {
+  $$GroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnFilters(column));
+}
+
+class $$GroupsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GroupsTable> {
+  $$GroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+      column: $table.active, builder: (column) => ColumnOrderings(column));
+}
+
+class $$GroupsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GroupsTable> {
+  $$GroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$GroupsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $GroupsTable,
+    Group,
+    $$GroupsTableFilterComposer,
+    $$GroupsTableOrderingComposer,
+    $$GroupsTableAnnotationComposer,
+    $$GroupsTableCreateCompanionBuilder,
+    $$GroupsTableUpdateCompanionBuilder,
+    (Group, BaseReferences<_$AppDatabase, $GroupsTable, Group>),
+    Group,
+    PrefetchHooks Function()> {
+  $$GroupsTableTableManager(_$AppDatabase db, $GroupsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<bool> active = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              GroupsCompanion(
+            id: id,
+            name: name,
+            active: active,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String name,
+            Value<bool> active = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              GroupsCompanion.insert(
+            id: id,
+            name: name,
+            active: active,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$GroupsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $GroupsTable,
+    Group,
+    $$GroupsTableFilterComposer,
+    $$GroupsTableOrderingComposer,
+    $$GroupsTableAnnotationComposer,
+    $$GroupsTableCreateCompanionBuilder,
+    $$GroupsTableUpdateCompanionBuilder,
+    (Group, BaseReferences<_$AppDatabase, $GroupsTable, Group>),
+    Group,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2471,4 +2885,6 @@ class $AppDatabaseManager {
       $$SurveysTableTableManager(_db, _db.surveys);
   $$SurveyQuestionsTableTableManager get surveyQuestions =>
       $$SurveyQuestionsTableTableManager(_db, _db.surveyQuestions);
+  $$GroupsTableTableManager get groups =>
+      $$GroupsTableTableManager(_db, _db.groups);
 }

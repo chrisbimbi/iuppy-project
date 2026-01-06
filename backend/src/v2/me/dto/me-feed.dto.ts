@@ -1,9 +1,15 @@
 // src/v2/me/dto/me-feed.dto.ts
-export type ReactionKind = 'like' | 'love' | 'clap' | 'smile' | 'neutral' | 'angry';
+export type ReactionKind =
+  | 'like'
+  | 'love'
+  | 'clap'
+  | 'smile'
+  | 'neutral'
+  | 'angry';
 
 export interface MeFeedQuery {
-  limit?: number;            // 1..50 (default 20)
-  cursor?: string | null;    // "<createdAtISO>|<uuid>"
+  limit?: number; // 1..50 (default 20)
+  cursor?: string | null; // "<createdAtISO>|<uuid>"
   spaceId?: string;
   channelId?: string;
 }

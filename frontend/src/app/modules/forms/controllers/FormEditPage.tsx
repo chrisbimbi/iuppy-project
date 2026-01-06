@@ -8,319 +8,187 @@ import AudiencePicker from '../components/AudiencePicker';
 import FieldEditor, { Field } from '../components/FieldEditor';
 import FormEmailSettingsModal from '../components/FormsEmailSettingsModal';
 import LanguageTabs from '../components/LanguageTabs';
+import { useIntl } from 'react-intl';
 
-type FormPayload = {
-  title: TranslatableString;
-  description?: TranslatableString | null;
-  status: 'draft' | 'published' | 'expired' | 'archived';
-  scheduleStartAt?: string | null;
-  scheduleEndAt?: string | null;
-  deadlineAt?: string | null;
-  allowMultipleSubmissions?: boolean;
-  anonymous?: boolean;
-  allowExternal?: boolean;
-  audienceSpaceIds?: string[];
-  audienceGroupIds?: string[];
-  attachmentsAllowed?: boolean;
-  allowAttachments?: boolean;
-  attachmentHelpText?: TranslatableString | null;
-  remindersConfig?: { offsets?: string[] } | any;
-  notificationsConfig?: {
-    push?: boolean;
-    email?: boolean;
-    pushPayload?: { title: TranslatableString; body: TranslatableString };
-    [k: string]: any;
-  } | null;
-  acl?: any;
-  fields?: Field[];
-  requiresApproval?: boolean;
-  allowTranslations?: boolean;
-  defaultLocale?: string;
-};
+// ... types
 
 const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isUuidV4 = (s?: string) => !!s && uuidV4Regex.test(s);
-
-const STEPS = [
-  { key: 'basics', title: 'Informações básicas' },
-  { key: 'audience', title: 'Segmentação' },
-  { key: 'settings', title: 'Configurações' },
-  { key: 'fields', title: 'Perguntas' },
-  { key: 'review', title: 'Revisão & Publicação' },
-] as const;
-type StepKey = (typeof STEPS)[number]['key'];
 
 export default function FormEditPage() {
   const { formId } = useParams<{ formId?: string }>();
   const nav = useNavigate();
   const [sp, setSp] = useSearchParams();
+  const intl = useIntl();
+
+  const STEPS = [
+    { key: 'basics', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.BASICS' }) },
+    { key: 'audience', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.AUDIENCE' }) },
+    { key: 'settings', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.SETTINGS' }) },
+    { key: 'fields', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.FIELDS' }) },
+    { key: 'review', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.REVIEW' }) },
+  ] as const;
+  type StepKey = (typeof STEPS)[number]['key'];
 
   const isNew = !formId || formId === 'new' || !isUuidV4(formId);
   const stepFromUrl = (sp.get('step') as StepKey) || 'basics';
   const [step, setStep] = React.useState<StepKey>(stepFromUrl);
 
-  // Estado para controlar se o form JÁ ESTAVA publicado no banco.
-  // Isso evita despublicar acidentalmente um form que já estava live,
-  // mas garante que novos forms nasçam como draft até o final.
-  const [originalStatus, setOriginalStatus] = React.useState<string>('draft');
-
-  const [model, setModel] = React.useState<FormPayload>({
-    title: { 'pt-BR': '' },
-    description: { 'pt-BR': '' },
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [model, setModel] = React.useState<any>({
+    title: {},
+    description: {},
     status: 'draft',
-    scheduleStartAt: null,
-    scheduleEndAt: null,
-    deadlineAt: null,
-    allowMultipleSubmissions: false,
-    anonymous: false,
-    allowExternal: false,
-    audienceSpaceIds: [],
-    audienceGroupIds: [],
-    attachmentsAllowed: false,
-    allowAttachments: false,
-    attachmentHelpText: { 'pt-BR': '' },
-    remindersConfig: { offsets: [] },
-    notificationsConfig: {
-      push: false,
-      email: false,
-      pushPayload: { title: { 'pt-BR': '' }, body: { 'pt-BR': '' } }
-    },
-    acl: { owners: [], editors: [], viewers: [] },
     fields: [],
-    requiresApproval: false,
     allowTranslations: false,
     defaultLocale: 'pt-BR',
   });
+  const [originalStatus, setOriginalStatus] = React.useState<string>('draft');
+  const [availableLocales, setAvailableLocales] = React.useState<string[]>(['pt-BR']);
 
-  const [availableLocales, setAvailableLocales] = React.useState(['pt-BR']);
-  const [loading, setLoading] = React.useState(!isNew);
-  const [saving, setSaving] = React.useState(false);
-  const [err, setErr] = React.useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = React.useState(false);
+  const [showPushModal, setShowPushModal] = React.useState(false);
 
   const [schedStartOn, setSchedStartOn] = React.useState(false);
   const [schedEndOn, setSchedEndOn] = React.useState(false);
   const [deadlineOn, setDeadlineOn] = React.useState(false);
   const [pushOn, setPushOn] = React.useState(false);
 
-  const [showEmailModal, setShowEmailModal] = React.useState(false);
-  const [showPushModal, setShowPushModal] = React.useState(false);
+  const [pushTitleDraft, setPushTitleDraft] = React.useState<TranslatableString>({});
+  const [pushBodyDraft, setPushBodyDraft] = React.useState<TranslatableString>({});
 
-  const [pushTitleDraft, setPushTitleDraft] = React.useState<TranslatableString>({ 'pt-BR': '' });
-  const [pushBodyDraft, setPushBodyDraft] = React.useState<TranslatableString>({ 'pt-BR': '' });
-
-  const normalizeTranslatable = (field: any, defaultLocale = 'pt-BR'): TranslatableString => {
-    if (!field) return { [defaultLocale]: '' };
-    if (typeof field === 'string') return { [defaultLocale]: field };
-    if (Object.keys(field).length === 0) return { [defaultLocale]: '' };
-    return field;
+  const toLocalInputValue = (isoStr?: string | null) => {
+    if (!isoStr) return '';
+    return isoStr.substring(0, 16);
   };
 
-  React.useEffect(() => {
-    if (isNew) return;
-    let mounted = true;
-    setLoading(true);
-    FormsApi.get(formId!)
-      .then((data) => {
-        if (!mounted) return;
-        const d: any = data || {};
-        const defaultLocale = d.defaultLocale ?? 'pt-BR';
-
-        const attachmentsFlag = d.attachmentsAllowed === true || d.allowAttachments === true;
-        const notifCfg = d.notificationsConfig ?? { push: false, email: false };
-
-        const rawPushPayload = notifCfg.pushPayload ?? {};
-        const pushPayload = {
-          title: normalizeTranslatable(rawPushPayload.title, defaultLocale),
-          body: normalizeTranslatable(rawPushPayload.body, defaultLocale),
-        };
-
-        // Salva o status original do banco
-        setOriginalStatus(d.status || 'draft');
-
-        setModel((m) => ({
-          ...m,
-          ...d,
-          title: normalizeTranslatable(d.title, defaultLocale),
-          description: normalizeTranslatable(d.description, defaultLocale),
-          attachmentHelpText: normalizeTranslatable(d.attachmentHelpText, defaultLocale),
-          fields: (d.fields ?? []).map((f: any) => ({
-            ...f,
-            label: normalizeTranslatable(f.label, defaultLocale),
-            options: (f.options || []).map((op: any) => ({
-              id: op.id,
-              label: normalizeTranslatable(op.label, defaultLocale)
-            }))
-          })),
-          audienceSpaceIds: d.audienceSpaceIds ?? [],
-          audienceGroupIds: d.audienceGroupIds ?? [],
-          remindersConfig: d.remindersConfig ?? { offsets: [] },
-          notificationsConfig: {
-            ...(notifCfg || {}),
-            pushPayload,
-          },
-          requiresApproval: !!d.requiresApproval,
-          allowTranslations: !!d.allowTranslations,
-          defaultLocale: defaultLocale,
-          attachmentsAllowed: attachmentsFlag,
-          allowAttachments: attachmentsFlag,
-          anonymous: !!d.anonymous,
-        }));
-
-        if (d.allowTranslations) {
-          const locales = new Set([defaultLocale]);
-          Object.keys(normalizeTranslatable(d.title, defaultLocale)).forEach(k => locales.add(k));
-          setAvailableLocales(Array.from(locales));
-        } else {
-          setAvailableLocales([defaultLocale]);
-        }
-
-        setSchedStartOn(!!d.scheduleStartAt);
-        setSchedEndOn(!!d.scheduleEndAt);
-        setDeadlineOn(!!d.deadlineAt);
-        setPushOn(!!notifCfg?.push);
-        setPushTitleDraft(pushPayload.title);
-        setPushBodyDraft(pushPayload.body);
-      })
-      .catch((e) => setErr(String(e?.message || e)))
-      .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
-  }, [formId, isNew]);
-
-  React.useEffect(() => {
-    setSp(prev => {
-      const next = new URLSearchParams(prev);
-      next.set('step', step);
-      return next;
-    }, { replace: true });
-  }, [step, setSp]);
-
-  const stepIndex = (k: StepKey) => Math.max(0, STEPS.findIndex((s) => s.key === k));
-  const nextStepKey = (k: StepKey): StepKey => STEPS[Math.min(STEPS.length - 1, stepIndex(k) + 1)].key as StepKey;
-  const goStep = (delta: number) => setStep(STEPS[Math.max(0, Math.min(STEPS.length - 1, stepIndex(step) + delta))].key as StepKey);
-
-  const buildPayload = (base: FormPayload): FormPayload => {
-    const attachments = !!base.attachmentsAllowed || !!base.allowAttachments;
-    return {
-      ...base,
-      anonymous: !!base.anonymous,
-      allowExternal: !!base.allowExternal,
-      allowMultipleSubmissions: !!base.allowMultipleSubmissions,
-      attachmentsAllowed: attachments,
-      allowAttachments: attachments,
-      notificationsConfig: {
-        ...(base.notificationsConfig || {}),
-        push: !!base.notificationsConfig?.push,
-      },
-    };
+  const fromLocalInputValue = (val: string) => {
+    if (!val) return null;
+    return new Date(val).toISOString();
   };
-
-  // 🔥 CORREÇÃO CRÍTICA: Garante que o status enviado seja 'draft' nas etapas intermediárias
-  // a não ser que o formulário JÁ ESTEJA publicado no banco.
-  const getSafeStatusForIntermediateSave = () => {
-    if (isNew) return 'draft';
-    if (originalStatus === 'published') return 'published'; // Se já estava live, mantém live
-    return 'draft'; // Se era draft, continua draft até o clique final
-  };
-
-  const saveDraft = async () => {
-    // Força status seguro para não disparar push prematuro
-    const safeStatus = getSafeStatusForIntermediateSave();
-    // Note: Não mudamos o model.status local, apenas o payload enviado, para não confundir a UI
-    const payloadToSend = buildPayload({ ...model, status: safeStatus as any }) as any;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      if (isNew) {
-        const created = await FormsApi.create(payloadToSend);
-        // Atualiza originalStatus para o que foi criado (provavelmente draft)
-        setOriginalStatus(created.status);
-        nav(`/forms/${created.id}/edit?step=${step}`, { replace: true });
-      } else {
-        await FormsApi.update(formId!, payloadToSend);
-      }
-    } catch (e: any) { setErr(String(e?.message || e)); } finally { setSaving(false); }
-  };
-
-  const saveAndNext = async () => {
-    // Força status seguro
-    const safeStatus = getSafeStatusForIntermediateSave();
-    const payloadToSend = buildPayload({ ...model, status: safeStatus as any }) as any;
-
-    setSaving(true);
-    setErr(null);
-    try {
-      if (isNew) {
-        const created = await FormsApi.create(payloadToSend);
-        setOriginalStatus(created.status);
-        nav(`/forms/${created.id}/edit?step=${nextStepKey(step)}`, { replace: true });
-      } else {
-        await FormsApi.update(formId!, payloadToSend);
-        goStep(1);
-      }
-    } catch (e: any) { setErr(String(e?.message || e)); } finally { setSaving(false); }
-  };
-
-  // 🔥 AÇÃO DE PUBLICAR FINAL: Aqui sim enviamos 'published'
-  const publish = async () => {
-    const payloadToSend = buildPayload({ ...model, status: 'published' }) as any;
-    // Atualizamos o model local também
-    setModel((m) => ({ ...m, status: 'published' }));
-
-    try {
-      await FormsApi.update(formId!, payloadToSend);
-      // Atualiza estado local para refletir que agora está live
-      setOriginalStatus('published');
-      nav('/forms');
-    } catch (e: any) { setErr(String(e?.message || e)); }
-  };
-
-  const toLocalInputValue = (iso?: string | null) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-  const fromLocalInputValue = (v: string) => (v ? new Date(v).toISOString() : null);
 
   const setDeadline18hLocal = () => {
     const d = new Date();
     d.setHours(18, 0, 0, 0);
-    setModel((m) => ({ ...m, deadlineAt: d.toISOString() }));
-    setDeadlineOn(true);
+    setModel((m: any) => ({ ...m, deadlineAt: d.toISOString() }));
+  };
+
+  const load = async () => {
+    if (isNew) return;
+    setLoading(true);
+    try {
+      const data = await FormsApi.get(formId!);
+      setModel(data);
+      setOriginalStatus(data.status);
+      setAvailableLocales(data.allowTranslations ? ['pt-BR', 'en', 'es-ES'] : [data.defaultLocale || 'pt-BR']);
+
+      if (data.scheduleStartAt) setSchedStartOn(true);
+      if (data.scheduleEndAt) setSchedEndOn(true);
+      if (data.deadlineAt) setDeadlineOn(true);
+      if (data.notificationsConfig?.push) setPushOn(true);
+
+    } catch (e: any) {
+      setErr(e.message || intl.formatMessage({ id: 'FORMS.EDIT.ERROR.LOAD_FAILED' }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    load();
+  }, [formId]);
+
+  const save = async (nextStep?: StepKey) => {
+    setSaving(true);
+    setErr(null);
+    try {
+      let res;
+      if (isNew) {
+        res = await FormsApi.create({ ...model, companyId: 'current' }); // Backend handles companyId usually or we need to pass it
+      } else {
+        res = await FormsApi.update(formId!, model);
+      }
+
+      if (isNew) {
+        // Backend returns the form entity with 'id', not 'formId'
+        nav(`/forms/${res.id}/edit?step=${nextStep || 'basics'}`, { replace: true });
+      } else {
+        setModel(res);
+        if (nextStep) setStep(nextStep);
+      }
+    } catch (e: any) {
+      setErr(e.message || intl.formatMessage({ id: 'FORMS.EDIT.ERROR.SAVE_FAILED' }));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveDraft = () => save();
+  const saveAndNext = () => {
+    const idx = STEPS.findIndex(s => s.key === step);
+    if (idx < STEPS.length - 1) save(STEPS[idx + 1].key);
+    else save();
+  };
+
+  const goStep = (delta: number) => {
+    const idx = STEPS.findIndex(s => s.key === step);
+    const nextIdx = idx + delta;
+    if (nextIdx >= 0 && nextIdx < STEPS.length) setStep(STEPS[nextIdx].key);
+  };
+
+  const publish = async () => {
+    if (!confirm(intl.formatMessage({ id: 'FORMS.EDIT.CONFIRM.PUBLISH' }))) return;
+    setSaving(true);
+    try {
+      await FormsApi.publish(formId!);
+      await load();
+      nav('/forms');
+    } catch (e: any) {
+      setErr(e.message || intl.formatMessage({ id: 'FORMS.EDIT.ERROR.PUBLISH_FAILED' }));
+      setSaving(false);
+    }
   };
 
   const renderBasics = () => (
     <div className="row g-4">
       <div className="col-12">
         <Form.Group>
-          <Form.Label>Título</Form.Label>
+          <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.TITLE' })}</Form.Label>
           <LanguageTabs locales={availableLocales} values={model.title} onChange={(locale, value) => setModel(m => ({ ...m, title: { ...m.title, [locale]: value } }))} />
         </Form.Group>
       </div>
       <div className="col-12">
         <Form.Group>
-          <Form.Label>Descrição</Form.Label>
+          <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DESCRIPTION' })}</Form.Label>
           <LanguageTabs locales={availableLocales} values={model.description || {}} onChange={(locale, value) => setModel(m => ({ ...m, description: { ...(m.description || {}), [locale]: value } }))} as="textarea" />
         </Form.Group>
       </div>
       <div className="col-md-4">
-        <label className="form-label">Status (Intenção)</label>
+        <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.STATUS' })}</label>
         <select className="form-select" value={model.status} onChange={(e) => setModel(m => ({ ...m, status: e.target.value as any }))}>
-          <option value="draft">Rascunho</option>
-          <option value="published">Publicado</option>
-          <option value="archived">Arquivado</option>
+          <option value="draft">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.DRAFT' })}</option>
+          <option value="published">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.PUBLISHED' })}</option>
+          <option value="archived">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.ARCHIVED' })}</option>
         </select>
         <div className="form-text text-muted small">
-          O formulário só será efetivamente publicado ao clicar em "Publicar" na última etapa.
+          {intl.formatMessage({ id: 'FORMS.EDIT.INFO.PUBLISH_NOTE' })}
         </div>
+      </div>
+      <div className="col-md-4">
+        <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.VISIBILITY', defaultMessage: 'Visibilidade' })}</label>
+        <select className="form-select" value={model.visibility ?? 'public'} onChange={(e) => setModel(m => ({ ...m, visibility: e.target.value }))}>
+          <option value="public">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.PUBLIC', defaultMessage: 'Público' })}</option>
+          <option value="private">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.PRIVATE', defaultMessage: 'Privado' })}</option>
+          <option value="specific_groups">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.GROUPS', defaultMessage: 'Grupos Específicos' })}</option>
+          <option value="journey_only">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.JOURNEY_ONLY', defaultMessage: 'Apenas Jornadas' })}</option>
+        </select>
       </div>
       <div className="col-md-4 d-flex align-items-end">
         <div className="form-check">
           <input id="anonymous" className="form-check-input" type="checkbox" checked={!!model.anonymous} onChange={(e) => setModel(m => ({ ...m, anonymous: e.target.checked }))} />
-          <label className="form-check-label" htmlFor="anonymous">Formulário anônimo</label>
+          <label className="form-check-label" htmlFor="anonymous">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ANONYMOUS' })}</label>
         </div>
       </div>
       <div className="col-md-4 d-flex align-items-end">
@@ -331,11 +199,11 @@ export default function FormEditPage() {
             if (on) setAvailableLocales(['pt-BR', 'en', 'es-ES']);
             else setAvailableLocales([model.defaultLocale ?? 'pt-BR']);
           }} />
-          <label className="form-check-label" htmlFor="allowTranslations">Permitir tradução</label>
+          <label className="form-check-label" htmlFor="allowTranslations">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_TRANSLATION' })}</label>
         </div>
       </div>
       <div className="col-md-4">
-        <label className="form-label">Idioma padrão</label>
+        <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEFAULT_LOCALE' })}</label>
         <select className="form-select" value={model.defaultLocale ?? 'pt-BR'} onChange={(e) => setModel(m => ({ ...m, defaultLocale: e.target.value }))}>
           {availableLocales.map(loc => <option key={loc} value={loc}>{loc}</option>)}
         </select>
@@ -352,32 +220,32 @@ export default function FormEditPage() {
       <div className="col-12">
         <div className="form-check form-switch">
           <input id="schedStart" className="form-check-input" type="checkbox" checked={schedStartOn} onChange={(e) => { setSchedStartOn(e.target.checked); setModel(m => ({ ...m, scheduleStartAt: e.target.checked ? m.scheduleStartAt ?? new Date().toISOString() : null })) }} />
-          <label className="form-check-label" htmlFor="schedStart">Agendar início</label>
+          <label className="form-check-label" htmlFor="schedStart">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.SCHEDULE_START' })}</label>
         </div>
       </div>
-      {schedStartOn && <div className="col-md-6"><label className="form-label">Início</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleStartAt)} onChange={(e) => setModel(m => ({ ...m, scheduleStartAt: fromLocalInputValue(e.target.value) }))} /></div>}
+      {schedStartOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.START_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleStartAt)} onChange={(e) => setModel(m => ({ ...m, scheduleStartAt: fromLocalInputValue(e.target.value) }))} /></div>}
 
       <div className="col-12">
         <div className="form-check form-switch">
           <input id="schedEnd" className="form-check-input" type="checkbox" checked={schedEndOn} onChange={(e) => { setSchedEndOn(e.target.checked); setModel(m => ({ ...m, scheduleEndAt: e.target.checked ? m.scheduleEndAt ?? new Date(Date.now() + 86400000).toISOString() : null })) }} />
-          <label className="form-check-label" htmlFor="schedEnd">Agendar expiração</label>
+          <label className="form-check-label" htmlFor="schedEnd">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.SCHEDULE_END' })}</label>
         </div>
       </div>
-      {schedEndOn && <div className="col-md-6"><label className="form-label">Expira</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleEndAt)} onChange={(e) => setModel(m => ({ ...m, scheduleEndAt: fromLocalInputValue(e.target.value) }))} /></div>}
+      {schedEndOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.END_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleEndAt)} onChange={(e) => setModel(m => ({ ...m, scheduleEndAt: fromLocalInputValue(e.target.value) }))} /></div>}
 
       <div className="col-12">
         <div className="form-check form-switch">
           <input id="deadlineOn" className="form-check-input" type="checkbox" checked={deadlineOn} onChange={(e) => { const on = e.target.checked; setDeadlineOn(on); setModel(m => ({ ...m, deadlineAt: on ? m.deadlineAt ?? new Date().toISOString() : null })); }} />
-          <label className="form-check-label" htmlFor="deadlineOn">Exigir resposta até data</label>
+          <label className="form-check-label" htmlFor="deadlineOn">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEADLINE_TOGGLE' })}</label>
         </div>
       </div>
       {deadlineOn && (
         <>
-          <div className="col-md-6"><label className="form-label">Data limite</label><div className="d-flex gap-2"><input type="datetime-local" className="form-control" value={toLocalInputValue(model.deadlineAt)} onChange={(e) => setModel(m => ({ ...m, deadlineAt: fromLocalInputValue(e.target.value) }))} /><button type="button" className="btn btn-light" onClick={setDeadline18hLocal}>18h</button></div></div>
+          <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEADLINE_DATE' })}</label><div className="d-flex gap-2"><input type="datetime-local" className="form-control" value={toLocalInputValue(model.deadlineAt)} onChange={(e) => setModel(m => ({ ...m, deadlineAt: fromLocalInputValue(e.target.value) }))} /><button type="button" className="btn btn-light" onClick={setDeadline18hLocal}>18h</button></div></div>
           <div className="col-md-6">
-            <label className="form-label">Lembretes</label>
+            <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REMINDERS' })}</label>
             <div className="d-flex flex-wrap gap-3">
-              {[{ k: '-P1D', label: '1 dia antes' }, { k: '-P2D', label: '2 dias antes' }, { k: '-P7D', label: '1 semana antes' }, { k: '-P15D', label: '15 dias antes' }].map((opt) => (
+              {[{ k: '-P1D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.1_DAY' }) }, { k: '-P2D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.2_DAYS' }) }, { k: '-P7D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.1_WEEK' }) }, { k: '-P15D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.15_DAYS' }) }].map((opt) => (
                 <div key={opt.k} className="form-check"><input id={`rem-${opt.k}`} className="form-check-input" type="checkbox" checked={(model.remindersConfig?.offsets ?? []).includes(opt.k)} onChange={(e) => { const offsets = new Set(model.remindersConfig?.offsets ?? []); if (e.target.checked) offsets.add(opt.k); else offsets.delete(opt.k); setModel(m => ({ ...m, remindersConfig: { ...(m.remindersConfig ?? {}), offsets: Array.from(offsets) } })); }} /><label className="form-check-label" htmlFor={`rem-${opt.k}`}>{opt.label}</label></div>
               ))}
             </div>
@@ -388,34 +256,34 @@ export default function FormEditPage() {
       <div className="col-md-4">
         <div className="form-check mt-2">
           <input id="allowMult" className="form-check-input" type="checkbox" checked={!!model.allowMultipleSubmissions} onChange={(e) => setModel(m => ({ ...m, allowMultipleSubmissions: e.target.checked }))} />
-          <label className="form-check-label" htmlFor="allowMult">Múltiplas submissões</label>
+          <label className="form-check-label" htmlFor="allowMult">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.MULTIPLE_SUBMISSIONS' })}</label>
         </div>
       </div>
 
       <div className="col-md-4">
         <div className="form-check mt-2">
           <input id="allowExt" className="form-check-input" type="checkbox" checked={!!model.allowExternal} onChange={(e) => setModel(m => ({ ...m, allowExternal: e.target.checked }))} />
-          <label className="form-check-label" htmlFor="allowExt">Permitir externos</label>
+          <label className="form-check-label" htmlFor="allowExt">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_EXTERNAL' })}</label>
         </div>
       </div>
 
       <div className="col-md-4">
         <div className="form-check form-switch mt-2 d-flex align-items-center gap-2">
           <input id="pushOn" className="form-check-input" type="checkbox" checked={pushOn} onChange={(e) => { const on = e.target.checked; setPushOn(on); if (on) setShowPushModal(true); else setModel(m => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: false } })); }} />
-          <label className="form-check-label" htmlFor="pushOn">Push na publicação</label>
-          {pushOn && <button type="button" className="btn btn-link btn-sm" onClick={() => setShowPushModal(true)}>editar</button>}
+          <label className="form-check-label" htmlFor="pushOn">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.PUSH_ON_PUBLISH' })}</label>
+          {pushOn && <button type="button" className="btn btn-link btn-sm" onClick={() => setShowPushModal(true)}>{intl.formatMessage({ id: 'FORMS.EDIT.ACTION.EDIT' })}</button>}
         </div>
       </div>
 
       <div className="col-md-6">
         <div className="form-check mt-3">
           <input id="attachments" className="form-check-input" type="checkbox" checked={!!model.attachmentsAllowed} onChange={(e) => setModel(m => ({ ...m, attachmentsAllowed: e.target.checked }))} />
-          <label className="form-check-label" htmlFor="attachments">Permitir anexos</label>
+          <label className="form-check-label" htmlFor="attachments">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_ATTACHMENTS' })}</label>
         </div>
       </div>
       <div className="col-md-6">
         <Form.Group>
-          <Form.Label>Ajuda para anexos</Form.Label>
+          <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ATTACHMENT_HELP' })}</Form.Label>
           <LanguageTabs locales={availableLocales} values={model.attachmentHelpText || {}} onChange={(locale, value) => setModel(m => ({ ...m, attachmentHelpText: { ...(m.attachmentHelpText || {}), [locale]: value } }))} />
         </Form.Group>
       </div>
@@ -423,12 +291,12 @@ export default function FormEditPage() {
       <div className="col-12">
         <div className="form-check mt-2">
           <input id="requiresApproval" className="form-check-input" type="checkbox" checked={!!model.requiresApproval} onChange={(e) => setModel(m => ({ ...m, requiresApproval: e.target.checked }))} />
-          <label className="form-check-label" htmlFor="requiresApproval">Para aprovação do RH?</label>
+          <label className="form-check-label" htmlFor="requiresApproval">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REQUIRES_APPROVAL' })}</label>
         </div>
       </div>
 
       <div className="col-12">
-        {!isNew && <button type="button" className="btn btn-light" onClick={() => setShowEmailModal(true)}>Configurar e-mails de alerta</button>}
+        {!isNew && <button type="button" className="btn btn-light" onClick={() => setShowEmailModal(true)}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.CONFIGURE_EMAILS' })}</button>}
       </div>
     </div>
   );
@@ -445,29 +313,29 @@ export default function FormEditPage() {
 
     return (
       <div className="p-3 space-y-4">
-        <h5 className="mb-3">Resumo</h5>
+        <h5 className="mb-3">{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.TITLE' })}</h5>
 
         {model.status === 'published' && isDraftMode && (
           <div className="alert alert-success">
-            <strong>Atenção:</strong> O formulário será <strong>PUBLICADO</strong> ao clicar no botão abaixo e o Push Notification será enviado.
+            <strong>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.WARNING.TITLE' })}</strong> {intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.WARNING.TEXT_1' })} <strong>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.WARNING.TEXT_2' })}</strong> {intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.WARNING.TEXT_3' })}
           </div>
         )}
 
         <div className="mb-3">
-          <h6>Informações básicas</h6>
+          <h6>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.SECTION.BASICS' })}</h6>
           <ul className="list-unstyled mb-0">
-            <li><strong>Título:</strong> {model.title[defaultLocale] || <em>(sem título)</em>}</li>
-            <li><strong>Status Atual:</strong> {originalStatus}</li>
-            <li><strong>Status Alvo:</strong> {model.status}</li>
-            <li><strong>Idioma padrão:</strong> {model.defaultLocale ?? '-'}</li>
-            <li><strong>Permitir tradução:</strong> {model.allowTranslations ? 'Sim' : 'Não'}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.TITLE' })}:</strong> {model.title[defaultLocale] || <em>(sem título)</em>}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.LABEL.CURRENT_STATUS' })}</strong> {originalStatus}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.LABEL.TARGET_STATUS' })}</strong> {model.status}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEFAULT_LOCALE' })}:</strong> {model.defaultLocale ?? '-'}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_TRANSLATION' })}:</strong> {model.allowTranslations ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
           </ul>
         </div>
         <div className="mb-3">
-          <h6>Configurações</h6>
+          <h6>{intl.formatMessage({ id: 'FORMS.EDIT.REVIEW.SECTION.SETTINGS' })}</h6>
           <ul className="list-unstyled mb-0">
-            <li><strong>Push na publicação:</strong> {notif.push ? 'Sim' : 'Não'}</li>
-            <li><strong>Para aprovação do RH:</strong> {model.requiresApproval ? 'Sim' : 'Não'}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.PUSH_ON_PUBLISH' })}:</strong> {notif.push ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
+            <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REQUIRES_APPROVAL' })}:</strong> {model.requiresApproval ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
           </ul>
         </div>
       </div>
@@ -479,25 +347,25 @@ export default function FormEditPage() {
       <div className="container-xxl">
         <div className="card">
           <div className="card-header align-items-center justify-content-between">
-            <h3 className="card-title">{isNew ? 'Criar formulário' : 'Editar formulário'}</h3>
+            <h3 className="card-title">{isNew ? intl.formatMessage({ id: 'FORMS.EDIT.TITLE.CREATE' }) : intl.formatMessage({ id: 'FORMS.EDIT.TITLE.EDIT' })}</h3>
             <div className="d-flex gap-2">
-              <button className="btn btn-light" onClick={() => nav('/forms')} disabled={saving}>Cancelar</button>
+              <button className="btn btn-light" onClick={() => nav('/forms')} disabled={saving}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.CANCEL' })}</button>
               {step !== 'review' ? (
                 <>
                   <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
-                    {saving ? 'Salvando…' : 'Salvar rascunho'}
+                    {saving ? intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVING' }) : intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE_DRAFT' })}
                   </button>
                   <button type="button" className="btn btn-primary" onClick={saveAndNext} disabled={saving}>
-                    {saving ? 'Salvando…' : 'Salvar e continuar'}
+                    {saving ? intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVING' }) : intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE_NEXT' })}
                   </button>
                 </>
               ) : (
                 <>
                   <button type="button" className="btn btn-light" onClick={saveDraft} disabled={saving}>
-                    {saving ? 'Salvando…' : 'Salvar rascunho'}
+                    {saving ? intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVING' }) : intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE_DRAFT' })}
                   </button>
                   <button type="button" className="btn btn-success" onClick={publish} disabled={saving}>
-                    {model.status === 'published' ? 'Publicar Agora' : 'Salvar Final'}
+                    {model.status === 'published' ? intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.PUBLISH_NOW' }) : intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE_FINAL' })}
                   </button>
                 </>
               )}
@@ -505,7 +373,7 @@ export default function FormEditPage() {
           </div>
           <div className="card-body">
             {err && <div className="alert alert-danger mb-4">{err}</div>}
-            {loading ? <div>Carregando…</div> : (
+            {loading ? <div>{intl.formatMessage({ id: 'FORMS.EDIT.LOADING' })}</div> : (
               <>
                 <StepHeader steps={STEPS.map(s => ({ key: s.key, title: s.title }))} currentKey={step} onStepClick={(k) => setStep(k as StepKey)} />
                 {step === 'basics' && renderBasics()}
@@ -517,30 +385,30 @@ export default function FormEditPage() {
             )}
           </div>
           <div className="card-footer d-flex justify-content-between">
-            <button className="btn btn-light" onClick={() => goStep(-1)} disabled={STEPS.findIndex((s) => s.key === step) === 0}>Voltar</button>
+            <button className="btn btn-light" onClick={() => goStep(-1)} disabled={STEPS.findIndex((s) => s.key === step) === 0}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.BACK' })}</button>
           </div>
         </div>
       </div>
       {!isNew && <FormEmailSettingsModal show={showEmailModal} onHide={() => setShowEmailModal(false)} formId={formId!} />}
 
       <Modal show={showPushModal} onHide={() => setShowPushModal(false)}>
-        <Modal.Header closeButton><Modal.Title>Push da publicação</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title>{intl.formatMessage({ id: 'FORMS.EDIT.MODAL.PUSH.TITLE' })}</Modal.Title></Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3">
-            <Form.Label>Título</Form.Label>
+            <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.TITLE' })}</Form.Label>
             <LanguageTabs locales={availableLocales} values={pushTitleDraft} onChange={(l, v) => setPushTitleDraft(p => ({ ...p, [l]: v }))} />
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label>Mensagem</Form.Label>
+            <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.MODAL.PUSH.MESSAGE' })}</Form.Label>
             <LanguageTabs locales={availableLocales} values={pushBodyDraft} onChange={(l, v) => setPushBodyDraft(p => ({ ...p, [l]: v }))} as="textarea" />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPushModal(false)}>Cancelar</Button>
+          <Button variant="secondary" onClick={() => setShowPushModal(false)}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.CANCEL' })}</Button>
           <Button variant="primary" onClick={() => {
             setModel(m => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: true, pushPayload: { title: pushTitleDraft, body: pushBodyDraft } } }));
             setShowPushModal(false);
-          }}>Salvar</Button>
+          }}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE' })}</Button>
         </Modal.Footer>
 
       </Modal>

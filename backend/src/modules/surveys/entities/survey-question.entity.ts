@@ -1,25 +1,29 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { SurveyEntity } from './survey.entity';
 
-export type QuestionType = 'text' | 'single' | 'multi' | 'stars' | 'scale' | 'nps';
+export type QuestionType =
+  | 'text'
+  | 'single'
+  | 'multi'
+  | 'stars'
+  | 'scale'
+  | 'nps';
 
 @Entity('survey_question')
 export class SurveyQuestionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => SurveyEntity, s => s.questions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => SurveyEntity, (s) => s.questions, { onDelete: 'CASCADE' })
   survey: SurveyEntity;
 
   @Column()
   order: number;
 
-  @Column({ type: 'enum', enum: ['text','single','multi','stars','scale','nps'] })
+  @Column({
+    type: 'enum',
+    enum: ['text', 'single', 'multi', 'stars', 'scale', 'nps'],
+  })
   type: QuestionType;
 
   @Column()

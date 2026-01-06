@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { useIntl } from 'react-intl'
 import { UserGroup } from '@shared/types'
 import { DrawerComponent, MenuComponent } from 'src/assets/ts/components'
 
@@ -15,13 +16,16 @@ interface Props {
   onDuplicate(g: UserGroup): void
 }
 
-const Spinner = () => (
-  <div className="d-flex justify-content-center align-items-center" style={{ height: 200 }}>
-    <div className="spinner-border text-primary" role="status">
-      <span className="visually-hidden">Carregando…</span>
+const Spinner = () => {
+  const intl = useIntl()
+  return (
+    <div className="d-flex justify-content-center align-items-center" style={{ height: 200 }}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">{intl.formatMessage({ id: 'GROUPS.LIST.LOADING', defaultMessage: 'Loading...' })}</span>
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const GroupList: React.FC<Props> = ({
   groups,
@@ -35,6 +39,7 @@ const GroupList: React.FC<Props> = ({
   onDelete,
   onDuplicate,
 }) => {
+  const intl = useIntl()
   const hdrRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -43,7 +48,7 @@ const GroupList: React.FC<Props> = ({
   }, [groups])
 
   if (loading) return <Spinner />
-  if (error) return <div className="text-danger p-5">Erro ao carregar.</div>
+  if (error) return <div className="text-danger p-5">{intl.formatMessage({ id: 'GROUPS.LIST.ERROR', defaultMessage: 'Error loading.' })}</div>
 
   const sorted = [...groups].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -66,12 +71,12 @@ const GroupList: React.FC<Props> = ({
                   }
                 />
               </th>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Admins</th>
-              <th>Usuários</th>
-              <th>Criado em</th>
-              <th>Ações</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.NAME', defaultMessage: 'Name' })}</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.TYPE', defaultMessage: 'Type' })}</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.ADMINS', defaultMessage: 'Admins' })}</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.USERS', defaultMessage: 'Users' })}</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.CREATED_AT', defaultMessage: 'Created at' })}</th>
+              <th>{intl.formatMessage({ id: 'GROUPS.LIST.HEADER.ACTIONS', defaultMessage: 'Actions' })}</th>
             </tr>
           </thead>
           <tbody>
@@ -98,13 +103,13 @@ const GroupList: React.FC<Props> = ({
                       <li>
                         <button className="dropdown-item" onClick={() => onEdit(g)}>
                           <i className="bi bi-pencil me-2" />
-                          Editar
+                          {intl.formatMessage({ id: 'GROUPS.LIST.ACTION.EDIT', defaultMessage: 'Edit' })}
                         </button>
                       </li>
                       <li>
                         <button className="dropdown-item" onClick={() => onDuplicate(g)}>
                           <i className="bi bi-files me-2" />
-                          Duplicar
+                          {intl.formatMessage({ id: 'GROUPS.LIST.ACTION.DUPLICATE', defaultMessage: 'Duplicate' })}
                         </button>
                       </li>
                       <li>
@@ -113,7 +118,7 @@ const GroupList: React.FC<Props> = ({
                           onClick={() => onDelete(g.id)}
                         >
                           <i className="bi bi-trash me-2" />
-                          Apagar
+                          {intl.formatMessage({ id: 'GROUPS.LIST.ACTION.DELETE', defaultMessage: 'Delete' })}
                         </button>
                       </li>
                     </ul>

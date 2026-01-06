@@ -1,26 +1,28 @@
 
-import {FC} from 'react'
-import {KTIcon} from '../../../../..//helpers'
-import {ErrorMessage, Field} from 'formik'
+import { FC } from 'react'
+import { KTIcon } from '../../../../..//helpers'
+import { ErrorMessage, Field } from 'formik'
+import { useIntl } from 'react-intl'
 
 const Step1: FC = () => {
+  const intl = useIntl()
   return (
     <div className='w-100'>
       <div className='pb-10 pb-lg-15'>
         <h2 className='fw-bolder d-flex align-items-center text-gray-900'>
-          Choose Account Type
+          {intl.formatMessage({ id: 'WIZARDS.STEP1.TITLE', defaultMessage: 'Choose Account Type' })}
           <i
             className='fas fa-exclamation-circle ms-2 fs-7'
             data-bs-toggle='tooltip'
-            title='Billing is issued based on your selected account type'
+            title={intl.formatMessage({ id: 'WIZARDS.STEP1.TOOLTIP', defaultMessage: 'Billing is issued based on your selected account type' })}
           ></i>
         </h2>
 
         <div className='text-gray-500 fw-bold fs-6'>
-          If you need more info, please check out
+          {intl.formatMessage({ id: 'WIZARDS.COMMON.MORE_INFO', defaultMessage: 'If you need more info, please check out' })}
           <a href='/dashboard' className='link-primary fw-bolder'>
             {' '}
-            Help Page
+            {intl.formatMessage({ id: 'WIZARDS.COMMON.HELP_PAGE', defaultMessage: 'Help Page' })}
           </a>
           .
         </div>
@@ -43,9 +45,9 @@ const Step1: FC = () => {
               <KTIcon iconName='address-book' className='fs-3x me-5' />
 
               <span className='d-block fw-bold text-start'>
-                <span className='text-gray-900 fw-bolder d-block fs-4 mb-2'>Personal Account</span>
+                <span className='text-gray-900 fw-bolder d-block fs-4 mb-2'>{intl.formatMessage({ id: 'WIZARDS.STEP1.PERSONAL_ACCOUNT', defaultMessage: 'Personal Account' })}</span>
                 <span className='text-gray-500 fw-bold fs-6'>
-                  If you need more info, please check it out
+                  {intl.formatMessage({ id: 'WIZARDS.STEP1.PERSONAL_DESC', defaultMessage: 'If you need more info, please check it out' })}
                 </span>
               </span>
             </label>
@@ -66,9 +68,9 @@ const Step1: FC = () => {
               <KTIcon iconName='briefcase' className='fs-3x me-5' />
 
               <span className='d-block fw-bold text-start'>
-                <span className='text-gray-900 fw-bolder d-block fs-4 mb-2'>Corporate Account</span>
+                <span className='text-gray-900 fw-bolder d-block fs-4 mb-2'>{intl.formatMessage({ id: 'WIZARDS.STEP1.CORPORATE_ACCOUNT', defaultMessage: 'Corporate Account' })}</span>
                 <span className='text-gray-500 fw-bold fs-6'>
-                  Create corporate account to mane users
+                  {intl.formatMessage({ id: 'WIZARDS.STEP1.CORPORATE_DESC', defaultMessage: 'Create corporate account to mane users' })}
                 </span>
               </span>
             </label>
@@ -83,4 +85,4 @@ const Step1: FC = () => {
   )
 }
 
-export {Step1}
+export { Step1 }

@@ -10,8 +10,8 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 export class GroupsService {
   constructor(
     @InjectRepository(GroupEntity) private groupRepo: Repository<GroupEntity>,
-    @InjectRepository(UserEntity)  private userRepo: Repository<UserEntity>,
-  ) {}
+    @InjectRepository(UserEntity) private userRepo: Repository<UserEntity>,
+  ) { }
 
   // ——— LISTA TODOS OS GRUPOS (Leve para Dropdown) ———
   findAll(companyId: string) {
@@ -19,7 +19,7 @@ export class GroupsService {
       where: { companyId },
       order: { name: 'ASC' },
       // 🔥 OTIMIZAÇÃO: Apenas campos essenciais, sem relations pesadas
-      select: ['id', 'name', 'identifier', 'type'], 
+      select: ['id', 'name', 'identifier', 'type'],
     });
   }
 
@@ -58,21 +58,44 @@ export class GroupsService {
 
   async addMember(groupId: string, userId: string): Promise<void> {
     const [g, u] = await Promise.all([
-      this.groupRepo.findOne({ where: { id: groupId }, relations: ['members'] }),
+      this.groupRepo.findOne({
+        where: { id: groupId },
+        relations: ['members'],
+      }),
       this.userRepo.findOneBy({ id: userId }),
     ]);
     if (!g) throw new NotFoundException(`Group ${groupId} not found`);
     if (!u) throw new NotFoundException(`User ${userId} not found`);
-    if (!g.members.some(m => m.id === userId)) {
+    if (!g.members.some((m) => m.id === userId)) {
       g.members.push(u);
       await this.groupRepo.save(g);
     }
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
-    const g = await this.groupRepo.findOne({ where: { id: groupId }, relations: ['members'] });
+    const g = await this.groupRepo.findOne({
+      where: { id: groupId },
+      relations: ['members'],
+    });
     if (!g) throw new NotFoundException(`Group ${groupId} not found`);
-    g.members = g.members.filter(m => m.id !== userId);
+    g.members = g.members.filter((m) => m.id !== userId);
     await this.groupRepo.save(g);
+  }
+
+  // Used by ChatService to find all groups a user belongs to
+  async findUserGroups(userId: string): Promise<GroupEntity[]> {
+    return this.groupRepo.createQueryBuilder('group')
+      .innerJoin('group.members', 'member')
+      .where('member.id = :userId', { userId })
+      .getMany();
+  }
+
+  async isMember(groupId: string, userId: string): Promise<boolean> {
+    const count = await this.groupRepo.createQueryBuilder('group')
+      .innerJoin('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .andWhere('member.id = :userId', { userId })
+      .getCount();
+    return count > 0;
   }
 }

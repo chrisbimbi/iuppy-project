@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Role, NewsType } from '../types';
+import { Role } from '../types';
 import * as Yup from 'yup'
 import { SurveyQuestionType, SurveyStatus } from '../types'
 
@@ -38,7 +38,7 @@ export const NewSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(5).max(200),
   content: z.string().min(10),
-  type: z.nativeEnum(NewsType),
+  hashtags: z.array(z.string()).optional(),
   authorId: z.string().uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -78,7 +78,7 @@ export const EventoSchema = z.object({
 export const CreateNewSchema = z.object({
   titulo: z.string().min(1, 'O título é obrigatório'),
   conteudo: z.string().min(1, 'O conteúdo é obrigatório'),
-  tipo: z.nativeEnum(NewsType),
+  hashtags: z.array(z.string()).optional(),
   segmentacao: z.array(z.string()),
   publicado: z.boolean(),
 });

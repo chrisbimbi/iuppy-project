@@ -57,9 +57,14 @@ export class FormsAnalyticsController {
   // GET /v2/forms/analytics/overview
   // ------------------------------------------------------
   @Get('overview')
-  async overview(@Req() req: any, @Query() q: AnalyticsQueryDto) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+  async overview(
+    @Req() req: any,
+    @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     // 🔥 GAP S2: Passa os filtros 'q' para o service
     return this.analyticsService.overview(companyId, q);
   }
@@ -68,9 +73,14 @@ export class FormsAnalyticsController {
   // GET /v2/forms/analytics/list
   // ------------------------------------------------------
   @Get('list')
-  async list(@Req() req: any, @Query() q: AnalyticsQueryDto) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+  async list(
+    @Req() req: any,
+    @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     // 🔥 GAP S2: Passa os filtros 'q' para o service
     return this.analyticsService.list(companyId, q);
   }
@@ -83,9 +93,11 @@ export class FormsAnalyticsController {
   async runAggregation(
     @Req() req: any,
     @Body() body: { formId?: string; date: string }, // date YYYY-MM-DD
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     if (!body.date)
       throw new BadRequestException('date (YYYY-MM-DD) is required');
 
@@ -107,9 +119,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     // 🔥 GAP S2: Passa os filtros 'q' para o service
     return this.analyticsService.formStats(companyId, formId, q);
   }
@@ -124,9 +138,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.analyticsService.getFieldsStats(companyId, formId, q);
   }
 
@@ -140,9 +156,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
 
     // @ts-ignore (Service tem o helper privado)
     const { from, to } = this.analyticsService.normalizeRange(q);
@@ -171,9 +189,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.analyticsService.formNotifications(companyId, formId, q);
   }
 
@@ -187,9 +207,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.analyticsService.formReminders(companyId, formId, q);
   }
 
@@ -202,9 +224,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Body() body: ExportDto,
     @Res() res: Response,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
 
     const format = body.format ?? 'xlsx';
 
@@ -230,10 +254,14 @@ export class FormsAnalyticsController {
   // GET /v2/forms/analytics/badges
   // ------------------------------------------------------
   @Get('badges')
-  async badges(@Req() req: any) {
-    const companyId = this.getCompanyIdSync(req);
+  async badges(
+    @Req() req: any,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const cmsUserId = this.getUserId(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     if (!cmsUserId) throw new BadRequestException('user missing from token');
     return this.analyticsService.badges(companyId, cmsUserId);
   }
@@ -242,10 +270,15 @@ export class FormsAnalyticsController {
   // POST /v2/forms/analytics/badges/ack
   // ------------------------------------------------------
   @Post('badges/ack')
-  async ackBadge(@Req() req: any, @Body() body: AckBadgeDto) {
-    const companyId = this.getCompanyIdSync(req);
+  async ackBadge(
+    @Req() req: any,
+    @Body() body: AckBadgeDto,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const cmsUserId = this.getUserId(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     if (!cmsUserId) throw new BadRequestException('user missing from token');
     if (!body?.formId && !body?.all) {
       throw new BadRequestException('formId or all=true missing');
@@ -259,7 +292,8 @@ export class FormsAnalyticsController {
   @Get('jobs')
   async jobs(@Req() req: any) {
     const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.analyticsService.jobs(companyId);
   }
 
@@ -269,7 +303,8 @@ export class FormsAnalyticsController {
   @Post('jobs/run-reminders')
   async runReminders(@Req() req: any) {
     const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.remindersService.runForCompany(companyId);
   }
 
@@ -282,9 +317,11 @@ export class FormsAnalyticsController {
     @Req() req: any,
     @Param('formId') formId: string,
     @Query() q: AnalyticsQueryDto,
+    @Query('companyId') companyIdFromQuery?: string,
   ) {
-    const companyId = this.getCompanyIdSync(req);
-    if (!companyId) throw new BadRequestException('companyId missing from token');
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    if (!companyId)
+      throw new BadRequestException('companyId missing from token');
     return this.analyticsService.analyticsGetLogs(companyId, formId, q);
   }
 }

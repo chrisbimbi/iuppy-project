@@ -55,6 +55,26 @@ export function AsideMenuMain() {
     return isOrgAdmin || (isEnabled('forms') && canView('forms'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
+  const showJourneys = useMemo(() => {
+    if (modsLoading || aclLoading) return true
+    return isOrgAdmin || (isEnabled('journeys') && canView('journeys'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
+  const showSocial = useMemo(() => {
+    if (modsLoading || aclLoading) return true
+    return isOrgAdmin || (isEnabled('social') && canView('social'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
+  const showVacations = useMemo(() => {
+    if (modsLoading || aclLoading) return false // Default false if loading
+    return isEnabled('vacations') && (isOrgAdmin || canView('vacations'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
+  const showPerformance = useMemo(() => {
+    if (modsLoading || aclLoading) return false
+    return isEnabled('performance') && (isOrgAdmin || canView('performance'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
   return (
     <>
       {/* Dashboard */}
@@ -69,12 +89,20 @@ export function AsideMenuMain() {
           <AsideMenuItem to="/modules/surveys" hasBullet fontIcon="bi-bar-chart" title={t('MENU.SURVEYS', 'Pesquisas e Enquetes')} />
         )}
         {showForms && (
-          <AsideMenuItem
-            to="/forms"                 // ✅ vai para a LISTA
-            hasBullet
-            fontIcon="bi-ui-checks-grid"
-            title={t('MENU.FORMS', 'Formulários')}
-          />
+          <AsideMenuItem to="/forms" hasBullet fontIcon="bi-ui-checks-grid" title={t('MENU.FORMS', 'Formulários')} />
+        )}
+        {showJourneys && (
+          <AsideMenuItem to="/journeys" hasBullet fontIcon="bi-signpost-2" title={t('MENU.JOURNEYS', 'Jornadas')} />
+        )}
+        {showSocial && (
+          <AsideMenuItem to="/social-analytics" hasBullet fontIcon="bi-people" title={t('MENU.SOCIAL', 'Mural Social')} />
+        )}
+        {/* Vacation & Performance restored to Modules */}
+        {showVacations && (
+          <AsideMenuItem to="/vacations" hasBullet fontIcon="bi-sun" title={t('MENU.VACATIONS', 'Gestão de Férias')} />
+        )}
+        {showPerformance && (
+          <AsideMenuItem to="/performance" hasBullet fontIcon="bi-trophy" title={t('MENU.PERFORMANCE', 'Ciclos de Avaliação')} />
         )}
       </AsideMenuItemWithSub>
 
@@ -83,8 +111,19 @@ export function AsideMenuMain() {
       )}
 
       {/* Usuários & Grupos */}
-      <AsideMenuItemWithSub to="#" title={t('MENU.USERS_GROUPS', 'Meus usuários e grupos')} fontIcon="bi-people">
-        {showGroups && <AsideMenuItem to="/groups" hasBullet title={t('MENU.GROUPS', 'Grupos')} />}
+      <AsideMenuItemWithSub to="#" title={t('MENU.USERS_GROUPS', 'Usuários e Grupos')} fontIcon="bi-people">
+        <AsideMenuItem to="/users" hasBullet title={t('MENU.USERS', 'Usuários')} />
+        <AsideMenuItem to="/groups" hasBullet title={t('MENU.GROUPS', 'Grupos')} />
+      </AsideMenuItemWithSub>
+
+      {/* Configuration Section - Moved to Bottom */}
+      <AsideMenuItemWithSub to="/settings" title={t('MENU.SETTINGS', 'Configurações')} fontIcon="bi-gear">
+        <AsideMenuItemWithSub to="/settings/operations" hasBullet title={t('MENU.OPERATIONS', 'Processos Operacionais')}>
+          {showVacations && (
+            <AsideMenuItem to="/vacations/policy" hasBullet title={t('MENU.VACATION_POLICY', 'Políticas de Férias')} />
+          )}
+        </AsideMenuItemWithSub>
+        <AsideMenuItem to="/company/settings" hasBullet title={t('MENU.COMPANY', 'Empresa')} />
       </AsideMenuItemWithSub>
     </>
   )

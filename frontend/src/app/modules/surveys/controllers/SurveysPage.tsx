@@ -1,5 +1,6 @@
 // frontend/src/app/modules/surveys/controllers/SurveysPage.tsx
 import React, { useEffect, useRef, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { Modal } from 'bootstrap'
 import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
@@ -20,6 +21,7 @@ const SurveysPage: React.FC = () => {
     const { currentUser } = useAuth()
     const companyId = currentUser!.companyId
     const userId = currentUser!.id
+    const intl = useIntl()
 
     const { data: spaces = [] } = useSpaces(companyId)
     const { groups = [] } = useGroups({ companyId }) // mantido se for usar depois
@@ -80,7 +82,7 @@ const SurveysPage: React.FC = () => {
         // 1) Monta payload SÓ com campos permitidos pelo CreateSurveyDto
         const payload: Partial<Survey> = {
             companyId, // precisa ir no body pro DTO
-            title: `${survey.title} (Cópia)`,
+            title: `${survey.title} ${intl.formatMessage({ id: 'SURVEYS.PAGE.COPY_SUFFIX', defaultMessage: '(Cópia)' })}`,
             description: survey.description || '',
             authorId: userId, // quem está duplicando vira autor
             adminIds: survey.adminIds?.length ? survey.adminIds : [userId],
@@ -148,7 +150,7 @@ const SurveysPage: React.FC = () => {
             <div className="app-page" id="kt_app_page">
                 <AsideDefault />
                 <Content>
-                    <PageTitle breadcrumbs={[]}>Pesquisas e Enquetes</PageTitle>
+                    <PageTitle breadcrumbs={[]}>{intl.formatMessage({ id: 'SURVEYS.PAGE.TITLE', defaultMessage: 'Pesquisas e Enquetes' })}</PageTitle>
 
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <select
@@ -156,7 +158,7 @@ const SurveysPage: React.FC = () => {
                             value={spaceFilter ?? ''}
                             onChange={(e) => setSpaceFilter(e.target.value || undefined)}
                         >
-                            <option value="">Todos os Espaços</option>
+                            <option value="">{intl.formatMessage({ id: 'SURVEYS.PAGE.FILTER.ALL_SPACES', defaultMessage: 'Todos os Espaços' })}</option>
                             {spaces.map((space) => (
                                 <option key={space.id} value={space.id}>
                                     {space.name}
@@ -165,7 +167,7 @@ const SurveysPage: React.FC = () => {
                         </select>
 
                         <button className="btn btn-primary" onClick={openCreate}>
-                            Criar Enquete
+                            {intl.formatMessage({ id: 'SURVEYS.PAGE.BUTTON.CREATE', defaultMessage: 'Criar Enquete' })}
                         </button>
                     </div>
 
@@ -209,13 +211,13 @@ const SurveysPage: React.FC = () => {
             <div className="modal fade" ref={deleteRef} tabIndex={-1}>
                 <div className="modal-dialog">
                     <div className="modal-content p-5">
-                        <h5>Confirmar exclusão?</h5>
+                        <h5>{intl.formatMessage({ id: 'SURVEYS.PAGE.MODAL.DELETE.TITLE', defaultMessage: 'Confirmar exclusão?' })}</h5>
                         <div className="d-flex justify-content-end gap-3 mt-4">
                             <button className="btn btn-light" onClick={() => deleteModal?.hide()}>
-                                Cancelar
+                                {intl.formatMessage({ id: 'SURVEYS.PAGE.MODAL.DELETE.CANCEL', defaultMessage: 'Cancelar' })}
                             </button>
                             <button className="btn btn-danger" onClick={handleConfirmDelete}>
-                                Excluir
+                                {intl.formatMessage({ id: 'SURVEYS.PAGE.MODAL.DELETE.CONFIRM', defaultMessage: 'Excluir' })}
                             </button>
                         </div>
                     </div>

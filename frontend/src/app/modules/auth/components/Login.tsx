@@ -63,7 +63,7 @@ export function Login() {
           try { await logout() } catch { }
           saveAuth(undefined)
           setCurrentUser(undefined)
-          setStatus('Seu perfil não tem acesso ao painel administrativo.')
+          setStatus(intl.formatMessage({ id: 'AUTH.VALIDATION.NO_ACCESS' }))
           setSubmitting(false)
           return
         }

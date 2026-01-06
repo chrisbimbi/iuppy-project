@@ -11,6 +11,15 @@ export type ActivityItem = {
     link: string;
 };
 
+// Helper simples para pegar o companyId (duplicado de api.ts pois não é exportado lá)
+function getCompanyId(): string | undefined {
+    if (typeof window !== 'undefined') {
+        const fromLs = window.localStorage.getItem('companyId');
+        if (fromLs) return fromLs;
+    }
+    return undefined;
+}
+
 export function useCmsNotifications() {
     const [badgeCount, setBadgeCount] = useState(0);
     const [items, setItems] = useState<ActivityItem[]>([]);
@@ -18,7 +27,10 @@ export function useCmsNotifications() {
 
     const fetchData = useCallback(async () => {
         try {
-            const { data } = await api.get('/v2/forms/analytics/badges');
+            const companyId = getCompanyId();
+            const { data } = await api.get('/v2/forms/analytics/badges', {
+                params: { companyId }
+            });
 
             setBadgeCount(data.totalNew || 0);
 
@@ -52,7 +64,10 @@ export function useCmsNotifications() {
     const markAsRead = async (formId: string) => {
         try {
             // Chama endpoint de ACK
-            await api.post('/v2/forms/analytics/badges/ack', { formId });
+            const companyId = getCompanyId();
+            await api.post('/v2/forms/analytics/badges/ack', { formId }, {
+                params: { companyId }
+            });
             // Atualiza localmente instantaneamente
             setItems(prev => prev.filter(i => i.id !== formId));
             setBadgeCount(prev => Math.max(0, prev - 1)); // Aproximação visual

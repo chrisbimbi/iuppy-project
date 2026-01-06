@@ -17,7 +17,9 @@ import { useAuth } from 'src/app/modules/auth';
 import { useContentActions } from '../../../providers/useContentActions';
 import { uploadArrayOfFiles } from 'src/utils/fileUtils';
 import { AudienceMode } from '@shared/types/NewsSettings';
+
 import { NewsAudienceService } from '../../../services/news-audience.service';
+import { createNewSchema } from '../helpers/validationSchemas';
 
 interface ContentFormProps {
   initialValues: CreateContentDto;
@@ -143,6 +145,24 @@ const ContentForm: React.FC<ContentFormProps> = ({
       base.authorId = String(currentUser.id);
       base.companyId = currentUser.companyId;
     }
+
+    // 🩹 FIX: Reconstruir audienceMode se não vier do backend
+    if (base.settings && !base.settings.audienceMode) {
+      if (base.settings.visibility === 'specific_groups') {
+        base.settings.audienceMode = AudienceMode.GROUPS;
+        // Garante que targetAudience esteja populado se houver audienceGroupIds (legado)
+        if (!base.settings.targetAudience && base.settings.audienceGroupIds) {
+          base.settings.targetAudience = base.settings.audienceGroupIds;
+        }
+      } else if (base.channelId && base.settings.visibility === 'public') {
+        // Se for público e tiver canal, assumimos CHANNEL ou COMPANY.
+        // O padrão seguro é COMPANY, mas se o usuário selecionar CHANNEL no step2, muda.
+        // Se quisermos ser precisos, precisaríamos checar se o canal é "global" ou não.
+        // Por enquanto, COMPANY é o default do Step2, então ok.
+        base.settings.audienceMode = AudienceMode.COMPANY;
+      }
+    }
+
     setValues(base);
     setStep(1);
   }, [initialValues, currentUser]);
@@ -199,14 +219,28 @@ const ContentForm: React.FC<ContentFormProps> = ({
     }
   }
 
-  const onSubmit = async (
+  const [showPushConfirm, setShowPushConfirm] = useState(false);
+  const [pendingDto, setPendingDto] = useState<CreateContentDto | null>(null);
+  const [pendingHelpers, setPendingHelpers] = useState<FormikHelpers<CreateContentDto> | null>(null);
+
+  const handlePushConfirm = async (shouldSend: boolean) => {
+    setShowPushConfirm(false);
+    if (!pendingDto || !pendingHelpers) return;
+
+    const finalDto = { ...pendingDto };
+    if (!shouldSend) {
+      // Se não quiser reenviar, desativa o push no settings
+      if (finalDto.settings) {
+        finalDto.settings.pushNotification = false;
+      }
+    }
+    await processSubmit(finalDto, pendingHelpers);
+  };
+
+  const processSubmit = async (
     dto: CreateContentDto,
     helpers: FormikHelpers<CreateContentDto>
   ) => {
-    if (!dto.channelId) {
-      helpers.setSubmitting(false);
-      return;
-    }
     try {
       setErr(false);
 
@@ -229,7 +263,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
         title: dto.title,
         subtitle: dto.subtitle,
         content: dto.content,
-        type: dto.type,
+        hashtags: dto.hashtags,
         channelId: dto.channelId,
         authorId: dto.authorId!,
         companyId: dto.companyId!,
@@ -269,27 +303,75 @@ const ContentForm: React.FC<ContentFormProps> = ({
     } finally {
       setStage('idle');
       helpers.setSubmitting(false);
+      setPendingDto(null);
+      setPendingHelpers(null);
     }
+  };
+
+  const onSubmit = async (
+    dto: CreateContentDto,
+    helpers: FormikHelpers<CreateContentDto>
+  ) => {
+    if (!dto.channelId) {
+      helpers.setSubmitting(false);
+      return;
+    }
+
+    // Intercepta se for edição e tiver push marcado
+    if (editingId && dto.isPublished && dto.settings?.pushNotification) {
+      setPendingDto(dto);
+      setPendingHelpers(helpers);
+      setShowPushConfirm(true);
+      return;
+    }
+
+    await processSubmit(dto, helpers);
   };
 
   return (
     <>
+      {/* Modal de Confirmação de Push */}
+      {showPushConfirm && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Reenviar Notificação?</h5>
+                <button type="button" className="btn-close" onClick={() => setShowPushConfirm(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>Este conteúdo está marcado para enviar uma notificação push.</p>
+                <p>Deseja reenviar a notificação para a audiência?</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-light" onClick={() => handlePushConfirm(false)}>
+                  Não, apenas salvar
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => handlePushConfirm(true)}>
+                  Sim, reenviar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PageTitle>
         {intl.formatMessage({
-          id: editingId ? 'MENU.EDIT_COMUNICADO' : 'MENU.CREATE_COMUNICADO',
+          id: editingId ? 'COMMUNICATION.FORM.TITLE.EDIT' : 'COMMUNICATION.FORM.TITLE.CREATE',
           defaultMessage: editingId ? 'Editar comunicado' : 'Criar comunicado',
         })}
       </PageTitle>
       <Content>
         {err && (
           <div className="alert alert-danger">
-            Ocorreu um erro ao salvar o comunicado. Por favor, tente novamente.
+            {intl.formatMessage({ id: 'COMMUNICATION.FORM.ALERT.ERROR' })}
           </div>
         )}
 
         {stage === 'upload' && (
           <div className="alert alert-info d-flex align-items-center">
-            <span className="me-3">Fazendo upload de seus anexos e imagens…</span>
+            <span className="me-3">{intl.formatMessage({ id: 'COMMUNICATION.FORM.ALERT.UPLOAD' })}</span>
             <div className="progress w-100" style={{ height: 6 }}>
               <div
                 className="progress-bar"
@@ -305,11 +387,11 @@ const ContentForm: React.FC<ContentFormProps> = ({
 
         {stage === 'save' && (
           <div className="alert alert-primary">
-            Salvando o conteúdo…
+            {intl.formatMessage({ id: 'COMMUNICATION.FORM.ALERT.SAVING' })}
           </div>
         )}
 
-        <Formik initialValues={values} onSubmit={onSubmit} enableReinitialize>
+        <Formik initialValues={values} validationSchema={createNewSchema(intl)} onSubmit={onSubmit} enableReinitialize>
           {formik => {
             const { submitForm, isSubmitting } = formik;
             return (
@@ -348,7 +430,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                         path="../media/icons/duotune/arrows/arr063.svg"
                         className="svg-icon-2 me-0"
                       />
-                      {intl.formatMessage({ id: 'BUTTON.BACK', defaultMessage: 'Voltar' })}
+                      {intl.formatMessage({ id: 'COMMUNICATION.FORM.BUTTON.BACK', defaultMessage: 'Voltar' })}
                     </button>
                   )}
                   {step < 2 ? (
@@ -357,7 +439,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
                       className="btn btn-primary"
                       onClick={next}
                     >
-                      {intl.formatMessage({ id: 'BUTTON.NEXT', defaultMessage: 'Avançar' })}
+                      {intl.formatMessage({ id: 'COMMUNICATION.FORM.BUTTON.NEXT', defaultMessage: 'Avançar' })}
                       <KTSVG
                         path="../media/icons/duotune/arrows/arr064.svg"
                         className="svg-icon-2 ms-0"
@@ -373,8 +455,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
                       onClick={() => submitForm()}
                     >
                       {isSubmitting || stage !== 'idle'
-                        ? intl.formatMessage({ id: 'BUTTON.SAVING', defaultMessage: 'Salvando…' })
-                        : intl.formatMessage({ id: 'BUTTON.SAVE', defaultMessage: 'Salvar' })}
+                        ? intl.formatMessage({ id: 'COMMUNICATION.FORM.BUTTON.SAVING', defaultMessage: 'Salvando…' })
+                        : intl.formatMessage({ id: 'COMMUNICATION.FORM.BUTTON.SAVE', defaultMessage: 'Salvar' })}
                     </button>
                   )}
                 </div>

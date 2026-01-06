@@ -1,4 +1,5 @@
 import React from 'react'
+import { useIntl } from 'react-intl'
 import clsx from 'clsx'
 import { User } from '@shared/types'
 
@@ -10,9 +11,10 @@ interface Props {
 }
 
 const MembersList: React.FC<Props> = ({ members, loading, error, onRemove }) => {
-  if (loading) return <div>Carregando membros…</div>
-  if (error) return <div className="text-danger">Erro ao carregar membros</div>
-  if (members.length === 0) return <div>Nenhum membro.</div>
+  const intl = useIntl()
+  if (loading) return <div>{intl.formatMessage({ id: 'GROUPS.MEMBERS.LOADING', defaultMessage: 'Loading members...' })}</div>
+  if (error) return <div className="text-danger">{intl.formatMessage({ id: 'GROUPS.MEMBERS.ERROR', defaultMessage: 'Error loading members' })}</div>
+  if (members.length === 0) return <div>{intl.formatMessage({ id: 'GROUPS.MEMBERS.EMPTY', defaultMessage: 'No members.' })}</div>
 
   return (
     <div className="row g-3">

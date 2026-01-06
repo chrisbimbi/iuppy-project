@@ -1,5 +1,12 @@
 // src/modules/forms/public-forms.controller.ts
-import { BadRequestException, Body, Controller, NotFoundException, Param, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { FormsService } from './forms.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 
@@ -17,7 +24,9 @@ export class PublicFormsController {
       throw new NotFoundException('form not found');
     }
     if (!form.allowExternal) {
-      throw new BadRequestException('external submissions not allowed for this form');
+      throw new BadRequestException(
+        'external submissions not allowed for this form',
+      );
     }
 
     // companyId vem do form

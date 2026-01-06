@@ -6,7 +6,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { News, NewsSettings } from '@shared/types';
-import { NewsType } from '@shared/types/NewsType';
+
+import { Channel } from '../channels/channel.entity';
+import { JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity()
 export class NewsEntity implements News {
@@ -22,8 +24,15 @@ export class NewsEntity implements News {
   @Column()
   channelId!: string;
 
+  @ManyToOne(() => Channel)
+  @JoinColumn({ name: 'channelId' })
+  channel?: Channel;
+
   @Column({ default: false })
   isPublished!: boolean;
+
+  @Column({ default: false })
+  mustAcknowledge!: boolean;
 
   @Column()
   title!: string;
@@ -34,12 +43,8 @@ export class NewsEntity implements News {
   @Column('text')
   content!: string;
 
-  @Column({
-    type: 'enum',
-    enum: NewsType,
-    default: NewsType.ANNOUNCEMENT,
-  })
-  type!: NewsType;
+  @Column('text', { array: true, nullable: true, default: {} })
+  hashtags!: string[];
 
   @Column('simple-json', { nullable: true })
   attachments!: string[];
@@ -63,4 +68,20 @@ export class NewsEntity implements News {
   /** Usado para "snapshot" de audiência no momento da publicação (jsonb ou null) */
   @Column('jsonb', { nullable: true })
   audienceSnapshotAtPublish?: any;
+
+  // --- AI FEATURES ---
+  @Column('float', { array: true, nullable: true })
+  embedding?: number[];
+
+  @Column('float', { nullable: true })
+  sentiment_score?: number;
+
+  @Column({ nullable: true })
+  sentiment_label?: string;
+
+  @Column('text', { nullable: true })
+  ai_summary?: string;
+
+  @Column('text', { array: true, nullable: true })
+  ai_tags?: string[];
 }

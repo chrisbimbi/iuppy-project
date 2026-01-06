@@ -26,12 +26,17 @@ import { JwtAccessGuard } from '../../auth/guards/jwt-access.guard';
 import { FormsService } from './forms.service';
 // 🔥 S3+: Importa o ACL Guard (se for usar)
 // import { FormsAclGuard } from './guards/forms-acl.guard';
+import { AccessControlService } from 'src/access-control/access-control.service';
+import { Role } from '@shared/types';
 
 @Controller('forms')
 @UseGuards(JwtAccessGuard) // Protege todas as rotas por padrão
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true })) // S3+: Adiciona validação
 export class FormsController {
-  constructor(private readonly formsService: FormsService) { }
+  constructor(
+    private readonly formsService: FormsService,
+    private readonly accessControlService: AccessControlService,
+  ) { }
 
   private getCompanyIdSync(req: any): string | null {
     return (
@@ -73,6 +78,7 @@ export class FormsController {
     @Req() req: any,
     @Query('status') status?: string,
     @Query('companyId') companyIdFromQuery?: string,
+    @Query('visibility') visibility?: string,
   ) {
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     if (!companyId) {
@@ -84,16 +90,35 @@ export class FormsController {
     if (!companyId) {
       throw new BadRequestException('companyId missing');
     }
-    return this.formsService.listForms(companyId, status);
-  }
 
+    const role = req.user?.role;
+    const userId = this.getUserId(req);
+    let allowedSpaceIds: string[] | undefined;
+    let filterUserId: string | undefined;
+
+    if (role === Role.User) {
+      // App User: Apply Segmentation
+      filterUserId = userId;
+    } else {
+      // Admin: Check ACL
+      const caps = await this.accessControlService.capabilities(companyId, { id: userId, role });
+      const formsCaps = caps.modules.forms;
+
+      if (!formsCaps?.canView) {
+        return [];
+      }
+
+      if (formsCaps.scopeType === 'SPACE_IDS') {
+        allowedSpaceIds = formsCaps.spaceIds;
+      }
+    }
+
+    return this.formsService.listForms(companyId, status, visibility, allowedSpaceIds, filterUserId);
+  }
 
   // 🔥 NOVO ENDPOINT
   @Get('my/interactions')
-  async myInteractions(
-    @Req() req: any,
-    @Query('limit') limit = '50',
-  ) {
+  async myInteractions(@Req() req: any, @Query('limit') limit = '50') {
     let companyId = this.getCompanyIdSync(req);
     const userId = this.getUserId(req);
 
@@ -105,7 +130,11 @@ export class FormsController {
       throw new BadRequestException('companyId/userId missing');
     }
 
-    return this.formsService.getMyInteractions(userId, companyId, Number(limit));
+    return this.formsService.getMyInteractions(
+      userId,
+      companyId,
+      Number(limit),
+    );
   }
   // =========================================================
   // CRIAR FORM (CMS)
@@ -186,8 +215,12 @@ export class FormsController {
   // AÇÕES DE GERENCIAMENTO (NOVAS - S1 FIX)
   // =========================================================
   @Post(':id/publish')
-  async publish(@Req() req: any, @Param('id') id: string) {
-    const companyId = this.getCompanyIdSync(req);
+  async publish(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const userId = this.getUserId(req); // Pega o ator
     if (!companyId) throw new BadRequestException('companyId missing');
     if (!userId) throw new BadRequestException('userId missing');
@@ -196,8 +229,12 @@ export class FormsController {
   }
 
   @Post(':id/unpublish')
-  async unpublish(@Req() req: any, @Param('id') id: string) {
-    const companyId = this.getCompanyIdSync(req);
+  async unpublish(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const userId = this.getUserId(req); // Pega o ator
     if (!companyId) throw new BadRequestException('companyId missing');
     if (!userId) throw new BadRequestException('userId missing');
@@ -206,8 +243,12 @@ export class FormsController {
   }
 
   @Post(':id/duplicate')
-  async duplicate(@Req() req: any, @Param('id') id: string) {
-    const companyId = this.getCompanyIdSync(req);
+  async duplicate(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
     const userId = this.getUserId(req);
     if (!companyId) throw new BadRequestException('companyId missing');
     if (!userId) throw new BadRequestException('userId missing for duplicate');
@@ -216,12 +257,16 @@ export class FormsController {
   }
 
   @Post('remove-many')
-  async removeMany(@Req() req: any, @Body() body: { ids: string[] }) {
-    const companyId = this.getCompanyIdSync(req);
-    const userId = this.getUserId(req); // Pega o ator
+  async removeMany(
+    @Req() req: any,
+    @Body() body: { ids: string[] },
+    @Query('companyId') companyIdFromQuery?: string,
+  ) {
+    const companyId = companyIdFromQuery || this.getCompanyIdSync(req);
+    const userId = this.getUserId(req);
     if (!companyId) throw new BadRequestException('companyId missing');
     if (!userId) throw new BadRequestException('userId missing');
-    // Assinatura: removeMany(companyId, actorUserId, ids)
+
     return this.formsService.removeMany(companyId, userId, body.ids || []);
   }
 
@@ -448,12 +493,7 @@ export class FormsController {
 
     // TODO: Adicionar verificação se o 'userId' é RH/Admin
 
-    return this.formsService.closeChat(
-      companyId,
-      formId,
-      submissionId,
-      userId,
-    );
+    return this.formsService.closeChat(companyId, formId, submissionId, userId);
   }
 
   // =========================================================

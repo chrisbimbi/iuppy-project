@@ -147,39 +147,38 @@ export const Step2: React.FC<Step2Props> = ({
       // 👇 evita 400 e mostra mensagem clara
       if (!editingId && mode === AudienceMode.GROUPS && selectedGroups.length === 0) {
         setAud(null)
-        setAudError('Nenhum público selecionado. Por favor escolha um grupo para calcular a audiência.')
+        setAudError(intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.ERROR.NO_AUDIENCE' }))
         return
       }
 
-      if (editingId) {
-        if (mode === AudienceMode.GROUPS) {
-          res = await NewsAudienceService.probeForNews(editingId, { mode, groupIds: selectedGroups })
+      // Prepare params based on current form state
+      const params: any = { mode }
+
+      if (mode === AudienceMode.GROUPS) {
+        params.groupIds = selectedGroups
+      } else if (mode === AudienceMode.CHANNEL) {
+        if (data.channelId) {
+          params.channelIds = [data.channelId]
         } else {
-          res = await NewsAudienceService.probeForNews(editingId, { mode })
+          throw new Error(intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.ERROR.SELECT_CHANNEL' }))
         }
+      } else if (mode === AudienceMode.SPACE) {
+        const spaceId = data.settings.audienceSpaceId || await deriveSpaceIdFromChannel(data.channelId)
+        if (!spaceId) throw new Error(intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.ERROR.NO_SPACE' }))
+        params.spaceId = spaceId
+      }
+
+      if (editingId) {
+        res = await NewsAudienceService.probeForNews(editingId, params)
       } else {
-        if (mode === AudienceMode.COMPANY) {
-          res = await NewsAudienceService.probeForDraft({ mode })
-        } else if (mode === AudienceMode.CHANNEL) {
-          if (data.channelId) {
-            res = await NewsAudienceService.probeForDraft({ mode, channelIds: [data.channelId] })
-          } else {
-            throw new Error('Selecione um canal no passo 1 para estimar este público.')
-          }
-        } else if (mode === AudienceMode.SPACE) {
-          const spaceId = data.settings.audienceSpaceId || await deriveSpaceIdFromChannel(data.channelId)
-          if (!spaceId) throw new Error('Não foi possível determinar o espaço. Selecione um canal (passo 1) pertencente a um espaço.')
-          res = await NewsAudienceService.probeForDraft({ mode, spaceId })
-        } else if (mode === AudienceMode.GROUPS) {
-          res = await NewsAudienceService.probeForDraft({ mode, groupIds: selectedGroups })
-        }
+        res = await NewsAudienceService.probeForDraft(params)
       }
 
       setAud(res)
       if (res) setFieldValue('settings.audienceSnapshot', { totalUsuarios: res.totalUsuarios, comTokenAtivo: res.comTokenAtivo })
     } catch (e: any) {
       setAud(null)
-      setAudError(e?.message || 'Falha ao calcular audiência.')
+      setAudError(e?.message || intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.ERROR.CALC_FAILED' }))
     } finally {
       setAudLoading(false)
     }
@@ -195,32 +194,34 @@ export const Step2: React.FC<Step2Props> = ({
     <div className="w-100">
       {/* === Audiência Unificada === */}
       <div className="pb-5">
-        <h2 className="fw-bolder text-dark">Escolher públicos</h2>
+        <h2 className="fw-bolder text-dark">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.TITLE.AUDIENCE' })}</h2>
         <div className="text-gray-400 fw-bold fs-6">
-          Selecione quem deve receber/ver este conteúdo.
+          {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.SUBTITLE.AUDIENCE' })}
         </div>
       </div>
 
       <div className="row mb-6">
         <div className="col-md-6">
-          <label className="form-label required">Público</label>
+          <label className="form-label required">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.AUDIENCE' })}</label>
           <select
             className="form-select form-select-lg form-select-solid"
             value={mode}
             onChange={(e) => handleAudienceSelect(e.target.value)}
           >
-            <option value="COMPANY">Enviar para a empresa inteira</option>
-            <option value="SPACE">Todos os canais deste espaço</option>
-            <option value="CHANNEL">Este canal</option>
-            <option value="GROUPS">Grupos específicos</option>
+            <option value="COMPANY">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.OPTION.COMPANY' })}</option>
+            <option value="SPACE">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.OPTION.SPACE' })}</option>
+            <option value="CHANNEL">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.OPTION.CHANNEL' })}</option>
+            <option value="GROUPS">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.OPTION.GROUPS' })}</option>
           </select>
         </div>
 
         {mode === AudienceMode.GROUPS && (
           <div className="col-md-6">
-            <label className="form-label required">Grupos</label>
+            <label className="form-label required">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.GROUPS' })}</label>
             <button type="button" className="btn btn-outline-primary" onClick={() => groupsModal?.show()}>
-              {selectedGroups.length > 0 ? 'Editar grupos selecionados…' : 'Selecionar Grupos…'}
+              {selectedGroups.length > 0
+                ? intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.EDIT_GROUPS' })
+                : intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.SELECT_GROUPS' })}
             </button>
             <ErrorMessage name="settings.targetAudience" component="div" className="invalid-feedback" />
             {selectedGroups.length > 0 && (
@@ -238,24 +239,24 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="card shadow-sm mb-10">
         <div className="card-body d-flex flex-column flex-sm-row gap-6 align-items-start align-items-sm-center">
           <div className="flex-grow-1">
-            <div className="fw-bold">Estimativa de audiência</div>
+            <div className="fw-bold">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.CARD.ESTIMATE' })}</div>
             <div className="text-muted fs-7">
-              Atualiza automaticamente conforme você muda o público.
+              {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.CARD.ESTIMATE_DESC' })}
             </div>
             {audError && <div className="text-danger mt-2">{audError}</div>}
           </div>
           <div className="d-flex gap-6 align-items-center">
             <div className="text-center">
               <div className="fs-1 fw-bolder">{audLoading ? '…' : (aud?.totalUsuarios ?? '—')}</div>
-              <div className="text-muted fs-8">Total</div>
+              <div className="text-muted fs-8">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.TOTAL' })}</div>
             </div>
             <div className="vr" />
             <div className="text-center">
               <div className="fs-1 fw-bolder">{audLoading ? '…' : (aud?.comTokenAtivo ?? '—')}</div>
-              <div className="text-muted fs-8">Entregável (com token)</div>
+              <div className="text-muted fs-8">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.DELIVERABLE' })}</div>
             </div>
             <button type="button" className="btn btn-light btn-sm" onClick={refreshAudience} disabled={audLoading}>
-              Recalcular
+              {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.RECALCULATE' })}
             </button>
           </div>
         </div>
@@ -263,8 +264,8 @@ export const Step2: React.FC<Step2Props> = ({
 
       {/* === Engajamento === */}
       <div className="pb-5 mt-2">
-        <h3 className="fw-bolder text-dark">Engajamento</h3>
-        <div className="text-gray-400 fw-bold fs-6">Compartilhamento, comentários e reações</div>
+        <h3 className="fw-bolder text-dark">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.TITLE.ENGAGEMENT' })}</h3>
+        <div className="text-gray-400 fw-bold fs-6">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.SUBTITLE.ENGAGEMENT' })}</div>
       </div>
       <div className="row mb-10">
         <div className="col-md-4">
@@ -278,10 +279,10 @@ export const Step2: React.FC<Step2Props> = ({
                 if (e.target.checked) shareModal?.show()
               }}
             />
-            <label className="form-check-label">&nbsp;Permitir compartilhamento</label>
+            <label className="form-check-label">&nbsp;{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.ALLOW_SHARING' })}</label>
             {data.settings.allowSharing && (
               <button type="button" className="btn btn-link btn-sm ms-2 p-0" onClick={() => shareModal?.show()}>
-                Editar
+                {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.EDIT' })}
               </button>
             )}
           </div>
@@ -290,20 +291,20 @@ export const Step2: React.FC<Step2Props> = ({
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.allowReactions}
               onChange={e => setFieldValue('settings.allowReactions', e.target.checked)} />
-            <label className="form-check-label">Permitir reações</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.ALLOW_REACTIONS' })}</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.allowComments}
               onChange={e => setFieldValue('settings.allowComments', e.target.checked)} />
-            <label className="form-check-label">Permitir comentários</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.ALLOW_COMMENTS' })}</label>
           </div>
           {data.settings.allowComments && (
             <div className="form-check form-switch form-switch-custom form-switch-solid mt-2">
               <input className="form-check-input" type="checkbox" checked={data.settings.moderateComments}
                 onChange={e => setFieldValue('settings.moderateComments', e.target.checked)} />
-              <label className="form-check-label">Moderar comentários</label>
+              <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.MODERATE_COMMENTS' })}</label>
             </div>
           )}
         </div>
@@ -311,18 +312,18 @@ export const Step2: React.FC<Step2Props> = ({
 
       {/* === Notificações === */}
       <div className="pb-5">
-        <h3 className="fw-bolder text-dark">Notificações</h3>
-        <div className="text-gray-400 fw-bold fs-6">Push, e-mail e in-app</div>
+        <h3 className="fw-bolder text-dark">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.TITLE.NOTIFICATIONS' })}</h3>
+        <div className="text-gray-400 fw-bold fs-6">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.SUBTITLE.NOTIFICATIONS' })}</div>
       </div>
       <div className="row mb-10">
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid d-flex align-items-center">
             <input className="form-check-input" type="checkbox" checked={data.settings.pushNotification}
               onChange={e => { setFieldValue('settings.pushNotification', e.target.checked); if (e.target.checked) pushModal?.show() }} />
-            <label className="form-check-label">&nbsp;Enviar notificação push</label>
+            <label className="form-check-label">&nbsp;{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.PUSH' })}</label>
             {data.settings.pushNotification && (
               <button type="button" className="btn btn-link btn-sm ms-2 p-0" onClick={() => pushModal?.show()}>
-                Editar
+                {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.EDIT' })}
               </button>
             )}
           </div>
@@ -331,29 +332,29 @@ export const Step2: React.FC<Step2Props> = ({
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.emailNotification}
               onChange={e => setFieldValue('settings.emailNotification', e.target.checked)} />
-            <label className="form-check-label">Enviar notificação por e-mail</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.EMAIL' })}</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.inAppNotification}
               onChange={e => setFieldValue('settings.inAppNotification', e.target.checked)} />
-            <label className="form-check-label">Notificação in-app</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.IN_APP' })}</label>
           </div>
         </div>
       </div>
 
       {/* === Publicação === */}
       <div className="pb-5">
-        <h3 className="fw-bold text-dark">Datas de Publicação</h3>
-        <div className="text-gray-400 fw-bold fs-6">Imediato, agendar e expirar</div>
+        <h3 className="fw-bold text-dark">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.TITLE.PUBLICATION' })}</h3>
+        <div className="text-gray-400 fw-bold fs-6">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.SUBTITLE.PUBLICATION' })}</div>
       </div>
       <div className="row mb-10">
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.isPublished ?? data.isPublished}
               onChange={e => setFieldValue('isPublished', e.target.checked)} />
-            <label className="form-check-label">Publicar imediatamente</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.PUBLISH_IMMEDIATELY' })}</label>
           </div>
         </div>
         {!data.isPublished && (
@@ -362,7 +363,7 @@ export const Step2: React.FC<Step2Props> = ({
               <div className="form-check form-switch form-switch-custom form-switch-solid">
                 <input className="form-check-input" type="checkbox" checked={data.settings.schedulePublication}
                   onChange={e => setFieldValue('settings.schedulePublication', e.target.checked)} />
-                <label className="form-check-label">Agendar publicação</label>
+                <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.SCHEDULE' })}</label>
               </div>
               {data.settings.schedulePublication && (
                 <input
@@ -379,7 +380,7 @@ export const Step2: React.FC<Step2Props> = ({
               <div className="form-check form-switch form-switch-custom form-switch-solid">
                 <input className="form-check-input" type="checkbox" checked={data.settings.expirePublication}
                   onChange={e => setFieldValue('settings.expirePublication', e.target.checked)} />
-                <label className="form-check-label">Expirar publicação</label>
+                <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.EXPIRE' })}</label>
               </div>
               {data.settings.expirePublication && (
                 <input
@@ -398,8 +399,8 @@ export const Step2: React.FC<Step2Props> = ({
 
       {/* === Outras Opções === */}
       <div className="pb-5">
-        <h3 className="fw-bolder text-dark">Outras Opções</h3>
-        <div className="text-gray-400 fw-bold fs-6">Autor, pinagem e confirmação de leitura</div>
+        <h3 className="fw-bolder text-dark">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.TITLE.OTHER' })}</h3>
+        <div className="text-gray-400 fw-bold fs-6">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.SUBTITLE.OTHER' })}</div>
       </div>
       <div className="row mb-10">
         <div className="col-md-4">
@@ -413,10 +414,10 @@ export const Step2: React.FC<Step2Props> = ({
                 if (e.target.checked) { setSelectedAuthor(null); authorModal?.show() }
               }}
             />
-            <label className="form-check-label">&nbsp;Mostrar autor</label>
+            <label className="form-check-label">&nbsp;{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.SHOW_AUTHOR' })}</label>
             {selectedAuthor && data.settings.showAuthor && data.authorId !== currentUser!.id && (
               <button type="button" className="btn btn-link btn-sm ms-2 p-0" onClick={() => authorModal?.show()}>
-                Editar
+                {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.BUTTON.EDIT' })}
               </button>
             )}
           </div>
@@ -438,14 +439,17 @@ export const Step2: React.FC<Step2Props> = ({
           <div className="form-check form-switch form-switch-custom form-switch-solid">
             <input className="form-check-input" type="checkbox" checked={data.settings.pinToTop}
               onChange={e => setFieldValue('settings.pinToTop', e.target.checked)} />
-            <label className="form-check-label">Fixar no topo</label>
+            <label className="form-check-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.LABEL.PIN' })}</label>
           </div>
         </div>
         <div className="col-md-4">
           <div className="form-check form-switch form-switch-custom form-switch-solid">
-            <input className="form-check-input" type="checkbox" checked={data.settings.acknowledgementRequired}
-              onChange={e => setFieldValue('settings.acknowledgementRequired', e.target.checked)} />
-            <label className="form-check-label">Para confirmação do colaborador</label>
+            <input className="form-check-input" type="checkbox" checked={data.mustAcknowledge}
+              onChange={e => setFieldValue('mustAcknowledge', e.target.checked)} />
+            <label className="form-check-label">
+              Exigir Ciência (NR-1)
+              <span className="form-text text-muted d-block mt-1 fs-8">Obrigatório "Li e estou ciente"</span>
+            </label>
           </div>
         </div>
       </div>
@@ -454,24 +458,24 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="modal fade" id="kt_modal_push_notification" tabIndex={-1}>
         <div className="modal-dialog"><div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Configurar Notificação Push</h5>
+            <h5 className="modal-title">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.PUSH.TITLE' })}</h5>
             <button type="button" className="btn-close" onClick={cancelPush} />
           </div>
           <div className="modal-body">
             <div className="mb-10">
-              <label className="form-label">Título do Push</label>
+              <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.PUSH.LABEL.TITLE' })}</label>
               <input type="text" className="form-control form-control-solid"
                 value={data.settings.pushTitle || ''} onChange={e => setFieldValue('settings.pushTitle', e.target.value)} />
             </div>
             <div className="mb-10">
-              <label className="form-label">Conteúdo do Push</label>
+              <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.PUSH.LABEL.CONTENT' })}</label>
               <textarea className="form-control form-control-solid" rows={3}
                 value={data.settings.pushContent || ''} onChange={e => setFieldValue('settings.pushContent', e.target.value)} />
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-light" onClick={cancelPush}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={commitPush}>OK</button>
+            <button type="button" className="btn btn-light" onClick={cancelPush}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.CANCEL' })}</button>
+            <button type="button" className="btn btn-primary" onClick={commitPush}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.OK' })}</button>
           </div>
         </div></div>
       </div>
@@ -480,7 +484,7 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="modal fade" id="kt_modal_select_groups" tabIndex={-1}>
         <div className="modal-dialog modal-dialog-scrollable"><div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Selecionar Grupos</h5>
+            <h5 className="modal-title">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.GROUPS.TITLE' })}</h5>
             <button type="button" className="btn-close" onClick={cancelGroups} />
           </div>
           <div className="modal-body">
@@ -498,8 +502,8 @@ export const Step2: React.FC<Step2Props> = ({
             ))}
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-light" onClick={cancelGroups}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={commitGroups}>OK</button>
+            <button type="button" className="btn btn-light" onClick={cancelGroups}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.CANCEL' })}</button>
+            <button type="button" className="btn btn-primary" onClick={commitGroups}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.OK' })}</button>
           </div>
         </div></div>
       </div>
@@ -508,47 +512,47 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="modal fade" id="kt_modal_share_options" tabIndex={-1}>
         <div className="modal-dialog"><div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Opções de Compartilhamento</h5>
+            <h5 className="modal-title">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.TITLE' })}</h5>
             <button type="button" className="btn-close" onClick={cancelShare} />
           </div>
           <div className="modal-body">
             <div className="mb-10">
-              <label className="form-label">Link de Compartilhamento</label>
+              <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.LABEL.LINK' })}</label>
               <input
                 type="text"
                 className="form-control form-control-solid"
                 value={data.settings.shareUrl || ''}
                 onChange={e => setFieldValue('settings.shareUrl', e.target.value)}
-                placeholder="Cole um link ou use os botões abaixo"
+                placeholder={intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.PLACEHOLDER' })}
               />
               <div className="d-flex gap-2 mt-3">
                 <button
                   type="button"
                   className="btn btn-light"
                   disabled={!editingId}
-                  title={editingId ? '' : 'Disponível após salvar'}
+                  title={editingId ? '' : intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.HINT' })}
                   onClick={() => setFieldValue('settings.shareUrl', deeplinkFor(editingId))}
                 >
-                  Preencher com Deeplink
+                  {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.BUTTON.DEEPLINK' })}
                 </button>
                 <button
                   type="button"
                   className="btn btn-light"
                   disabled={!editingId}
-                  title={editingId ? '' : 'Disponível após salvar'}
+                  title={editingId ? '' : intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.HINT' })}
                   onClick={() => setFieldValue('settings.shareUrl', webUrlFor(editingId))}
                 >
-                  Preencher com URL Web
+                  {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.BUTTON.WEB' })}
                 </button>
               </div>
               {!editingId && (
                 <small className="text-muted d-block mt-2">
-                  O conteúdo ainda não tem ID. Esses atalhos ficam disponíveis depois que você salvar.
+                  {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.HINT' })}
                 </small>
               )}
             </div>
             <div className="mb-10">
-              <label className="form-label">Texto Padrão</label>
+              <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.SHARE.LABEL.TEXT' })}</label>
               <textarea
                 className="form-control form-control-solid"
                 rows={2}
@@ -558,8 +562,8 @@ export const Step2: React.FC<Step2Props> = ({
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-light" onClick={cancelShare}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={commitShare}>OK</button>
+            <button type="button" className="btn btn-light" onClick={cancelShare}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.CANCEL' })}</button>
+            <button type="button" className="btn btn-primary" onClick={commitShare}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.OK' })}</button>
           </div>
         </div></div>
       </div>
@@ -568,7 +572,7 @@ export const Step2: React.FC<Step2Props> = ({
       <div className="modal fade" id="kt_modal_select_author" tabIndex={-1}>
         <div className="modal-dialog modal-dialog-scrollable"><div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Selecionar Autor</h5>
+            <h5 className="modal-title">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.AUTHOR.TITLE' })}</h5>
             <button type="button" className="btn-close" onClick={cancelAuthor} />
           </div>
           <div className="modal-body">
@@ -581,8 +585,8 @@ export const Step2: React.FC<Step2Props> = ({
             ))}
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-light" onClick={cancelAuthor}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={commitAuthor}>OK</button>
+            <button type="button" className="btn btn-light" onClick={cancelAuthor}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.CANCEL' })}</button>
+            <button type="button" className="btn btn-primary" onClick={commitAuthor}>{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP2.MODAL.BUTTON.OK' })}</button>
           </div>
         </div></div>
       </div>

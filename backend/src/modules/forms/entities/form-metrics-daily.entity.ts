@@ -1,53 +1,53 @@
-import { Entity, Column, PrimaryColumn, Index } from 'typeorm'
+import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 
 @Entity('form_metrics_daily')
 @Index(['companyId', 'formId', 'date'])
 export class FormMetricsDailyEntity {
   @PrimaryColumn('uuid')
-  companyId: string
+  companyId: string;
 
   @PrimaryColumn('uuid')
-  formId: string
+  formId: string;
 
   @PrimaryColumn({ type: 'date' })
-  date: string
+  date: string;
 
   @Column({ type: 'int', nullable: true, default: 0 })
-  eligibles: number
+  eligibles: number;
 
   @Column({ type: 'int', default: 0 })
-  impressions: number
+  impressions: number;
 
   @Column({ type: 'int', default: 0 })
-  opens: number
+  opens: number;
 
   @Column({ type: 'int', default: 0 })
-  starts: number
+  starts: number;
 
   @Column({ type: 'int', default: 0 })
-  submits: number
+  submits: number;
 
   @Column({ type: 'int', default: 0 })
-  onTimeSubmits: number
+  onTimeSubmits: number;
 
   @Column({ type: 'int', default: 0 })
-  internalSubmits: number
+  internalSubmits: number;
 
   @Column({ type: 'int', default: 0 })
-  externalSubmits: number
+  externalSubmits: number;
 
   @Column({ type: 'int', default: 0 })
-  pushSent: number
+  pushSent: number;
 
   @Column({ type: 'int', default: 0 })
-  pushOpened: number
+  pushOpened: number;
 
   @Column({ type: 'int', default: 0 })
-  emailSent: number
+  emailSent: number;
 
   @Column({ type: 'int', default: 0 })
-  emailOpened: number
+  emailOpened: number;
 
   @Column({ type: 'int', default: 0 })
-  emailClicked: number
+  emailClicked: number;
 }

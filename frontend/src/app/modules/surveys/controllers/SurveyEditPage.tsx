@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from 'src/app/modules/auth'
 import { Survey } from '@shared/types'
@@ -17,6 +18,7 @@ const SurveyEditPage = () => {
     const companyId = currentUser!.companyId
     const userId = currentUser!.id
     const navigate = useNavigate()
+    const intl = useIntl()
     const { surveyId } = useParams<{ surveyId: string }>()
     const [searchParams] = useSearchParams()
     const stepParam = Number(searchParams.get('step') || '1')
@@ -96,10 +98,13 @@ const SurveyEditPage = () => {
                     <AsideDefault />
                     <Content>
                         <div className="alert alert-warning">
-                            Você não tem permissão para {isCreate ? 'criar' : 'editar'} enquetes neste contexto.
+                            {intl.formatMessage(
+                                { id: 'SURVEYS.EDIT.ERROR.NO_PERMISSION', defaultMessage: 'Você não tem permissão para {action} enquetes neste contexto.' },
+                                { action: isCreate ? 'criar' : 'editar' }
+                            )}
                         </div>
                         <button className="btn btn-light mt-4" onClick={() => navigate('/modules/surveys')}>
-                            ← Voltar para a lista
+                            {intl.formatMessage({ id: 'SURVEYS.EDIT.BUTTON.BACK', defaultMessage: '← Voltar para a lista' })}
                         </button>
                     </Content>
                 </div>
@@ -113,7 +118,9 @@ const SurveyEditPage = () => {
                 <AsideDefault />
                 <Content>
                     <PageTitle breadcrumbs={[]}>
-                        {surveyId ? 'Editar Enquete' : 'Criar Enquete'}
+                        {surveyId
+                            ? intl.formatMessage({ id: 'SURVEYS.EDIT.TITLE.EDIT', defaultMessage: 'Editar Enquete' })
+                            : intl.formatMessage({ id: 'SURVEYS.EDIT.TITLE.CREATE', defaultMessage: 'Criar Enquete' })}
                     </PageTitle>
 
                     {/* Botão de voltar */}
@@ -121,14 +128,14 @@ const SurveyEditPage = () => {
                         <button
                             className="btn btn-light"
                             onClick={() => navigate('/modules/surveys')}
-                            title="Voltar para a lista"
+                            title={intl.formatMessage({ id: 'SURVEYS.EDIT.BUTTON.BACK', defaultMessage: 'Voltar para a lista' })}
                         >
-                            ← Voltar para a lista
+                            {intl.formatMessage({ id: 'SURVEYS.EDIT.BUTTON.BACK', defaultMessage: '← Voltar para a lista' })}
                         </button>
                     </div>
 
                     {loading ? (
-                        <div className="alert alert-info">Carregando...</div>
+                        <div className="alert alert-info">{intl.formatMessage({ id: 'SURVEYS.EDIT.STATE.LOADING', defaultMessage: 'Carregando...' })}</div>
                     ) : (
                         <SurveyWizardForm
                             key={surveyId ?? 'new'}

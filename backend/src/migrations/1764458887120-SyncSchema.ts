@@ -1,0 +1,124 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class SyncSchema1764458887120 implements MigrationInterface {
+    name = 'SyncSchema1764458887120'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`DROP INDEX "public"."IDX_news_metrics_daily_newsId_date"`);
+        await queryRunner.query(`ALTER TABLE "user_entity" ADD "otpCode" text`);
+        await queryRunner.query(`ALTER TABLE "user_entity" ADD "otpExpiresAt" TIMESTAMP`);
+        await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]::text[]`);
+        await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]::text[]`);
+        await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]::text[]`);
+        await queryRunner.query(`ALTER TABLE "channel" ALTER COLUMN "is_published" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "channel" ALTER COLUMN "position" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "space" ALTER COLUMN "distributionChannels" SET DEFAULT ARRAY['app']`);
+        await queryRunner.query(`ALTER TABLE "news_entity" DROP COLUMN "channelId"`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ADD "channelId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "isPublished" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "title" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "content" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "spaceIds" SET DEFAULT ARRAY[]::text[]`);
+        await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "groupIds" SET DEFAULT ARRAY[]::text[]`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "defaultLocale" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "supportedLocales" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "updatedAt" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_modules" ALTER COLUMN "enabled" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_modules" ALTER COLUMN "updatedAt" SET NOT NULL`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_858b14f91c48cc6a2c2a14d458"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_799b86b522c3326b8cab82e2b9"`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ADD "companyId" uuid NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ADD "userId" uuid`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ALTER COLUMN "type" DROP DEFAULT`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_56fd105d286f8032e6ee017831"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP CONSTRAINT "uniq_user_reaction_per_news"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD "companyId" uuid NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD "userId" uuid`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ALTER COLUMN "createdAt" SET NOT NULL`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_7f0de048ce06fef98a288576c5"`);
+        await queryRunner.query(`ALTER TABLE "news_comment" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_comment" ADD "companyId" uuid NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_comment" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_comment" ADD "userId" uuid`);
+        await queryRunner.query(`ALTER TABLE "news_comment" ALTER COLUMN "approved" SET NOT NULL`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_7bbe96abc17d7c43dc33b007fe"`);
+        await queryRunner.query(`ALTER TABLE "news_share" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_share" ADD "companyId" uuid NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_share" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_share" ADD "userId" uuid`);
+        await queryRunner.query(`ALTER TABLE "news_share" ALTER COLUMN "createdAt" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_audience" ALTER COLUMN "createdAt" SET NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "push_delivery" ALTER COLUMN "createdAt" SET NOT NULL`);
+        await queryRunner.query(`CREATE INDEX "IDX_858b14f91c48cc6a2c2a14d458" ON "news_interaction_event" ("companyId", "newsId", "userId", "type") `);
+        await queryRunner.query(`CREATE INDEX "IDX_799b86b522c3326b8cab82e2b9" ON "news_interaction_event" ("companyId", "newsId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_56fd105d286f8032e6ee017831" ON "news_reaction" ("companyId", "newsId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_7f0de048ce06fef98a288576c5" ON "news_comment" ("companyId", "newsId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_7bbe96abc17d7c43dc33b007fe" ON "news_share" ("companyId", "newsId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_2aa31b95cd04f1783dad7a49f6" ON "news_metrics_daily" ("newsId", "date") `);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD CONSTRAINT "uniq_user_reaction_per_news" UNIQUE ("companyId", "newsId", "userId")`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP CONSTRAINT "uniq_user_reaction_per_news"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_2aa31b95cd04f1783dad7a49f6"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_7bbe96abc17d7c43dc33b007fe"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_7f0de048ce06fef98a288576c5"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_56fd105d286f8032e6ee017831"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_799b86b522c3326b8cab82e2b9"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_858b14f91c48cc6a2c2a14d458"`);
+        await queryRunner.query(`ALTER TABLE "push_delivery" ALTER COLUMN "createdAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_audience" ALTER COLUMN "createdAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_share" ALTER COLUMN "createdAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_share" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_share" ADD "userId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_share" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_share" ADD "companyId" character varying NOT NULL`);
+        await queryRunner.query(`CREATE INDEX "IDX_7bbe96abc17d7c43dc33b007fe" ON "news_share" ("companyId", "newsId") `);
+        await queryRunner.query(`ALTER TABLE "news_comment" ALTER COLUMN "approved" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_comment" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_comment" ADD "userId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_comment" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_comment" ADD "companyId" character varying NOT NULL`);
+        await queryRunner.query(`CREATE INDEX "IDX_7f0de048ce06fef98a288576c5" ON "news_comment" ("companyId", "newsId") `);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ALTER COLUMN "createdAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD "userId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD "companyId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_reaction" ADD CONSTRAINT "uniq_user_reaction_per_news" UNIQUE ("companyId", "newsId", "userId")`);
+        await queryRunner.query(`CREATE INDEX "IDX_56fd105d286f8032e6ee017831" ON "news_reaction" ("companyId", "newsId") `);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ALTER COLUMN "type" SET DEFAULT 'OPEN'`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" DROP COLUMN "userId"`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ADD "userId" character varying NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" DROP COLUMN "companyId"`);
+        await queryRunner.query(`ALTER TABLE "news_interaction_event" ADD "companyId" character varying NOT NULL`);
+        await queryRunner.query(`CREATE INDEX "IDX_799b86b522c3326b8cab82e2b9" ON "news_interaction_event" ("companyId", "newsId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_858b14f91c48cc6a2c2a14d458" ON "news_interaction_event" ("companyId", "newsId", "userId", "type") `);
+        await queryRunner.query(`ALTER TABLE "company_modules" ALTER COLUMN "updatedAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_modules" ALTER COLUMN "enabled" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "updatedAt" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "supportedLocales" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "company_settings" ALTER COLUMN "defaultLocale" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "groupIds" SET DEFAULT ARRAY[]`);
+        await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "spaceIds" SET DEFAULT ARRAY[]`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "content" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "title" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ALTER COLUMN "isPublished" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "news_entity" DROP COLUMN "channelId"`);
+        await queryRunner.query(`ALTER TABLE "news_entity" ADD "channelId" uuid`);
+        await queryRunner.query(`ALTER TABLE "space" ALTER COLUMN "distributionChannels" SET DEFAULT ARRAY['app'`);
+        await queryRunner.query(`ALTER TABLE "channel" ALTER COLUMN "position" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "channel" ALTER COLUMN "is_published" DROP NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]`);
+        await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]`);
+        await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]`);
+        await queryRunner.query(`ALTER TABLE "user_entity" DROP COLUMN "otpExpiresAt"`);
+        await queryRunner.query(`ALTER TABLE "user_entity" DROP COLUMN "otpCode"`);
+        await queryRunner.query(`CREATE INDEX "IDX_news_metrics_daily_newsId_date" ON "news_metrics_daily" ("newsId", "date") `);
+    }
+
+}

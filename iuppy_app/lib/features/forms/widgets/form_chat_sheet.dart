@@ -174,7 +174,7 @@ class _ChatMessageBubble extends StatelessWidget {
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final color = isMe
         ? theme.colorScheme.primaryContainer
-        : theme.colorScheme.surfaceVariant;
+        : theme.colorScheme.surfaceContainerHighest;
     final textColor = isMe
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onSurfaceVariant;
@@ -234,7 +234,10 @@ class _ChatInputArea extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16),
         width: double.infinity,
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.5),
         child: Text(
           'Esta conversa foi encerrada pelo RH.',
           textAlign: TextAlign.center,

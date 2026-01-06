@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { News as Content, NewsType } from '@shared/types'
+import { News as Content } from '@shared/types'
 import {
   ExportTable,
   exportTablesToCsv,
@@ -10,22 +10,10 @@ import {
   downloadBlob,
 } from 'src/app/core/utils/exporter'
 
-const TYPE_LABELS: Record<NewsType, string> = {
-  [NewsType.ANNOUNCEMENT]: 'Aviso',
-  [NewsType.UPDATE]: 'Atualização',
-  [NewsType.ALERT]: 'Alerta',
-}
-
-function renderTypeLabel(t?: NewsType | string | null) {
-  if (t == null) return '-'
-  // tenta enum conhecido; senão, devolve string crua
-  return TYPE_LABELS[t as NewsType] ?? String(t)
-}
-
 /** ========= News list ========= */
 export type NewsExportItem = Pick<
   Content,
-  'id' | 'title' | 'subtitle' | 'type' | 'isPublished' | 'createdAt' | 'updatedAt'
+  'id' | 'title' | 'subtitle' | 'hashtags' | 'isPublished' | 'createdAt' | 'updatedAt'
 > & { channelName?: string | null }
 
 function buildNewsTable(items: NewsExportItem[], title = 'Conteúdos'): ExportTable {
@@ -35,7 +23,7 @@ function buildNewsTable(items: NewsExportItem[], title = 'Conteúdos'): ExportTa
     columns: [
       { key: 'title', label: 'Título' },
       { key: 'subtitle', label: 'Subtítulo' },
-      { key: 'type', label: 'Tipo' },
+      { key: 'hashtags', label: 'Hashtags' },
       { key: 'status', label: 'Status' },
       { key: 'channel', label: 'Canal' },
       { key: 'createdAt', label: 'Criado' },
@@ -44,7 +32,7 @@ function buildNewsTable(items: NewsExportItem[], title = 'Conteúdos'): ExportTa
     rows: items.map((i) => ({
       title: i.title ?? '-',
       subtitle: i.subtitle ?? '-',
-      type: renderTypeLabel(i.type),
+      hashtags: i.hashtags?.join(', ') ?? '-',
       status: i.isPublished ? 'Publicado' : 'Rascunho',
       channel: i.channelName ?? '-',
       createdAt: formatDatePt(i.createdAt),
@@ -81,7 +69,7 @@ export type OverviewRates = {
 export type OverviewItem = {
   id: string
   title: string
-  type?: string | null
+  hashtags?: string[] | null
   isPublished?: boolean
   channelName?: string | null
   createdAt?: string | Date | null
@@ -129,7 +117,7 @@ function buildOverviewTables(args: {
     sheetName: 'Publicações',
     columns: [
       { key: 'title', label: 'Título' },
-      { key: 'type', label: 'Tipo' },
+      { key: 'hashtags', label: 'Hashtags' },
       { key: 'status', label: 'Status' },
       { key: 'channel', label: 'Canal' },
       { key: 'createdAt', label: 'Criado' },
@@ -137,7 +125,7 @@ function buildOverviewTables(args: {
     ],
     rows: items.map((i) => ({
       title: i.title ?? '-',
-      type: i.type ?? '-',
+      hashtags: i.hashtags?.join(', ') ?? '-',
       status: i.isPublished ? 'Publicado' : 'Rascunho',
       channel: i.channelName ?? '-',
       createdAt: formatDatePt(i.createdAt),

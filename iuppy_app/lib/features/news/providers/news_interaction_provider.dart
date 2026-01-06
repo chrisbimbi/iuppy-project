@@ -9,7 +9,9 @@ class NewsInteractionProvider extends StateNotifier<void> {
   DateTime? _lastOpenSentAt; // de-bounce p/ /open
   bool _firstPushOpenSent = false; // garante "push-open-once"
 
-  NewsInteractionProvider(this._api, this.newsId) : super(null);
+  final Ref _ref;
+
+  NewsInteractionProvider(this._api, this.newsId, this._ref) : super(null);
 
   Future<void> sendOpen({Map<String, dynamic>? meta}) async {
     final now = DateTime.now();
@@ -39,6 +41,13 @@ class NewsInteractionProvider extends StateNotifier<void> {
 
     try {
       await _api.openNews(newsId, meta: enrichedMeta);
+      
+      // 🔥 Atualiza badge localmente
+      final localStore = _ref.read(localNewsStoreProvider);
+      await localStore.markRead(newsId);
+      
+      // 🔥 Notifica app para atualizar badges
+      _ref.read(feedVersionProvider.notifier).state++;
     } catch (_) {
       // silencia falha de telemetria
     }
@@ -50,6 +59,6 @@ final newsInteractionProvider =
     StateNotifierProvider.family<NewsInteractionProvider, void, String>(
   (ref, newsId) {
     final api = ref.watch(apiClientProvider);
-    return NewsInteractionProvider(api, newsId);
+    return NewsInteractionProvider(api, newsId, ref);
   },
 );

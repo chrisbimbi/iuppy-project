@@ -3,18 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:iuppy_app/features/home/widgets/glass_search_and_spaces.dart';
+import 'package:iuppy_app/features/search/search_bottom_sheet.dart';
+import 'package:iuppy_app/push_service.dart';
+import 'package:iuppy_app/features/chat/chat_service.dart';
 
 import '../../core/providers.dart';
+import '../forms/providers/forms_provider.dart';
 import '../menu/menu_drawer.dart';
 
-// widgets existentes
-import 'widgets/header_oval.dart';
-import 'widgets/quick_access_row.dart';
+import '../surveys/survey_providers.dart';
+import '../journeys/journey_providers.dart';
+import 'widgets/home_header.dart';
+import 'widgets/circular_quick_access.dart';
 import 'widgets/news_carousel.dart';
-import 'widgets/modules_grid.dart';
+import 'widgets/home_journeys_slider.dart';
+
 import 'widgets/curved_navbar.dart';
 
-// Indica rapidamente se há alguma notícia no cache local (para clamping de badges)
 final _hasAnyNewsCachedProvider = FutureProvider<bool>((ref) async {
   final db = ref.read(dbProvider);
   final items = await db.getNews(limit: 1);
@@ -33,7 +38,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _selectedSpaceId;
   String _query = '';
 
-  // guarda um container estável para leituras assíncronas
   late final ProviderContainer _c;
   bool _alive = true;
 
@@ -61,20 +65,54 @@ class _HomePageState extends ConsumerState<HomePage> {
         _c.read(companySettingsProvider.future),
       ]);
 
+      // Register Push Handler for In-App updates
+      // Register Push Handler for In-App updates
+      PushService.instance.setNotificationRefreshHandler((message) async {
+        if (!_alive) return;
+
+        // Optimized: If chat message, only refresh chat data
+        if (message?.data['type'] == 'chat') {
+          _c.invalidate(unreadCountProvider);
+
+          try {
+            final chatAsync = await _c.read(unreadCountProvider.future);
+            final total = chatAsync['total'] ?? 0;
+            await PushService.instance.updateBadge(total as int);
+          } catch (e) {
+            debugPrint('Error updating badge for chat push: $e');
+          }
+          return;
+        }
+
+        await _refreshLatestNewsAndBadges();
+
+        // Force refresh chat specifically for non-chat pushes (just in case) or general refresh
+        _c.invalidate(unreadCountProvider);
+
+        // Update App Badge
+        try {
+          final chatAsync = await _c.read(unreadCountProvider.future);
+          final total = chatAsync['total'] ?? 0;
+          await PushService.instance.updateBadge(total as int);
+        } catch (e) {
+          debugPrint('Error updating badge: $e');
+        }
+      });
+
       if (!_alive || !mounted) return;
-
       await _refreshLatestNewsAndBadges();
-
       if (!_alive || !mounted) return;
       setState(() {});
-    } catch (e) {
-      // log se quiser
+    } catch (e, stack) {
+      debugPrint('[HOME] Bootstrap ERROR: $e');
+      debugPrint('[HOME] Stack: $stack');
     }
   }
 
   Future<void> _refreshLatestNewsAndBadges() async {
     if (!_alive) return;
     try {
+      // 1. Atualiza News
       final api = _c.read(apiClientProvider);
       final remote = await api.getNews();
       if (!_alive) return;
@@ -93,47 +131,78 @@ class _HomePageState extends ConsumerState<HomePage> {
     await _c.read(newsRepoProvider).homeFeedRemoteFirst(maxItems: 24);
     if (!_alive) return;
 
-    // Invalida para forçar recálculo dos badges
+    // 2. Força atualização de Surveys e Forms (Garante Badges)
+    _c.refresh(surveysListProvider); // 🔥 CORREÇÃO: Busca enquetes na hora
+    _c.refresh(formsListProvider);
+    _c.refresh(myFormsSubmissionsProvider);
+    _c.refresh(journeyProgressProvider);
+    _c.refresh(
+        companySettingsProvider); // 🔥 REFRESH SETTINGS (Modules enabled/disabled)
+
+    // 3. Invalida contadores
     _c.invalidate(unreadCountersProvider);
     _c.invalidate(formsBadgesProvider);
+    _c.invalidate(newSurveysCountProvider);
 
     _c.read(feedVersionProvider.notifier).state++;
+    _c.read(feedVersionProvider.notifier).state++;
+  }
+
+  void _openSearch(String query) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SearchBottomSheet(initialQuery: query),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final branding = ref.watch(companySettingsProvider).maybeWhen(
-          data: (d) => d.branding,
-          orElse: () => null,
-        );
+    final branding = ref
+        .watch(companySettingsProvider)
+        .maybeWhen(data: (d) => d.branding, orElse: () => null);
     final name = ref.watch(authControllerProvider).userName ?? 'usuário';
 
-    // badges "cached" (fallback)
     final badges = ref.watch(homeBadgesProvider);
-    final hasAnyNews = ref.watch(_hasAnyNewsCachedProvider).maybeWhen(
-          data: (v) => v,
-          orElse: () => true,
-        );
+    final hasAnyNews = ref
+        .watch(_hasAnyNewsCachedProvider)
+        .maybeWhen(data: (v) => v, orElse: () => true);
 
-    // badge vivo de news
-    var unreadNews = ref.watch(unreadCountersProvider).maybeWhen(
-          data: (d) => d.total,
-          orElse: () => badges.newsNew,
-        );
+    var unreadNews = ref
+        .watch(unreadCountersProvider)
+        .maybeWhen(data: (d) => d.total, orElse: () => badges.newsNew);
     if (!hasAnyNews) unreadNews = 0;
 
-    // 🔥 BADGE DE FORMS: Pega do provider global que já soma (Novos + Respostas)
-    final unreadForms = ref.watch(formsBadgesProvider).maybeWhen(
-          data: (v) => v,
-          orElse: () => badges.formsNew,
-        );
+    final unreadForms = ref
+        .watch(formsBadgesProvider)
+        .maybeWhen(data: (v) => v, orElse: () => badges.formsNew);
+    final unreadSurveys = ref
+        .watch(newSurveysCountProvider)
+        .maybeWhen(data: (v) => v, orElse: () => 0);
 
-    // 🔥 TOTAL: News + Forms
-    final totalAlerts = unreadNews + unreadForms;
+    final unreadJourneys = ref
+        .watch(journeyBadgesProvider)
+        .maybeWhen(data: (v) => v, orElse: () => 0);
+
+    final totalAlerts =
+        unreadNews + unreadForms + unreadSurveys + unreadJourneys;
+
+    // Watch chatBadgeProvider and pass badge to CurvedNavbar.
+    final chatCount = ref.watch(chatBadgeProvider).value ?? 0;
+
+    final navBarBadges = <int, int>{};
+    if (totalAlerts > 0) {
+      navBarBadges[2] = totalAlerts; // Notifications index = 2
+    }
+    if (chatCount > 0) {
+      navBarBadges[3] = chatCount; // Chat index = 3
+    }
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: const MenuDrawer(), // Agora o MenuDrawer tem o badge!
+      backgroundColor: Colors.grey.shade50,
+      drawer: const MenuDrawer(),
       bottomNavigationBar: CurvedNavBar(
         selectedIndex: _navIndex,
         onSelected: (i) {
@@ -148,16 +217,16 @@ class _HomePageState extends ConsumerState<HomePage> {
               GoRouter.of(context).push('/notifications');
               break;
             case 3:
-              GoRouter.of(context).push('/settings');
+              GoRouter.of(context).push('/chat');
+              ref.invalidate(
+                  chatBadgeProvider); // Invalidate chat badge when chat is opened
               break;
             case 4:
               _scaffoldKey.currentState?.openDrawer();
               break;
           }
         },
-        badges: {
-          2: totalAlerts, // 🔥 Mostra o total no sininho
-        },
+        badges: navBarBadges,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -165,83 +234,116 @@ class _HomePageState extends ConsumerState<HomePage> {
           if (!mounted) return;
           setState(() {});
         },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: _HeaderWithQuickAccess(
-                color: Color(branding?.primary ?? 0xFF22B4FF),
-                title: _greeting(name),
+        child: ListView(
+          children: [
+            // Header with avatar, greeting, and XP
+            const HomeHeader(),
+
+            // Circular quick access buttons
+            const CircularQuickAccess(),
+
+            // Search and Spaces
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: GlassSearchAndSpaces(
+                selectedSpaceId: _selectedSpaceId,
+                onSpaceChanged: (id) => setState(() => _selectedSpaceId = id),
+                onQueryChanged: (q) => setState(() => _query = q),
+                onSearch: _openSearch,
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Column(
-                  children: [
-                    GlassSearchAndSpaces(
-                      selectedSpaceId: _selectedSpaceId,
-                      onSpaceChanged: (id) =>
-                          setState(() => _selectedSpaceId = id),
-                      onQueryChanged: (q) => setState(() => _query = q),
-                    ),
-                  ],
-                ),
+
+            const SizedBox(height: 16),
+
+            // News Carousel
+            NewsCarousel(spaceId: _selectedSpaceId),
+
+            const SizedBox(height: 16),
+
+            // Journeys progress
+            const HomeJourneysSlider(),
+
+            // Modules section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Comece agora',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  TextButton(
+                    onPressed: () => GoRouter.of(context).push('/modules'),
+                    child: const Text('Ver todos'),
+                  ),
+                ],
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Últimas notícias',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      onPressed: () => GoRouter.of(context).push('/news'),
-                      child: const Text('Ver todas'),
-                    ),
-                  ],
-                ),
-              ),
+
+            // Modules slider
+            Consumer(
+              builder: (context, ref, _) {
+                final settings = ref.watch(companySettingsProvider).maybeWhen(
+                      data: (d) => d,
+                      orElse: () => null,
+                    );
+                final enabled = settings?.enabledModules ?? {};
+                final badges = ref.watch(homeBadgesProvider);
+
+                final journeyProgress =
+                    ref.watch(journeyProgressProvider).asData?.value ?? [];
+                final hasJourneys = journeyProgress.isNotEmpty;
+
+                final items = <_Module>[
+                  _Module(
+                      'surveys', 'Enquetes', Icons.poll_outlined, '/surveys',
+                      badge: badges.surveysPending),
+                  _Module('activities', 'Atividades', Icons.assignment_outlined,
+                      '/activities'),
+                  _Module(
+                      'news', 'Comunicados', Icons.campaign_outlined, '/news',
+                      badge: badges.newsNew),
+                  _Module('forms', 'Formulários', Icons.assignment_outlined,
+                      '/forms',
+                      badge: badges.formsNew),
+                  _Module('vacations', 'Férias', Icons.beach_access_outlined,
+                      '/vacations'),
+                  _Module('performance', 'Performance',
+                      Icons.trending_up_outlined, '/performance'),
+                  if (hasJourneys)
+                    _Module(
+                        'journeys', 'Jornadas', Icons.map_outlined, '/journeys',
+                        badge: unreadJourneys),
+                  // 🔥 NR-1 Module
+                  _Module('nr1', 'NR-1', Icons.security, '/modules/nr1',
+                      badge: 0), // Badge logic can be added later
+                ].where((m) => enabled.contains(m.key)).toList();
+
+                return SizedBox(
+                  height: 120,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final mod = items[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: SizedBox(
+                          width: 140,
+                          child: _ModuleCard(module: mod),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 300,
-                child: NewsCarousel(spaceId: _selectedSpaceId),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Comece agora!',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      onPressed: () => GoRouter.of(context).push('/modules'),
-                      child: const Text('Ver todos'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const ModulesGrid(),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).padding.bottom + 16,
-              ),
-            ),
+
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -249,49 +351,89 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class _HeaderWithQuickAccess extends StatelessWidget {
-  const _HeaderWithQuickAccess({
-    required this.color,
-    required this.title,
-  });
+class _Module {
+  final String key;
+  final String label;
+  final IconData icon;
+  final String route;
+  final int badge;
+  _Module(this.key, this.label, this.icon, this.route, {this.badge = 0});
+}
 
-  final Color color;
-  final String title;
+class _ModuleCard extends StatelessWidget {
+  final _Module module;
+
+  const _ModuleCard({required this.module});
 
   @override
   Widget build(BuildContext context) {
-    const headerH = 232.0;
-    const rowH = 112.0;
+    final primaryColor = Theme.of(context).primaryColor;
 
-    return SizedBox(
-      height: headerH + rowH / 2 + 8,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: HeaderOval(
-              color: color,
-              title: title,
-              trailing: IconButton(
-                onPressed: () => GoRouter.of(context).push('/settings'),
-                icon: const Icon(Icons.settings, color: Colors.white),
+    return GestureDetector(
+      onTap: () => GoRouter.of(context).push(module.route),
+      child: Container(
+        decoration: BoxDecoration(
+          color: module.key == 'journeys' ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    module.icon,
+                    size: 32,
+                    color:
+                        module.key == 'journeys' ? Colors.white : primaryColor,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    module.label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: module.key == 'journeys'
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const Positioned(
-            left: 16,
-            right: 16,
-            top: headerH - rowH / 2,
-            child: QuickAccessRow(),
-          ),
-        ],
+            if (module.badge > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
 String _greeting(String name) {
-  final h = DateTime.now().hour;
-  final hi = h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
-  return '$hi, $name';
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Bom dia';
+  if (hour < 18) return 'Boa tarde';
+  return 'Boa noite';
 }

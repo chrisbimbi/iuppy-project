@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 type Cols = {
-  company: string;          // companyId | company_id
-  name: string;             // name
-  slug?: string | null;     // slug?
+  company: string; // companyId | company_id
+  name: string; // name
+  slug?: string | null; // slug?
   position?: string | null; // position?
-  status?: string | null;   // active | isPublished | published | is_active | is_published
+  status?: string | null; // active | isPublished | published | is_active | is_published
 };
 
 async function regclass(ds: DataSource, name: string) {
@@ -32,7 +32,12 @@ async function pickColumn(ds: DataSource, table: string, candidates: string[]) {
   return null;
 }
 
-async function countRows(ds: DataSource, table: string, companyCol: string | null, companyId: string) {
+async function countRows(
+  ds: DataSource,
+  table: string,
+  companyCol: string | null,
+  companyId: string,
+) {
   if (companyCol) {
     const r = await ds.query(
       `SELECT 1 FROM "${table}" WHERE "${companyCol}" = $1 LIMIT 1`,
@@ -54,7 +59,8 @@ async function pickSpacesTable(ds: DataSource, companyId: string) {
   if (existing.length === 0) return null;
 
   // Escolhe a que tiver linhas para a empresa; se nenhuma tiver, pega a que tiver qualquer linha; senão a primeira
-  let best: { table: string; rows: number; companyCol: string | null } | null = null;
+  let best: { table: string; rows: number; companyCol: string | null } | null =
+    null;
   for (const t of existing) {
     const companyCol =
       (await pickColumn(ds, t, ['companyId', 'company_id'])) || null;
@@ -66,7 +72,11 @@ async function pickSpacesTable(ds: DataSource, companyId: string) {
   return best; // { table, rows, companyCol }
 }
 
-async function hasRowsForUser(ds: DataSource, table: string, cols: { company: string; user: string }) {
+async function hasRowsForUser(
+  ds: DataSource,
+  table: string,
+  cols: { company: string; user: string },
+) {
   const r = await ds.query(
     `SELECT 1 FROM "${table}" WHERE "${cols.company}" = $1 AND "${cols.user}" = $2 LIMIT 1`,
     // valores serão preenchidos pelo caller com .bind
@@ -91,7 +101,13 @@ export class SpacesV2Service {
     const slugCol = await pickColumn(this.ds, table, ['slug']);
     const positionCol = await pickColumn(this.ds, table, ['position']);
     const statusCol =
-      (await pickColumn(this.ds, table, ['active', 'isPublished', 'published', 'is_active', 'is_published'])) || null;
+      (await pickColumn(this.ds, table, [
+        'active',
+        'isPublished',
+        'published',
+        'is_active',
+        'is_published',
+      ])) || null;
 
     // user_space gating (só se existir tabela + linhas do usuário)
     const hasUserSpace = await regclass(this.ds, 'public.user_space');
@@ -101,9 +117,17 @@ export class SpacesV2Service {
     let usSpaceCol = 'spaceId';
 
     if (hasUserSpace) {
-      usCompanyCol = (await pickColumn(this.ds, 'user_space', ['companyId', 'company_id'])) || 'companyId';
-      usUserCol = (await pickColumn(this.ds, 'user_space', ['userId', 'user_id'])) || 'userId';
-      usSpaceCol = (await pickColumn(this.ds, 'user_space', ['spaceId', 'space_id'])) || 'spaceId';
+      usCompanyCol =
+        (await pickColumn(this.ds, 'user_space', [
+          'companyId',
+          'company_id',
+        ])) || 'companyId';
+      usUserCol =
+        (await pickColumn(this.ds, 'user_space', ['userId', 'user_id'])) ||
+        'userId';
+      usSpaceCol =
+        (await pickColumn(this.ds, 'user_space', ['spaceId', 'space_id'])) ||
+        'spaceId';
 
       const r = await this.ds.query(
         `SELECT 1 FROM "user_space" WHERE "${usCompanyCol}" = $1 AND "${usUserCol}" = $2 LIMIT 1`,
@@ -118,7 +142,9 @@ export class SpacesV2Service {
       slugCol
         ? `s."${slugCol}" AS "slug"`
         : `LOWER(regexp_replace(s."${nameCol}", '[^a-zA-Z0-9]+', '-', 'g')) AS "slug"`,
-      positionCol ? `s."${positionCol}" AS "position"` : `NULL::int AS "position"`,
+      positionCol
+        ? `s."${positionCol}" AS "position"`
+        : `NULL::int AS "position"`,
     ];
 
     const filters: string[] = [`s."${companyCol}" = $1`];

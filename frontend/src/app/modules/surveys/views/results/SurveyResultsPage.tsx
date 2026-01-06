@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageTitle } from 'src/layout/core'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
@@ -36,6 +37,7 @@ const SurveyResultsPage = () => {
   const companyId = currentUser!.companyId
   const { surveyId = '' } = useParams()
   const navigate = useNavigate()
+  const intl = useIntl()
 
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [stats, setStats] = useState<SurveyStatisticsDto | null>(null)
@@ -91,7 +93,7 @@ const SurveyResultsPage = () => {
       await exportSurveyPanelPdfGlobal('survey-results-panel', `survey-${surveyId}.pdf`)
     } catch (err: any) {
       console.error('Erro ao exportar PDF', err)
-      alert('Não foi possível gerar o PDF. Tente novamente.')
+      alert(intl.formatMessage({ id: 'SURVEYS.RESULTS.ERROR.PDF', defaultMessage: 'Não foi possível gerar o PDF. Tente novamente.' }))
     } finally {
       setExportingPdf(false)
     }
@@ -104,7 +106,7 @@ const SurveyResultsPage = () => {
       await exportSurveyXlsxGlobal(survey, stats, `survey-${survey.id}.xlsx`)
     } catch (err: any) {
       console.error('Erro ao exportar XLSX', err)
-      alert('Não foi possível gerar o XLSX. Tente novamente.')
+      alert(intl.formatMessage({ id: 'SURVEYS.RESULTS.ERROR.XLSX', defaultMessage: 'Não foi possível gerar o XLSX. Tente novamente.' }))
     } finally {
       setExportingXlsx(false)
     }
@@ -122,7 +124,7 @@ const SurveyResultsPage = () => {
     chart: { type: 'bar', height: 320, toolbar: { show: false } },
     plotOptions: { bar: { horizontal: true, barHeight: '60%' } },
     dataLabels: { enabled: true },
-    xaxis: { title: { text: 'Respostas' } },
+    xaxis: { title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.COUNT', defaultMessage: 'Respostas' }) } },
     title: { text: title },
   })
 
@@ -130,7 +132,7 @@ const SurveyResultsPage = () => {
     chart: { type: 'bar', height: 320, toolbar: { show: false } },
     plotOptions: { bar: { columnWidth: '60%' } },
     dataLabels: { enabled: true },
-    xaxis: { title: { text: 'Valor' } },
+    xaxis: { title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.VALUE', defaultMessage: 'Valor' }) } },
     title: { text: title },
   })
 
@@ -175,9 +177,9 @@ const SurveyResultsPage = () => {
     chart: { type: 'heatmap', toolbar: { show: false } },
     dataLabels: { enabled: false },
     plotOptions: { heatmap: { shadeIntensity: 0.5 } },
-    xaxis: { title: { text: 'Hora do dia' } },
-    yaxis: { title: { text: 'Dia da semana' } },
-    title: { text: 'Atividade por dia x hora' },
+    xaxis: { title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.HOUR', defaultMessage: 'Hora do dia' }) } },
+    yaxis: { title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.DAY', defaultMessage: 'Dia da semana' }) } },
+    title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.HEATMAP_TITLE', defaultMessage: 'Atividade por dia x hora' }) },
   }
 
   const isExporting = exportingPdf || exportingXlsx
@@ -188,7 +190,7 @@ const SurveyResultsPage = () => {
         <AsideDefault />
         <Content>
           <PageTitle breadcrumbs={[]}>
-            Resultados da Enquete {survey ? `– ${survey.title}` : ''}
+            {intl.formatMessage({ id: 'SURVEYS.RESULTS.TITLE', defaultMessage: 'Resultados da Enquete' })} {survey ? `– ${survey.title}` : ''}
           </PageTitle>
 
           {/* Botão de voltar */}
@@ -196,9 +198,9 @@ const SurveyResultsPage = () => {
             <button
               className="btn btn-light"
               onClick={() => navigate('/modules/surveys')}
-              title="Voltar para a lista de enquetes"
+              title={intl.formatMessage({ id: 'SURVEYS.RESULTS.BUTTON.BACK', defaultMessage: 'Voltar para a lista de enquetes' })}
             >
-              ← Voltar para a lista
+              {intl.formatMessage({ id: 'SURVEYS.RESULTS.BUTTON.BACK', defaultMessage: '← Voltar para a lista' })}
             </button>
           </div>
 
@@ -212,7 +214,7 @@ const SurveyResultsPage = () => {
             >
               <div className='spinner-border' role='status' />
               <div className='mt-3 text-gray-700 fw-semibold'>
-                {exportingPdf ? 'Gerando PDF…' : 'Gerando XLSX…'}
+                {exportingPdf ? intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.GENERATING_PDF', defaultMessage: 'Gerando PDF…' }) : intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.GENERATING_XLSX', defaultMessage: 'Gerando XLSX…' })}
               </div>
             </div>
           )}
@@ -227,7 +229,7 @@ const SurveyResultsPage = () => {
               <form className='card card-body mb-6' onSubmit={onApply}>
                 <div className='row g-4 align-items-end'>
                   <div className='col-md-3'>
-                    <label className='form-label'>De</label>
+                    <label className='form-label'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.LABEL.FROM', defaultMessage: 'De' })}</label>
                     <input
                       type='datetime-local'
                       className='form-control'
@@ -236,7 +238,7 @@ const SurveyResultsPage = () => {
                     />
                   </div>
                   <div className='col-md-3'>
-                    <label className='form-label'>Até</label>
+                    <label className='form-label'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.LABEL.TO', defaultMessage: 'Até' })}</label>
                     <input
                       type='datetime-local'
                       className='form-control'
@@ -253,7 +255,7 @@ const SurveyResultsPage = () => {
                         checked={!!filters.onlyIdentified}
                         onChange={e => setFilters(f => ({ ...f, onlyIdentified: e.target.checked }))}
                       />
-                      <label htmlFor='onlyIdentified' className='form-check-label'>Ignorar respostas anônimas</label>
+                      <label htmlFor='onlyIdentified' className='form-check-label'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.CHECKBOX.IGNORE_ANONYMOUS', defaultMessage: 'Ignorar respostas anônimas' })}</label>
                     </div>
                     <div className='form-check'>
                       <input
@@ -263,11 +265,11 @@ const SurveyResultsPage = () => {
                         checked={!!filters.distinctByUser}
                         onChange={e => setFilters(f => ({ ...f, distinctByUser: e.target.checked }))}
                       />
-                      <label htmlFor='distinct' className='form-check-label'>Contar apenas última por usuário</label>
+                      <label htmlFor='distinct' className='form-check-label'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.CHECKBOX.DISTINCT', defaultMessage: 'Contar apenas última por usuário' })}</label>
                     </div>
                   </div>
                   <div className='col-md-3 text-end'>
-                    <button type='submit' className='btn btn-primary'>Aplicar</button>
+                    <button type='submit' className='btn btn-primary'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.BUTTON.APPLY', defaultMessage: 'Aplicar' })}</button>
                   </div>
                 </div>
               </form>
@@ -276,19 +278,19 @@ const SurveyResultsPage = () => {
               <div className='row g-6 mb-6'>
                 <div className='col-md-3'>
                   <div className='card card-body'>
-                    <div className='fs-7 text-muted'>Total de respostas</div>
+                    <div className='fs-7 text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.KPI.TOTAL', defaultMessage: 'Total de respostas' })}</div>
                     <div className='fs-1 fw-bold'>{stats?.totalResponses ?? '-'}</div>
                   </div>
                 </div>
                 <div className='col-md-3'>
                   <div className='card card-body'>
-                    <div className='fs-7 text-muted'>Conclusão (%)</div>
+                    <div className='fs-7 text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.KPI.COMPLETION', defaultMessage: 'Conclusão (%)' })}</div>
                     <div className='fs-1 fw-bold'>{stats?.completionRate ?? 0}%</div>
                   </div>
                 </div>
                 <div className='col-md-3'>
                   <div className='card card-body'>
-                    <div className='fs-7 text-muted'>NPS Geral</div>
+                    <div className='fs-7 text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.KPI.NPS', defaultMessage: 'NPS Geral' })}</div>
                     <div className='fs-1 fw-bold'>
                       {stats?.npsOverall ? `${stats.npsOverall.npsScore}` : '—'}
                     </div>
@@ -296,7 +298,7 @@ const SurveyResultsPage = () => {
                 </div>
                 <div className='col-md-3'>
                   <div className='card card-body'>
-                    <div className='fs-7 text-muted'>Satisfação (stars / scale)</div>
+                    <div className='fs-7 text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.KPI.SATISFACTION', defaultMessage: 'Satisfação (stars / scale)' })}</div>
                     <div className='fs-1 fw-bold'>
                       {stats?.starsAverage != null ? stats.starsAverage.toFixed(2) : '—'} / {stats?.scaleAverage != null ? stats.scaleAverage.toFixed(2) : '—'}
                     </div>
@@ -307,17 +309,17 @@ const SurveyResultsPage = () => {
               {/* Série temporal */}
               <div className='card card-body mb-8'>
                 <div className='d-flex justify-content-between align-items-center mb-4'>
-                  <h5 className='mb-0'>Respostas por dia</h5>
+                  <h5 className='mb-0'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.RESPONSES_PER_DAY', defaultMessage: 'Respostas por dia' })}</h5>
                 </div>
                 {sortedTimeseries.length > 0 ? (
                   <ReactApexChart
-                    options={lineOptions('Respostas por dia')}
+                    options={lineOptions(intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.RESPONSES_PER_DAY', defaultMessage: 'Respostas por dia' }))}
                     series={[{ name: 'Respostas', data: sortedTimeseries.map(r => ({ x: r.date, y: r.count })) }]}
                     type='line'
                     height={320}
                   />
                 ) : (
-                  <div className='text-center text-muted'>Sem dados no período</div>
+                  <div className='text-center text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.NO_DATA_PERIOD', defaultMessage: 'Sem dados no período' })}</div>
                 )}
               </div>
 
@@ -341,10 +343,10 @@ const SurveyResultsPage = () => {
                 {exportingXlsx ? (
                   <>
                     <span className='spinner-border spinner-border-sm me-2 align-middle'></span>
-                    Gerando XLSX…
+                    {intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.GENERATING_XLSX', defaultMessage: 'Gerando XLSX…' })}
                   </>
                 ) : (
-                  'Exportar XLSX (abas)'
+                  intl.formatMessage({ id: 'SURVEYS.RESULTS.BUTTON.EXPORT_XLSX', defaultMessage: 'Exportar XLSX (abas)' })
                 )}
               </button>
 
@@ -357,20 +359,20 @@ const SurveyResultsPage = () => {
                 {exportingPdf ? (
                   <>
                     <span className='spinner-border spinner-border-sm me-2 align-middle'></span>
-                    Gerando PDF…
+                    {intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.GENERATING_PDF', defaultMessage: 'Gerando PDF…' })}
                   </>
                 ) : (
-                  'Exportar PDF (painel)'
+                  intl.formatMessage({ id: 'SURVEYS.RESULTS.BUTTON.EXPORT_PDF', defaultMessage: 'Exportar PDF (painel)' })
                 )}
               </button>
             </div>
 
             {/* Por pergunta */}
             <div className='mb-4'>
-              <h4>Estatísticas por pergunta</h4>
+              <h4>{intl.formatMessage({ id: 'SURVEYS.RESULTS.SECTION.STATS_BY_QUESTION', defaultMessage: 'Estatísticas por pergunta' })}</h4>
             </div>
 
-            {loading && <div className='alert alert-info'>Carregando...</div>}
+            {loading && <div className='alert alert-info'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.LOADING', defaultMessage: 'Carregando...' })}</div>}
 
             {!loading && stats?.questions?.map((q) => {
               const cardTitle = `${q.questionText}`
@@ -384,11 +386,11 @@ const SurveyResultsPage = () => {
                     <div className='d-flex justify-content-between align-items-center mb-2'>
                       <div className='fw-semibold'>{cardTitle}</div>
                       <div className='text-muted'>
-                        Respondentes: {q.totalRespondents} | Respondidas: {q.answeredCount ?? 0} | Puladas: {q.skippedCount ?? 0}
+                        {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.RESPONDENTS', defaultMessage: 'Respondentes:' })} {q.totalRespondents} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.ANSWERED', defaultMessage: 'Respondidas:' })} {q.answeredCount ?? 0} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.SKIPPED', defaultMessage: 'Puladas:' })} {q.skippedCount ?? 0}
                       </div>
                     </div>
                     <ReactApexChart
-                      options={{ ...barOptions(cardTitle), xaxis: { categories: labels, title: { text: 'Contagem' } } }}
+                      options={{ ...barOptions(cardTitle), xaxis: { categories: labels, title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.COUNT', defaultMessage: 'Contagem' }) } } }}
                       series={[{ name: 'Respostas', data }]}
                       type='bar'
                       height={320}
@@ -406,11 +408,11 @@ const SurveyResultsPage = () => {
                     <div className='d-flex justify-content-between align-items-center mb-2'>
                       <div className='fw-semibold'>{cardTitle}</div>
                       <div className='text-muted'>
-                        Média: {q.average?.toFixed(2) ?? '—'} | Mediana: {q.median ?? '—'} | P25: {q.p25 ?? '—'} | P75: {q.p75 ?? '—'} | Desv.Pad: {q.stddev?.toFixed(2) ?? '—'}
+                        {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.MEAN', defaultMessage: 'Média:' })} {q.average?.toFixed(2) ?? '—'} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.MEDIAN', defaultMessage: 'Mediana:' })} {q.median ?? '—'} | P25: {q.p25 ?? '—'} | P75: {q.p75 ?? '—'} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.STDDEV', defaultMessage: 'Desv.Pad:' })} {q.stddev?.toFixed(2) ?? '—'}
                       </div>
                     </div>
                     <ReactApexChart
-                      options={{ ...histOptions(cardTitle), xaxis: { categories: keys.map(String), title: { text: 'Valor' } } }}
+                      options={{ ...histOptions(cardTitle), xaxis: { categories: keys.map(String), title: { text: intl.formatMessage({ id: 'SURVEYS.RESULTS.CHART.AXIS.VALUE', defaultMessage: 'Valor' }) } } }}
                       series={[{ name: 'Qtd', data }]}
                       type='bar'
                       height={320}
@@ -440,9 +442,9 @@ const SurveyResultsPage = () => {
                       </div>
                       <div className='col-md-8'>
                         <div className='row text-center'>
-                          <div className='col'><div className='fs-2 fw-bold text-success'>{q.promoters ?? 0}</div><div className='text-muted'>Promotores</div></div>
-                          <div className='col'><div className='fs-2 fw-bold text-gray-700'>{q.passives ?? 0}</div><div className='text-muted'>Passivos</div></div>
-                          <div className='col'><div className='fs-2 fw-bold text-danger'>{q.detractors ?? 0}</div><div className='text-muted'>Detratores</div></div>
+                          <div className='col'><div className='fs-2 fw-bold text-success'>{q.promoters ?? 0}</div><div className='text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.NPS.PROMOTERS', defaultMessage: 'Promotores' })}</div></div>
+                          <div className='col'><div className='fs-2 fw-bold text-gray-700'>{q.passives ?? 0}</div><div className='text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.NPS.PASSIVES', defaultMessage: 'Passivos' })}</div></div>
+                          <div className='col'><div className='fs-2 fw-bold text-danger'>{q.detractors ?? 0}</div><div className='text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.NPS.DETRACTORS', defaultMessage: 'Detratores' })}</div></div>
                         </div>
                       </div>
                     </div>
@@ -465,13 +467,13 @@ const SurveyResultsPage = () => {
                     <div className='d-flex justify-content-between align-items-center mb-2'>
                       <div className='fw-semibold'>{cardTitle}</div>
                       <div className='text-muted'>
-                        Respondentes: {q.totalRespondents} | Respondidas: {q.answeredCount ?? 0} | Puladas: {q.skippedCount ?? 0}
+                        {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.RESPONDENTS', defaultMessage: 'Respondentes:' })} {q.totalRespondents} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.ANSWERED', defaultMessage: 'Respondidas:' })} {q.answeredCount ?? 0} | {intl.formatMessage({ id: 'SURVEYS.RESULTS.INFO.SKIPPED', defaultMessage: 'Puladas:' })} {q.skippedCount ?? 0}
                       </div>
                     </div>
 
                     {!!q.topWords?.length && (
                       <div className='mb-4'>
-                        <div className='text-muted mb-2'>Palavras mais citadas</div>
+                        <div className='text-muted mb-2'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.WORDCLOUD.TITLE', defaultMessage: 'Palavras mais citadas' })}</div>
                         <div className='bg-light rounded d-flex align-items-center justify-content-center'>
                           <WordCloudCanvas
                             topWords={q.topWords}
@@ -489,7 +491,7 @@ const SurveyResultsPage = () => {
                       <div className='row g-6 mb-4'>
                         {q.bigrams?.length ? (
                           <div className='col-md-6'>
-                            <div className='fw-semibold mb-2'>Top bigramas</div>
+                            <div className='fw-semibold mb-2'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.BIGRAMS.TITLE', defaultMessage: 'Top bigramas' })}</div>
                             <div className='d-flex flex-wrap gap-2'>
                               {q.bigrams.slice(0, 30).map(b => (
                                 <span key={b.phrase} className='badge badge-light'>
@@ -501,7 +503,7 @@ const SurveyResultsPage = () => {
                         ) : null}
                         {q.trigrams?.length ? (
                           <div className='col-md-6'>
-                            <div className='fw-semibold mb-2'>Top trigramas</div>
+                            <div className='fw-semibold mb-2'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.TRIGRAMS.TITLE', defaultMessage: 'Top trigramas' })}</div>
                             <div className='d-flex flex-wrap gap-2'>
                               {q.trigrams.slice(0, 30).map(t => (
                                 <span key={t.phrase} className='badge badge-light'>
@@ -518,7 +520,7 @@ const SurveyResultsPage = () => {
                       <>
                         <div className='table-responsive'>
                           <table className='table'>
-                            <thead><tr><th style={{ width: 80 }}>#</th><th>Resposta</th></tr></thead>
+                            <thead><tr><th style={{ width: 80 }}>#</th><th>{intl.formatMessage({ id: 'SURVEYS.RESULTS.TABLE.HEADER.ANSWER', defaultMessage: 'Resposta' })}</th></tr></thead>
                             <tbody>
                               {slice.map((a, idx) => (
                                 <tr key={start + idx}><td className='text-muted'>{start + idx + 1}</td><td>{a}</td></tr>
@@ -530,13 +532,13 @@ const SurveyResultsPage = () => {
                         {/* Paginação Metronic */}
                         <div className='d-flex justify-content-between align-items-center mt-4'>
                           <div className='text-muted'>
-                            Mostrando <strong>{start + 1}</strong>–<strong>{end}</strong> de <strong>{total}</strong>
+                            {intl.formatMessage({ id: 'SURVEYS.RESULTS.PAGINATION.SHOWING', defaultMessage: 'Mostrando' })} <strong>{start + 1}</strong>–<strong>{end}</strong> {intl.formatMessage({ id: 'SURVEYS.RESULTS.PAGINATION.OF', defaultMessage: 'de' })} <strong>{total}</strong>
                           </div>
                           <nav>
                             <ul className='pagination'>
                               <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                                 <a href='#' className='page-link' onClick={e => { e.preventDefault(); if (currentPage > 1) setPage(q.questionId, currentPage - 1) }}>
-                                  <i className='previous'></i>Anterior
+                                  <i className='previous'></i>{intl.formatMessage({ id: 'SURVEYS.RESULTS.PAGINATION.PREV', defaultMessage: 'Anterior' })}
                                 </a>
                               </li>
                               {pageNumbers.map((p, i, arr) => {
@@ -553,7 +555,7 @@ const SurveyResultsPage = () => {
                               })}
                               <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
                                 <a href='#' className='page-link' onClick={e => { e.preventDefault(); if (currentPage < totalPages) setPage(q.questionId, currentPage + 1) }}>
-                                  Próxima<i className='next'></i>
+                                  {intl.formatMessage({ id: 'SURVEYS.RESULTS.PAGINATION.NEXT', defaultMessage: 'Próxima' })}<i className='next'></i>
                                 </a>
                               </li>
                             </ul>
@@ -561,7 +563,7 @@ const SurveyResultsPage = () => {
                         </div>
                       </>
                     ) : (
-                      <div className='text-muted'>Sem respostas.</div>
+                      <div className='text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.NO_ANSWERS', defaultMessage: 'Sem respostas.' })}</div>
                     )}
                   </section>
                 )
@@ -571,7 +573,7 @@ const SurveyResultsPage = () => {
               return (
                 <section data-pdf-section className='card card-body mb-6' key={q.questionId}>
                   <div className='fw-semibold'>{cardTitle}</div>
-                  <div className='text-muted'>Sem dados.</div>
+                  <div className='text-muted'>{intl.formatMessage({ id: 'SURVEYS.RESULTS.STATE.NO_DATA', defaultMessage: 'Sem dados.' })}</div>
                 </section>
               )
             })}

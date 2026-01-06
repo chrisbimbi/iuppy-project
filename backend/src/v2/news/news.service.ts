@@ -11,11 +11,14 @@ import { NewsReactionEntity } from '../interactions/entities/news-reaction.entit
 import { NewsCommentEntity } from '../interactions/entities/news-comment.entity'
 import { NewsShareEntity } from '../interactions/entities/news-share.entity'
 import { NewsAudienceEntity } from '../interactions/entities/news-audience.entity'
+import { NewsFavoriteEntity } from '../interactions/entities/news-favorite.entity'
 
 import type { ReactionKind } from '@shared/types/v2/interactions'
 import { AudienceService } from '../audience/audience.service'
+import { AudienceResolverService } from '../../news/audience-resolver.service'
 import { SchemaIntrospectorV2 } from '../common/schema-introspector.v2'
 import { CommentCounterAdapterV2 } from '../comments/comment-counter.adapter'
+import { MetricsDailyServiceV2 } from '../metrics/metrics-daily.service'
 import { AudienceMode } from '@shared/types/NewsSettings'   // ⬅️ novo import
 
 /** State calculado por usuário para uma News */
@@ -27,6 +30,7 @@ export interface UserState {
   acknowledgedAt: string | null
   myReaction: ReactionKind | null
   myComments: number
+  isFavorited: boolean
 }
 
 type EventMeta = {
@@ -97,8 +101,11 @@ export class NewsV2Service {
 
     private readonly interactions: InteractionsService,
     private readonly audience: AudienceService,
+    private readonly audienceResolver: AudienceResolverService,
     private readonly commentCounter: CommentCounterAdapterV2,
     private readonly schema: SchemaIntrospectorV2,
+    @InjectRepository(NewsFavoriteEntity) private readonly favoriteRepo: Repository<NewsFavoriteEntity>,
+    private readonly metricsDaily: MetricsDailyServiceV2,
   ) { }
 
   // ---------- infra / helpers
@@ -423,6 +430,15 @@ export class NewsV2Service {
       if (r && r[0]) myReaction = String(r[0].reaction) as ReactionKind
     }
 
+    // isFavorited
+    let isFavorited = false;
+    {
+      const f = await this.favoriteRepo.findOne({
+        where: { companyId, newsId: id, userId },
+      });
+      isFavorited = !!f;
+    }
+
     const myComments = await this.commentCounter.countApprovedByUserForNews(companyId, userId, id)
 
     return {
@@ -433,6 +449,7 @@ export class NewsV2Service {
       acknowledgedAt,
       myReaction,
       myComments,
+      isFavorited,
     }
   }
 
@@ -535,41 +552,53 @@ export class NewsV2Service {
            FROM news_share
           WHERE "companyId"=$1 AND "newsId"=$2`,
         [companyId, id],
-      )
-      return (r && r[0]) ? toInt(r[0].c) : 0
-    })()
+      );
+      return r && r[0] ? toInt(r[0].c) : 0;
+    })();
 
-    const settingsRaw = safeJson<any>((n as any).settings, {})
+    const favoritesTotal = await this.favoriteRepo.count({
+      where: { companyId, newsId: id },
+    });
+
+    const settingsRaw = safeJson<any>((n as any).settings, {});
     const settings = {
       acknowledgementRequired:
-        (settingsRaw?.acknowledgementRequired ?? settingsRaw?.ackRequired ?? false) === true,
+        (settingsRaw?.acknowledgementRequired ??
+          settingsRaw?.ackRequired ??
+          false) === true,
       allowReactions: (settingsRaw?.allowReactions ?? true) === true,
       allowComments: (settingsRaw?.allowComments ?? false) === true,
       commentsRequireModeration:
-        (settingsRaw?.commentsRequireModeration ?? settingsRaw?.moderateComments ?? false) === true,
+        (settingsRaw?.commentsRequireModeration ??
+          settingsRaw?.moderateComments ??
+          false) === true,
       shareEnabled: (settingsRaw?.shareEnabled ?? true) === true,
-    }
+    };
 
-    const { name: authorName, avatar: authorAvatarUrl } = await this.fetchAuthor(
+    const { name: authorName, avatar: authorAvatarUrl } =
+      await this.fetchAuthor(companyId, (n as any).authorId ?? null);
+
+    const previewComments = await this.fetchPreviewComments(companyId, id, 6);
+    const reactorsPreview = await this.fetchReactorsPreview(companyId, id, 3);
+    const commentersPreview = await this.fetchCommentersPreview(
       companyId,
-      (n as any).authorId ?? null,
-    )
-
-    const previewComments = await this.fetchPreviewComments(companyId, id, 6)
-    const reactorsPreview = await this.fetchReactorsPreview(companyId, id, 3)
-    const commentersPreview = await this.fetchCommentersPreview(companyId, id, 3)
-    const sharersPreview = await this.fetchSharersPreview(companyId, id, 3)
+      id,
+      3,
+    );
+    const sharersPreview = await this.fetchSharersPreview(companyId, id, 3);
 
     const metrics = {
       audienceSnapshotAtPublish, // número total calculado do snapshot/jsonb
 
       // compat
       totalOpens,
+      viewsTotal: totalOpens, // ⬅️ Alias for frontend
       uniqueOpens,
       acknowledgements: acks,
       reactions: reactionsByType,
       comments: commentsTotal,
       shares: sharesTotal,
+      favorites: favoritesTotal,
 
       // novos
       acks,
@@ -577,7 +606,8 @@ export class NewsV2Service {
       reactionsByType,
       commentsTotal,
       sharesTotal,
-    }
+      favoritesTotal,
+    };
 
     return {
       id: String((n as any).id),
@@ -850,5 +880,84 @@ export class NewsV2Service {
     // Garantimos o retorno pedindo o total após a aplicação.
     const total = await this.getAudienceSnapshotAtPublish(companyId, newsId)
     return { inserted: total, audienceSnapshotAtPublish: total }
+  }
+
+  async probeAudience(companyId: string, newsId: string, body: any) {
+    // Extract params from body (similar to V1 controller)
+    const { mode, spaceId, channelIds, groupIds, logicalRule } = body;
+
+    if (!mode) throw new BadRequestException('Audience mode is required');
+
+    const params: Record<string, any> = {};
+    if (spaceId) params.spaceId = spaceId;
+    if (channelIds) params.channelIds = channelIds;
+    if (groupIds) params.groupIds = groupIds;
+    if (logicalRule) params.logicalRule = logicalRule;
+
+    return this.audienceResolver.probe(companyId, mode, params);
+  }
+
+  // ---------- favorites
+
+  async toggleFavorite(companyId: string, newsId: string, userId: string) {
+    await this.ensureNews(companyId, newsId);
+    const existing = await this.favoriteRepo.findOne({
+      where: { companyId, newsId, userId },
+    });
+
+    if (existing) {
+      await this.favoriteRepo.remove(existing);
+      // Track unfavorite
+      this.metricsDaily.trackFavorite(companyId, newsId, userId, false).catch((e) => {
+        console.error('Failed to track unfavorite metric', e);
+      });
+      return { favorited: false };
+    } else {
+      await this.favoriteRepo.save({ companyId, newsId, userId });
+
+      // Track favorite interaction & metrics
+      this.interactions.favorite(companyId, newsId, userId).catch((e) => {
+        console.error('Failed to track favorite interaction', e);
+      });
+      this.metricsDaily.trackFavorite(companyId, newsId, userId, true).catch((e) => {
+        console.error('Failed to track favorite metric', e);
+      });
+
+      return { favorited: true };
+    }
+  }
+
+  async findFavorites(
+    companyId: string,
+    userId: string,
+    opts: { page: number; limit: number },
+  ) {
+    const { page, limit } = opts;
+    const skip = (page - 1) * limit;
+
+    const [favorites, total] = await this.favoriteRepo.findAndCount({
+      where: { companyId, userId },
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    if (!favorites.length) return { data: [], total, page, limit };
+
+    const data = [];
+
+    for (const fav of favorites) {
+      try {
+        const d = await this.detail(companyId, fav.newsId, userId);
+        data.push({
+          ...d,
+          favoritedAt: fav.createdAt,
+        });
+      } catch (e) {
+        // If news not found or error, skip
+      }
+    }
+
+    return { data, total, page, limit };
   }
 }

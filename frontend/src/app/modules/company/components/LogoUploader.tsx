@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import axios from 'axios'
+import { useIntl } from 'react-intl'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -43,6 +44,7 @@ async function getCroppedBlob(imageSrc: string, cropAreaPixels: Area): Promise<B
 }
 
 const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
+    const intl = useIntl()
     const inputRef = useRef<HTMLInputElement | null>(null)
     const [localUrl, setLocalUrl] = useState<string | null>(null)
     const [crop, setCrop] = useState({ x: 0, y: 0 })
@@ -83,7 +85,7 @@ const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
             setLocalUrl(null)
             if (inputRef.current) inputRef.current.value = ''
         } catch (e: any) {
-            setError('Falha no upload. Tente novamente.')
+            setError(intl.formatMessage({ id: 'COMPANY.LOGO_UPLOADER.ERROR', defaultMessage: 'Falha no upload. Tente novamente.' }))
         } finally {
             setUploading(false)
         }
@@ -120,7 +122,7 @@ const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
                             onClick={() => inputRef.current?.click()}
                             disabled={uploading}
                         >
-                            Selecionar imagem
+                            {intl.formatMessage({ id: 'COMPANY.LOGO_UPLOADER.BUTTON.SELECT', defaultMessage: 'Selecionar imagem' })}
                         </button>
                         {localUrl && (
                             <button
@@ -129,7 +131,7 @@ const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
                                 onClick={handleUpload}
                                 disabled={uploading}
                             >
-                                {uploading ? 'Enviando…' : 'Salvar logo'}
+                                {uploading ? intl.formatMessage({ id: 'COMPANY.LOGO_UPLOADER.BUTTON.UPLOADING', defaultMessage: 'Enviando…' }) : intl.formatMessage({ id: 'COMPANY.LOGO_UPLOADER.BUTTON.SAVE', defaultMessage: 'Salvar logo' })}
                             </button>
                         )}
                     </div>

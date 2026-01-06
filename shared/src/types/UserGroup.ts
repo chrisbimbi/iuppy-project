@@ -1,5 +1,6 @@
 // shared/src/types/UserGroup.ts
 
+export * from '../constants/UserGroupType';
 import { UserGroupType } from "../constants/UserGroupType"
 
 /** Tipagem principal do grupo de usuários */

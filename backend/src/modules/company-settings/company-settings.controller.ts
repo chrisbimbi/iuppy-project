@@ -7,17 +7,20 @@ import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
 
 @Controller('modules/:companyId/company-settings')
 export class CompanySettingsController {
-    constructor(private service: CompanySettingsService) { }
+  constructor(private service: CompanySettingsService) {}
 
-    @Get()
-    get(@Param('companyId') companyId: string) {
-        return this.service.get(companyId);
-    }
+  @Get()
+  get(@Param('companyId') companyId: string) {
+    return this.service.get(companyId);
+  }
 
-    @Patch()
-    @UseGuards(JwtAccessGuard)
-    @Roles(Role.SuperAdmin, Role.CompanyAdmin)
-    upsert(@Param('companyId') companyId: string, @Body() dto: UpsertCompanySettingsDto) {
-        return this.service.upsert(companyId, dto);
-    }
+  @Patch()
+  @UseGuards(JwtAccessGuard)
+  @Roles(Role.SuperAdmin, Role.CompanyAdmin)
+  upsert(
+    @Param('companyId') companyId: string,
+    @Body() dto: UpsertCompanySettingsDto,
+  ) {
+    return this.service.upsert(companyId, dto);
+  }
 }

@@ -105,6 +105,8 @@ export type NewsOverviewItem = {
     ack: number
     /** Likes/Reações (eventos) */
     reactions: number
+    /** Favoritos (eventos) */
+    favorites: number
     /** Comentários (eventos) */
     comments: number
     /** Shares (eventos) */
@@ -119,6 +121,7 @@ export type NewsOverviewSeriesPoint = {
   opens?: number
   uniqueOpens?: number
   reactions?: number
+  favorites?: number
   comments?: number
   shares?: number
   posts?: number
@@ -129,6 +132,7 @@ export type NewsOverviewResponse = {
   openRate30d: number
   ackRate30d: number
   reactionsPerBase: number
+  favoritesPerBase: number
   totalInteractions: number
 
   /** Lista (paginada) para News List */
@@ -149,6 +153,7 @@ export type NewsOverviewResponse = {
     opens?: number
     uniqueOpens?: number
     reactions?: number
+    favorites?: number
     comments?: number
     shares?: number
   }
@@ -168,6 +173,7 @@ export type OverviewSortBy =
   | 'unique'
   | 'ack'
   | 'reactions'
+  | 'favorites'
   | 'comments'
   | 'shares'
   | 'title'

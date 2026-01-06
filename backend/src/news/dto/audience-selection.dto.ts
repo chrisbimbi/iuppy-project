@@ -6,8 +6,8 @@ import {
   IsString,
   ArrayNotEmpty,
   ValidateIf,
-} from 'class-validator'
-import { AudienceMode } from '@shared/types/NewsSettings'
+} from 'class-validator';
+import { AudienceMode } from '@shared/types/NewsSettings';
 
 /**
  * DTO para aplicar/projetar uma seleção de audiência.
@@ -15,26 +15,26 @@ import { AudienceMode } from '@shared/types/NewsSettings'
  */
 export class AudienceSelectionDto {
   @IsEnum(AudienceMode)
-  mode!: AudienceMode
+  mode!: AudienceMode;
 
   @ValidateIf((o) => o.mode === AudienceMode.SPACE)
   @IsOptional()
   @IsString()
-  spaceId?: string
+  spaceId?: string;
 
   @ValidateIf((o) => o.mode === AudienceMode.CHANNEL)
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  channelIds?: string[]
+  channelIds?: string[];
 
   @ValidateIf((o) => o.mode === AudienceMode.GROUPS)
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @ArrayNotEmpty()
-  groupIds?: string[]
+  groupIds?: string[];
 }
 
 // Exportamos o tipo do shared para manter importações existentes compatíveis.
-export { AudienceMode }
+export { AudienceMode };

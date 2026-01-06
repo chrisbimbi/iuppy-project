@@ -31,23 +31,23 @@ final newsBatchMetricsProvider =
     futures.add(() async {
       try {
         final detail = await api.getNewsDetail(id); // <-- método existente
-        if (detail is Map) {
-          final d = Map<String, dynamic>.from(detail);
+        final d = Map<String, dynamic>.from(detail);
 
-          // No v2/detail, o retorno tem um bloco "metrics".
-          final metrics = (d['metrics'] is Map)
-              ? Map<String, dynamic>.from(d['metrics'])
-              : <String, dynamic>{};
+        // No v2/detail, o retorno tem um bloco "metrics".
+        final metrics = (d['metrics'] is Map)
+            ? Map<String, dynamic>.from(d['metrics'])
+            : <String, dynamic>{};
 
-          // Normaliza para os nomes esperados no front:
-          out[id] = <String, dynamic>{
-            'reactionsTotal':
-                _asInt(metrics['reactionsTotal'] ?? d['totalReactions']),
-            'commentsTotal':
-                _asInt(metrics['commentsTotal'] ?? d['commentsTotal']),
-            'sharesTotal': _asInt(metrics['sharesTotal'] ?? d['sharesTotal']),
-          };
-        }
+        // Normaliza para os nomes esperados no front:
+        out[id] = <String, dynamic>{
+          'reactionsTotal':
+              _asInt(metrics['reactionsTotal'] ?? d['totalReactions']),
+          'commentsTotal':
+              _asInt(metrics['commentsTotal'] ?? d['commentsTotal']),
+          'sharesTotal': _asInt(metrics['sharesTotal'] ?? d['sharesTotal']),
+          'favoritesTotal':
+              _asInt(metrics['favoritesTotal'] ?? metrics['favorites']),
+        };
       } catch (_) {
         // ignora falha desse item; card usa fallback do /news
       }

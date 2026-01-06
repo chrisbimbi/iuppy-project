@@ -4,10 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Iuppy App</string>
+	<string>$(BUNDLE_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,10 +32,18 @@
 			<key>CFBundleURLIconFile</key>
 			<string></string>
 			<key>CFBundleURLName</key>
-			<string>iuppydev</string>
+			<string>$(DEEP_LINK_SCHEME)</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>iuppydev</string>
+				<string>$(DEEP_LINK_SCHEME)</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(REVERSED_CLIENT_ID)</string>
 			</array>
 		</dict>
 	</array>
@@ -46,7 +56,13 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Permitir que o app salve imagens na sua galeria.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Precisamos do microfone para enviar áudio.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
@@ -56,8 +72,6 @@
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Permitir que o app salve imagens na sua galeria.</string>
 	<string>Main</string>
 	<key>UIStatusBarHidden</key>
 	<false/>

@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn, Unique } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+  Unique,
+} from 'typeorm';
 
 @Entity('news_reaction')
 @Index(['companyId', 'newsId'])

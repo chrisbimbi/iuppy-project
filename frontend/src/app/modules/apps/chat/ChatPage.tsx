@@ -1,25 +1,27 @@
-import {Navigate, Route, Routes, Outlet} from 'react-router-dom'
-import {PageLink, PageTitle} from '../../../..//layout/core'
-import {Private} from './components/Private'
-import {Group} from './components/Group'
-import {Drawer} from './components/Drawer'
-
-const chatBreadCrumbs: Array<PageLink> = [
-  {
-    title: 'Chat',
-    path: '/apps/chat/private-chat',
-    isSeparator: false,
-    isActive: false,
-  },
-  {
-    title: '',
-    path: '',
-    isSeparator: true,
-    isActive: false,
-  },
-]
+import { Navigate, Route, Routes, Outlet } from 'react-router-dom'
+import { PageLink, PageTitle } from '../../../..//layout/core'
+import { Private } from './components/Private'
+import { Group } from './components/Group'
+import { Drawer } from './components/Drawer'
+import { useIntl } from 'react-intl'
 
 const ChatPage = () => {
+  const intl = useIntl()
+  const chatBreadCrumbs: Array<PageLink> = [
+    {
+      title: intl.formatMessage({ id: 'APPS.CHAT.BREADCRUMBS.CHAT' }),
+      path: '/apps/chat/private-chat',
+      isSeparator: false,
+      isActive: false,
+    },
+    {
+      title: '',
+      path: '',
+      isSeparator: true,
+      isActive: false,
+    },
+  ]
+
   return (
     <Routes>
       <Route element={<Outlet />}>
@@ -27,7 +29,9 @@ const ChatPage = () => {
           path='private-chat'
           element={
             <>
-              <PageTitle breadcrumbs={chatBreadCrumbs}>Private chat</PageTitle>
+              <PageTitle breadcrumbs={chatBreadCrumbs}>
+                {intl.formatMessage({ id: 'APPS.CHAT.BREADCRUMBS.PRIVATE' })}
+              </PageTitle>
               <Private />
             </>
           }
@@ -36,7 +40,9 @@ const ChatPage = () => {
           path='group-chat'
           element={
             <>
-              <PageTitle breadcrumbs={chatBreadCrumbs}>Group chat</PageTitle>
+              <PageTitle breadcrumbs={chatBreadCrumbs}>
+                {intl.formatMessage({ id: 'APPS.CHAT.BREADCRUMBS.GROUP' })}
+              </PageTitle>
               <Group />
             </>
           }
@@ -45,7 +51,9 @@ const ChatPage = () => {
           path='drawer-chat'
           element={
             <>
-              <PageTitle breadcrumbs={chatBreadCrumbs}>Drawer chat</PageTitle>
+              <PageTitle breadcrumbs={chatBreadCrumbs}>
+                {intl.formatMessage({ id: 'APPS.CHAT.BREADCRUMBS.DRAWER' })}
+              </PageTitle>
               <Drawer />
             </>
           }

@@ -16,3 +16,7 @@ export type ModuleKey =
     | 'podcasts'
     | 'analytics'
     | 'chat'
+    | 'social'
+    | 'journeys'
+    | 'performance'
+    | 'nr1';

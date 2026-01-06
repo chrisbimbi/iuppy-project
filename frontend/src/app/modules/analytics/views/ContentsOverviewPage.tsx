@@ -20,6 +20,9 @@ import LatencyCdfChart from '../components/LatencyCdfChart'
 import LatencyHistogram from '../components/LatencyHistogram'
 import { exportTablesToCsv, downloadBlob } from 'src/app/core/utils/exporter'
 import { ContentService } from 'src/app/modules/communication/services/content.service'
+import { useIntl } from 'react-intl'
+import { SearchStatsWidget } from '../../dashboard/widgets/SearchStatsWidget'
+import { HashtagStatsWidget } from '../../dashboard/widgets/HashtagStatsWidget'
 
 type SpaceLite = { id: string; name: string }
 type ChannelLite = { id: string; name: string }
@@ -30,7 +33,10 @@ type LatencySummary = { p50: number | null; p90: number | null; avg?: number | n
 
 const isoDate = (d: Date | string) => {
   const x = typeof d === 'string' ? new Date(d) : d
-  return new Date(x.getFullYear(), x.getMonth(), x.getDate()).toISOString().slice(0, 10)
+  const year = x.getFullYear()
+  const month = String(x.getMonth() + 1).padStart(2, '0')
+  const day = String(x.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -45,18 +51,19 @@ const buildSeriesFromRows = (
   const from = new Date(fromISO)
   const to = new Date(toISO) // [from, to) exclusivo
 
-  type Agg = { posts: number; opens: number; uniqueOpens?: number; reactions: number; comments: number; shares: number; acks?: number }
+  type Agg = { posts: number; opens: number; uniqueOpens?: number; reactions: number; comments: number; shares: number; acks?: number; favorites: number }
   const map = new Map<string, Agg>()
 
   for (const r of rows) {
     const k = isoDate(r.createdAt)
-    const cur: Agg = map.get(k) || { posts: 0, opens: 0, uniqueOpens: undefined, reactions: 0, comments: 0, shares: 0, acks: 0 }
+    const cur: Agg = map.get(k) || { posts: 0, opens: 0, uniqueOpens: undefined, reactions: 0, comments: 0, shares: 0, acks: 0, favorites: 0 }
     cur.posts += 1
     cur.opens += Number(r.metrics.open ?? 0)
     if (typeof r.metrics.unique === 'number') cur.uniqueOpens = (cur.uniqueOpens ?? 0) + r.metrics.unique
     cur.reactions += Number(r.metrics.reactions ?? 0)
     cur.comments += Number(r.metrics.comments ?? 0)
     cur.shares += Number(r.metrics.shares ?? 0)
+    cur.favorites += Number(r.metrics.favorites ?? 0)
     cur.acks = (cur.acks ?? 0) + Number((r.metrics as any).ack ?? 0)
     map.set(k, cur)
   }
@@ -73,6 +80,7 @@ const buildSeriesFromRows = (
       reactions: v?.reactions ?? 0,
       comments: v?.comments ?? 0,
       shares: v?.shares ?? 0,
+      favorites: v?.favorites ?? 0,
       ...(v?.acks != null ? { acks: v.acks } : {}),
     } as any)
   }
@@ -88,10 +96,11 @@ const hasAnyMetricInSeries = (series: NewsOverviewSeriesPoint[]) =>
       (s.reactions ?? 0) > 0 ||
       (s.comments ?? 0) > 0 ||
       (s.shares ?? 0) > 0 ||
+      (s.favorites ?? 0) > 0 ||
       (s.posts ?? 0) > 0,
   )
 
-const COLOR_BY_KEY: Record<'posts' | 'open' | 'unique' | 'reactions' | 'comments' | 'shares' | 'ack', string> = {
+const COLOR_BY_KEY: Record<'posts' | 'open' | 'unique' | 'reactions' | 'comments' | 'shares' | 'ack' | 'favorites', string> = {
   posts: '#50CD89',
   open: '#3E97FF',
   unique: '#7239EA',
@@ -99,9 +108,11 @@ const COLOR_BY_KEY: Record<'posts' | 'open' | 'unique' | 'reactions' | 'comments
   comments: '#181C32',
   shares: '#FFC700',
   ack: '#0095E8',
+  favorites: '#F1416C', // Usando rosa/vermelho para favoritos
 }
 
 const ContentsOverviewPage: React.FC = () => {
+  const intl = useIntl()
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { can } = useAccess()
@@ -179,9 +190,9 @@ const ContentsOverviewPage: React.FC = () => {
   })
 
   const [hoveredMetric, setHoveredMetric] =
-    useState<null | 'posts' | 'open' | 'unique' | 'reactions' | 'comments' | 'shares' | 'ack'>(null)
+    useState<null | 'posts' | 'open' | 'unique' | 'reactions' | 'comments' | 'shares' | 'ack' | 'favorites'>(null)
   const [channelMetric, setChannelMetric] =
-    useState<'open' | 'unique' | 'reactions' | 'comments' | 'shares'>('open')
+    useState<'open' | 'unique' | 'reactions' | 'comments' | 'shares' | 'favorites'>('open')
 
   // Carregar espaços com permissão
   useEffect(() => {
@@ -250,6 +261,7 @@ const ContentsOverviewPage: React.FC = () => {
         unique: (it.metrics as any)?.unique ?? (it.metrics as any)?.uniqueOpens ?? undefined,
         ack: it.metrics?.ack ?? it.metrics?.acks ?? 0,
         reactions: it.metrics?.reactions ?? 0,
+        favorites: it.metrics?.favorites ?? 0,
         comments: it.metrics?.comments ?? 0,
         shares: it.metrics?.shares ?? 0,
         base: it.metrics?.base,
@@ -266,6 +278,7 @@ const ContentsOverviewPage: React.FC = () => {
         case 'unique': return x.metrics.unique ?? 0
         case 'ack': return (x.metrics as any).ack ?? 0
         case 'reactions': return x.metrics.reactions ?? 0
+        case 'favorites': return x.metrics.favorites ?? 0
         case 'comments': return x.metrics.comments ?? 0
         case 'shares': return x.metrics.shares ?? 0
         case 'title': return (x.title ?? '').toLowerCase()
@@ -325,6 +338,7 @@ const ContentsOverviewPage: React.FC = () => {
               const unique = num(b.uniqueOpens) ?? r.metrics.unique
               const ack = num(b.acks) ?? r.metrics.ack ?? 0
               const reacts = num(b.reactionsTotal) ?? r.metrics.reactions ?? 0
+              const favs = num(b.favorites) ?? r.metrics.favorites ?? 0
               const comms = num(b.commentsTotal) ?? r.metrics.comments ?? 0
               const shares = num(b.sharesTotal) ?? r.metrics.shares ?? 0
               const base = num(b.recebivel) ?? r.metrics.base
@@ -337,7 +351,7 @@ const ContentsOverviewPage: React.FC = () => {
                     ? (b as any).recebeuPush
                     : r.pushSent)
 
-              return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, comments: comms, shares, base } }
+              return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, favorites: favs, comments: comms, shares, base } }
             })
           } catch (e) {
             console.warn('[overview] bulk metrics (page) falhou', e)
@@ -386,6 +400,7 @@ const ContentsOverviewPage: React.FC = () => {
                 const unique = num(b.uniqueOpens) ?? r.metrics.unique
                 const ack = num(b.acks) ?? r.metrics.ack ?? 0
                 const reacts = num(b.reactionsTotal) ?? r.metrics.reactions ?? 0
+                const favs = num(b.favorites) ?? r.metrics.favorites ?? 0
                 const comms = num(b.commentsTotal) ?? r.metrics.comments ?? 0
                 const shares = num(b.sharesTotal) ?? r.metrics.shares ?? 0
                 const base = num(b.recebivel) ?? r.metrics.base
@@ -398,7 +413,7 @@ const ContentsOverviewPage: React.FC = () => {
                       ? (b as any).recebeuPush
                       : r.pushSent)
 
-                return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, comments: comms, shares, base } }
+                return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, favorites: favs, comments: comms, shares, base } }
               })
             } catch (e) {
               console.warn('[overview] bulk metrics (all) falhou', e)
@@ -482,6 +497,7 @@ const ContentsOverviewPage: React.FC = () => {
             const unique = num(b.uniqueOpens) ?? r.metrics.unique
             const ack = num(b.acks) ?? r.metrics.ack ?? 0
             const reacts = num(b.reactionsTotal) ?? r.metrics.reactions ?? 0
+            const favs = num(b.favorites) ?? r.metrics.favorites ?? 0
             const comms = num(b.commentsTotal) ?? r.metrics.comments ?? 0
             const shares = num(b.sharesTotal) ?? r.metrics.shares ?? 0
             const base = num(b.recebivel) ?? r.metrics.base
@@ -494,7 +510,7 @@ const ContentsOverviewPage: React.FC = () => {
                   ? (b as any).recebeuPush
                   : r.pushSent)
 
-            return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, comments: comms, shares, base } }
+            return { ...r, pushSent, metrics: { ...r.metrics, open, unique, ack, reactions: reacts, favorites: favs, comments: comms, shares, base } }
           })
         } catch (e) {
           console.warn('[overview] bulk metrics (all spaces) falhou', e)
@@ -547,12 +563,13 @@ const ContentsOverviewPage: React.FC = () => {
 
   // === KPIs do PERÍODO (somatório) ===
   const periodTotals = useMemo(() => {
-    const t = { posts: 0, open: 0, unique: 0, reactions: 0, comments: 0, shares: 0, ack: 0 }
+    const t = { posts: 0, open: 0, unique: 0, reactions: 0, favorites: 0, comments: 0, shares: 0, ack: 0 }
     t.posts = allRows.length
     for (const r of allRows) {
       t.open += Number(r.metrics.open ?? 0)
       t.unique += Number(r.metrics.unique ?? 0)
       t.reactions += Number(r.metrics.reactions ?? 0)
+      t.favorites += Number(r.metrics.favorites ?? 0)
       t.comments += Number(r.metrics.comments ?? 0)
       t.shares += Number(r.metrics.shares ?? 0)
       t.ack += Number((r.metrics as any).ack ?? 0)
@@ -568,13 +585,14 @@ const ContentsOverviewPage: React.FC = () => {
 
   // Séries para o gráfico principal
   const baseActivitySeries = [
-    { key: 'posts', name: 'Novos posts', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.posts ?? 0 })) },
-    { key: 'open', name: 'Visitas', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.opens ?? 0 })) },
-    { key: 'unique', name: 'Vis. únicas', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.uniqueOpens ?? 0 })) },
-    { key: 'reactions', name: 'Reações', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.reactions ?? 0 })) },
-    { key: 'comments', name: 'Comentários', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.comments ?? 0 })) },
-    { key: 'shares', name: 'Compart.', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.shares ?? 0 })) },
-    { key: 'ack', name: 'ACKs', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: (d as any).acks ?? (d as any).ack ?? 0 })) },
+    { key: 'posts', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.POSTS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.posts ?? 0 })) },
+    { key: 'open', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.VISITS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.opens ?? 0 })) },
+    { key: 'unique', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.UNIQUE_VISITS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.uniqueOpens ?? 0 })) },
+    { key: 'reactions', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.REACTIONS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.reactions ?? 0 })) },
+    { key: 'favorites', name: 'Favoritos', data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.favorites ?? 0 })) },
+    { key: 'comments', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.COMMENTS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.comments ?? 0 })) },
+    { key: 'shares', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.SHARES' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: d.shares ?? 0 })) },
+    { key: 'ack', name: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.ACKS' }), data: seriesDaily.map((d) => ({ x: new Date(`${d.date}T00:00:00`).getTime(), y: (d as any).acks ?? (d as any).ack ?? 0 })) },
   ] as const
 
   const activitySeries = useMemo(() => {
@@ -589,11 +607,11 @@ const ContentsOverviewPage: React.FC = () => {
       fill: { type: 'gradient', gradient: { shadeIntensity: 0.2, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] } },
       legend: { position: 'bottom' },
       xaxis: { type: 'datetime' },
-      title: { text: 'Atividade de conteúdos' },
+      title: { text: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.CHART.ACTIVITY' }) },
       dataLabels: { enabled: false },
       colors: (activitySeries as any[]).map((s: any) => COLOR_BY_KEY[s.key as keyof typeof COLOR_BY_KEY]),
     }),
-    [activitySeries, seriesDaily],
+    [activitySeries, seriesDaily, intl],
   )
 
   // Ranking por canal (métrica selecionada) — quando nenhum espaço estiver selecionado,
@@ -610,7 +628,7 @@ const ContentsOverviewPage: React.FC = () => {
 
   const channelsOptions: ApexOptions = {
     chart: { type: 'bar', height: 360, toolbar: { show: false } },
-    title: { text: 'Top canais' },
+    title: { text: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.CHART.TOP_CHANNELS' }) },
     plotOptions: { bar: { horizontal: true, barHeight: '45%' } },
     xaxis: { categories: byChannel.map(([id]) => chName(id)) },
     dataLabels: { enabled: true },
@@ -621,23 +639,27 @@ const ContentsOverviewPage: React.FC = () => {
     {
       name: (
         {
-          open: 'Visitas',
-          unique: 'Vis. únicas',
-          reactions: 'Reações',
-          comments: 'Comentários',
-          shares: 'Compart.',
+          open: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.VISITS' }),
+          unique: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.UNIQUE_VISITS' }),
+          reactions: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.REACTIONS' }),
+          favorites: 'Favoritos',
+          comments: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.COMMENTS' }),
+          shares: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.SHARES' }),
         } as any
       )[channelMetric],
       data: byChannel.map(([, v]) => v),
     },
   ]
 
-  const postsWithInteraction = allRows.filter((r) => (r.metrics.reactions + r.metrics.comments + r.metrics.shares) > 0).length
+  const postsWithInteraction = allRows.filter((r) => (r.metrics.reactions + r.metrics.favorites + r.metrics.comments + r.metrics.shares) > 0).length
   const donutOptions: ApexOptions = {
     chart: { type: 'donut', height: 320 },
     legend: { position: 'bottom' },
-    title: { text: 'Interações' },
-    labels: ['Com interação', 'Sem interação'],
+    title: { text: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.CHART.INTERACTIONS' }) },
+    labels: [
+      intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.CHART.INTERACTIONS.WITH' }),
+      intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.CHART.INTERACTIONS.WITHOUT' })
+    ],
     colors: ['#3E97FF', '#B5B5C3'],
     dataLabels: {
       enabled: true,
@@ -652,29 +674,31 @@ const ContentsOverviewPage: React.FC = () => {
   // === EXPORTS (refletem exatamente o que aparece na tela) ===
   const exportTableCsv = () => {
     const cols = [
-      { key: 'title', label: 'Título' },
-      { key: 'visits', label: 'Visitas' },
-      { key: 'visitors', label: 'Vis. únicas' },
-      { key: 'reactions', label: 'Reações' },
-      { key: 'comments', label: 'Comentários' },
-      { key: 'shares', label: 'Compart.' },
-      { key: 'push', label: 'Push' },
-      { key: 'status', label: 'Status' },
-      { key: 'createdAt', label: 'Criado em' },
+      { key: 'title', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TABLE.TITLE' }) },
+      { key: 'visits', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.VISITS' }) },
+      { key: 'visitors', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.UNIQUE_VISITS' }) },
+      { key: 'reactions', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.REACTIONS' }) },
+      { key: 'favorites', label: 'Favoritos' },
+      { key: 'comments', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.COMMENTS' }) },
+      { key: 'shares', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.SHARES' }) },
+      { key: 'push', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TABLE.PUSH' }) },
+      { key: 'status', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TABLE.STATUS' }) },
+      { key: 'createdAt', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TABLE.CREATED_AT' }) },
     ]
     const rowsCsv = rows.map((r) => ({
       title: r.title || '(sem título)',
       visits: r.metrics.open,
       visitors: r.metrics.unique ?? '',
       reactions: r.metrics.reactions,
+      favorites: r.metrics.favorites,
       comments: r.metrics.comments,
       shares: r.metrics.shares,
-      push: r.pushSent === true ? 'Sim' : 'Não',
-      status: r.publishedAt || r.isPublished ? 'Publicado' : 'Rascunho',
+      push: r.pushSent === true ? intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.YES' }) : intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.NO' }),
+      status: r.publishedAt || r.isPublished ? intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.STATUS.PUBLISHED' }) : intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.STATUS.DRAFT' }),
       createdAt: new Date(r.createdAt).toISOString(),
     }))
     const blob = exportTablesToCsv(
-      [{ title: 'Conteúdos', sheetName: 'Conteúdos', columns: cols as any, rows: rowsCsv as any } as any],
+      [{ title: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.EXPORT.CONTENTS' }), sheetName: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.EXPORT.CONTENTS' }), columns: cols as any, rows: rowsCsv as any } as any],
       ';',
     )
     downloadBlob(blob, `conteudos-overview.csv`)
@@ -682,14 +706,15 @@ const ContentsOverviewPage: React.FC = () => {
 
   const exportTimeSeriesCsv = () => {
     const cols = [
-      { key: 'date', label: 'Data' },
-      { key: 'posts', label: 'Novos posts' },
-      { key: 'opens', label: 'Visitas' },
-      { key: 'uniqueOpens', label: 'Vis. únicas' },
-      { key: 'reactions', label: 'Reações' },
-      { key: 'comments', label: 'Comentários' },
-      { key: 'shares', label: 'Compart.' },
-      { key: 'acks', label: 'ACKs' },
+      { key: 'date', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TABLE.DATE' }) },
+      { key: 'posts', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.POSTS' }) },
+      { key: 'opens', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.VISITS' }) },
+      { key: 'uniqueOpens', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.UNIQUE_VISITS' }) },
+      { key: 'reactions', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.REACTIONS' }) },
+      { key: 'favorites', label: 'Favoritos' },
+      { key: 'comments', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.COMMENTS' }) },
+      { key: 'shares', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.SHARES' }) },
+      { key: 'acks', label: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.METRIC.ACKS' }) },
     ]
     const rowsCsv = (seriesDaily || []).map((d) => ({
       date: d.date,
@@ -697,12 +722,13 @@ const ContentsOverviewPage: React.FC = () => {
       opens: d.opens ?? 0,
       uniqueOpens: d.uniqueOpens ?? 0,
       reactions: d.reactions ?? 0,
+      favorites: d.favorites ?? 0,
       comments: d.comments ?? 0,
       shares: d.shares ?? 0,
       acks: (d as any).acks ?? (d as any).ack ?? 0,
     }))
     const blob = exportTablesToCsv(
-      [{ title: 'Série (período)', sheetName: 'Série', columns: cols as any, rows: rowsCsv as any } as any],
+      [{ title: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.EXPORT.SERIES' }), sheetName: intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.EXPORT.SERIES' }), columns: cols as any, rows: rowsCsv as any } as any],
       ';',
     )
     downloadBlob(blob, `conteudos-overview-serie.csv`)
@@ -721,7 +747,7 @@ const ContentsOverviewPage: React.FC = () => {
         <Content>
           <div className="d-flex flex-wrap justify-content-between align-items-center mb-6">
             <div className="d-flex flex-column">
-              <h2 className="fw-bold m-0">Estatísticas gerais de conteúdos</h2>
+              <h2 className="fw-bold m-0">{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.TITLE' })}</h2>
               {(spaceId || channelId) && (
                 <div className="text-muted fs-8 mt-1">
                   {spaceId ? spName(spaceId) : ''}
@@ -734,19 +760,19 @@ const ContentsOverviewPage: React.FC = () => {
               {/* ====== Filtros de período ====== */}
               <div className="btn-group me-2" role="group" aria-label="Período">
                 {/* Sem "Hoje" */}
-                <button className={`btn btn-light ${datePreset === '7d' ? 'active' : ''}`} onClick={() => applyPreset('7d')}>7 dias</button>
-                <button className={`btn btn-light ${datePreset === '14d' ? 'active' : ''}`} onClick={() => applyPreset('14d')}>14 dias</button>
-                <button className={`btn btn-light ${datePreset === '30d' ? 'active' : ''}`} onClick={() => applyPreset('30d')}>30 dias</button>
-                <button className={`btn btn-light ${datePreset === '60d' ? 'active' : ''}`} onClick={() => applyPreset('60d')}>60 dias</button>
-                <button className={`btn btn-light ${datePreset === '90d' ? 'active' : ''}`} onClick={() => applyPreset('90d')}>90 dias</button>
-                <button className={`btn btn-light ${datePreset === 'custom' ? 'active' : ''}`} onClick={() => setDatePreset('custom')}>Personalizar</button>
+                <button className={`btn btn-light ${datePreset === '7d' ? 'active' : ''}`} onClick={() => applyPreset('7d')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.DAYS' }, { count: 7 })}</button>
+                <button className={`btn btn-light ${datePreset === '14d' ? 'active' : ''}`} onClick={() => applyPreset('14d')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.DAYS' }, { count: 14 })}</button>
+                <button className={`btn btn-light ${datePreset === '30d' ? 'active' : ''}`} onClick={() => applyPreset('30d')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.DAYS' }, { count: 30 })}</button>
+                <button className={`btn btn-light ${datePreset === '60d' ? 'active' : ''}`} onClick={() => applyPreset('60d')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.DAYS' }, { count: 60 })}</button>
+                <button className={`btn btn-light ${datePreset === '90d' ? 'active' : ''}`} onClick={() => applyPreset('90d')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.DAYS' }, { count: 90 })}</button>
+                <button className={`btn btn-light ${datePreset === 'custom' ? 'active' : ''}`} onClick={() => setDatePreset('custom')}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.CUSTOM' })}</button>
               </div>
               {datePreset === 'custom' && (
                 <div className="d-flex align-items-center gap-2 me-3">
                   <input type="date" className="form-control" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
                   <span>—</span>
                   <input type="date" className="form-control" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
-                  <button className="btn btn-primary" onClick={applyCustomRange}>Aplicar</button>
+                  <button className="btn btn-primary" onClick={applyCustomRange}>{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.APPLY' })}</button>
                 </div>
               )}
 
@@ -760,7 +786,7 @@ const ContentsOverviewPage: React.FC = () => {
                   setPage(1)
                 }}
               >
-                <option value="">Todos os espaços</option>
+                <option value="">{intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.ALL_SPACES' })}</option>
                 {spaces.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -778,7 +804,7 @@ const ContentsOverviewPage: React.FC = () => {
                   setPage(1)
                 }}
               >
-                <option value="">{spaceId ? 'Todos os canais do espaço' : '— escolha o espaço para filtrar canais —'}</option>
+                <option value="">{spaceId ? intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.ALL_CHANNELS' }) : intl.formatMessage({ id: 'ANALYTICS.OVERVIEW.FILTER.SELECT_SPACE' })}</option>
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -847,6 +873,14 @@ const ContentsOverviewPage: React.FC = () => {
             <div className="col-md-2">
               <div className="card">
                 <div className="card-body">
+                  <div className="fs-7 text-muted">Favoritos</div>
+                  <div className="fs-2 fw-bold">{fmtInt(periodTotals.favorites)}</div>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-2">
+              <div className="card">
+                <div className="card-body">
                   <div className="fs-7 text-muted">Comentários</div>
                   <div className="fs-2 fw-bold">{fmtInt(periodTotals.comments)}</div>
                 </div>
@@ -871,13 +905,13 @@ const ContentsOverviewPage: React.FC = () => {
                   <div className="text-muted fs-8">{isoDate(fromISO)} — {displayToISO}</div>
                 </div>
                 <div className="d-flex gap-2">
-                  {(['posts', 'open', 'unique', 'reactions', 'comments', 'shares', 'ack'] as const).map((key) => (
+                  {(['posts', 'open', 'unique', 'reactions', 'favorites', 'comments', 'shares', 'ack'] as const).map((key) => (
                     <button
                       key={key}
                       className={`btn btn-sm ${hoveredMetric === key ? 'btn-primary' : 'btn-light'}`}
                       onClick={() => setHoveredMetric((m) => (m === key ? null : key))}
                     >
-                      {({ posts: 'Posts', open: 'Visitas', unique: 'Vis. únicas', reactions: 'Reações', comments: 'Comentários', shares: 'Compart.', ack: 'ACKs' } as any)[key]}
+                      {({ posts: 'Posts', open: 'Visitas', unique: 'Vis. únicas', reactions: 'Reações', favorites: 'Favoritos', comments: 'Comentários', shares: 'Compart.', ack: 'ACKs' } as any)[key]}
                     </button>
                   ))}
                 </div>
@@ -905,6 +939,7 @@ const ContentsOverviewPage: React.FC = () => {
                         <option value="open">Visitas</option>
                         <option value="unique">Vis. únicas</option>
                         <option value="reactions">Reações</option>
+                        <option value="favorites">Favoritos</option>
                         <option value="comments">Comentários</option>
                         <option value="shares">Compart.</option>
                       </select>
@@ -965,6 +1000,7 @@ const ContentsOverviewPage: React.FC = () => {
                       <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('open')}>Visitas</th>
                       <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('unique')}>Vis. únicas</th>
                       <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('reactions')}>Reações</th>
+                      <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('favorites')}>Favoritos</th>
                       <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('comments')}>Comentários</th>
                       <th className="text-end" style={{ cursor: 'pointer' }} onClick={() => toggleSort('shares')}>Compart.</th>
                       <th className="text-center" title="Push enviado">Push</th>
@@ -992,6 +1028,7 @@ const ContentsOverviewPage: React.FC = () => {
                           <td className="text-end">{r.metrics.open}</td>
                           <td className="text-end">{r.metrics.unique ?? '—'}</td>
                           <td className="text-end">{r.metrics.reactions}</td>
+                          <td className="text-end">{r.metrics.favorites}</td>
                           <td className="text-end">{r.metrics.comments}</td>
                           <td className="text-end">{r.metrics.shares}</td>
                           <td className="text-center">
@@ -1031,6 +1068,15 @@ const ContentsOverviewPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+          {/* ====== Widgets de Busca e Hashtags ====== */}
+          <div className="row g-6 mb-6">
+            <div className="col-xl-8">
+              <SearchStatsWidget />
+            </div>
+            <div className="col-xl-4">
+              <HashtagStatsWidget />
             </div>
           </div>
         </Content>

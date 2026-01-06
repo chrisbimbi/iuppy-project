@@ -45,7 +45,7 @@ Color approvalColor(String raw, BuildContext ctx) {
     case 'pending':
       return Colors.amber.shade100;
     default:
-      return Theme.of(ctx).colorScheme.surfaceVariant;
+      return Theme.of(ctx).colorScheme.surfaceContainerHighest;
   }
 }
 
@@ -102,8 +102,9 @@ class SubmissionDetailSheet extends ConsumerWidget {
 
                     final Map<String, Map<String, dynamic>> answersByField = {};
                     for (final ans in answers) {
-                      if (ans['fieldId'] != null)
+                      if (ans['fieldId'] != null) {
                         answersByField[ans['fieldId'].toString()] = ans;
+                      }
                     }
 
                     return DraggableScrollableSheet(
@@ -143,8 +144,8 @@ class SubmissionDetailSheet extends ConsumerWidget {
                                         ?.copyWith(color: Colors.orange[800])),
                               const SizedBox(height: 14),
                               Wrap(spacing: 8, runSpacing: 8, children: [
-                                Chip(
-                                    label: const Text('Enviado'),
+                                const Chip(
+                                    label: Text('Enviado'),
                                     backgroundColor: Colors.white),
                                 if (requiresApproval &&
                                     _isApprovalStatus(rawStatus))
@@ -408,7 +409,7 @@ class _AttachmentStrip extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade200)),
-                  child: Center(
+                  child: const Center(
                       child: Icon(Icons.insert_drive_file,
                           size: 26, color: Colors.orange)));
             }));

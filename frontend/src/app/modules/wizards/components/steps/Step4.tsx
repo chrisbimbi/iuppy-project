@@ -1,18 +1,20 @@
-import React, {FC} from 'react'
-import {KTIcon, toAbsoluteUrl} from '../../../../..//helpers'
-import {ErrorMessage, Field} from 'formik'
+import React, { FC } from 'react'
+import { KTIcon, toAbsoluteUrl } from '../../../../..//helpers'
+import { ErrorMessage, Field } from 'formik'
+import { useIntl } from 'react-intl'
 
 const Step4: FC = () => {
+  const intl = useIntl()
   return (
     <div className='w-100'>
       <div className='pb-10 pb-lg-15'>
-        <h2 className='fw-bolder text-gray-900'>Billing Details</h2>
+        <h2 className='fw-bolder text-gray-900'>{intl.formatMessage({ id: 'WIZARDS.STEP4.TITLE', defaultMessage: 'Billing Details' })}</h2>
 
         <div className='text-gray-500 fw-bold fs-6'>
-          If you need more info, please check out
+          {intl.formatMessage({ id: 'WIZARDS.COMMON.MORE_INFO', defaultMessage: 'If you need more info, please check out' })}
           <a href='/dashboard' className='text-primary fw-bolder'>
             {' '}
-            Help Page
+            {intl.formatMessage({ id: 'WIZARDS.COMMON.HELP_PAGE', defaultMessage: 'Help Page' })}
           </a>
           .
         </div>
@@ -20,11 +22,11 @@ const Step4: FC = () => {
 
       <div className='d-flex flex-column mb-7 fv-row'>
         <label className='d-flex align-items-center fs-6 fw-bold form-label mb-2'>
-          <span className='required'>Name On Card</span>
+          <span className='required'>{intl.formatMessage({ id: 'WIZARDS.STEP4.NAME_ON_CARD', defaultMessage: 'Name On Card' })}</span>
           <i
             className='fas fa-exclamation-circle ms-2 fs-7'
             data-bs-toggle='tooltip'
-            title="Specify a card holder's name"
+            title={intl.formatMessage({ id: 'WIZARDS.STEP4.NAME_ON_CARD_TOOLTIP', defaultMessage: "Specify a card holder's name" })}
           ></i>
         </label>
 
@@ -40,13 +42,13 @@ const Step4: FC = () => {
       </div>
 
       <div className='d-flex flex-column mb-7 fv-row'>
-        <label className='required fs-6 fw-bold form-label mb-2'>Card Number</label>
+        <label className='required fs-6 fw-bold form-label mb-2'>{intl.formatMessage({ id: 'WIZARDS.STEP4.CARD_NUMBER', defaultMessage: 'Card Number' })}</label>
 
         <div className='position-relative'>
           <Field
             type='text'
             className='form-control form-control-solid'
-            placeholder='Enter card number'
+            placeholder={intl.formatMessage({ id: 'WIZARDS.STEP4.CARD_NUMBER_PLACEHOLDER', defaultMessage: 'Enter card number' })}
             name='cardNumber'
           />
           <div className='text-danger mt-2'>
@@ -71,7 +73,7 @@ const Step4: FC = () => {
 
       <div className='row mb-10'>
         <div className='col-md-8 fv-row'>
-          <label className='required fs-6 fw-bold form-label mb-2'>Expiration Date</label>
+          <label className='required fs-6 fw-bold form-label mb-2'>{intl.formatMessage({ id: 'WIZARDS.STEP4.EXPIRATION_DATE', defaultMessage: 'Expiration Date' })}</label>
 
           <div className='row fv-row'>
             <div className='col-6'>
@@ -119,11 +121,11 @@ const Step4: FC = () => {
 
         <div className='col-md-4 fv-row'>
           <label className='d-flex align-items-center fs-6 fw-bold form-label mb-2'>
-            <span className='required'>CVV</span>
+            <span className='required'>{intl.formatMessage({ id: 'WIZARDS.STEP4.CVV', defaultMessage: 'CVV' })}</span>
             <i
               className='fas fa-exclamation-circle ms-2 fs-7'
               data-bs-toggle='tooltip'
-              title='Enter a card CVV code'
+              title={intl.formatMessage({ id: 'WIZARDS.STEP4.CVV_TOOLTIP', defaultMessage: 'Enter a card CVV code' })}
             ></i>
           </label>
 
@@ -149,19 +151,19 @@ const Step4: FC = () => {
 
       <div className='d-flex flex-stack'>
         <div className='me-5'>
-          <label className='fs-6 fw-bold form-label'>Save Card for further billing?</label>
+          <label className='fs-6 fw-bold form-label'>{intl.formatMessage({ id: 'WIZARDS.STEP4.SAVE_CARD', defaultMessage: 'Save Card for further billing?' })}</label>
           <div className='fs-7 fw-bold text-gray-500'>
-            If you need more info, please check budget planning
+            {intl.formatMessage({ id: 'WIZARDS.STEP4.SAVE_CARD_DESC', defaultMessage: 'If you need more info, please check budget planning' })}
           </div>
         </div>
 
         <label className='form-check form-switch form-check-custom form-check-solid'>
           <Field className='form-check-input' type='checkbox' value='1' checked={true} />
-          <span className='form-check-label fw-bold text-gray-500'>Save Card</span>
+          <span className='form-check-label fw-bold text-gray-500'>{intl.formatMessage({ id: 'WIZARDS.STEP4.SAVE_CARD_LABEL', defaultMessage: 'Save Card' })}</span>
         </label>
       </div>
     </div>
   )
 }
 
-export {Step4}
+export { Step4 }

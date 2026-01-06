@@ -1,7 +1,12 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
 import { SpacesV2Service } from './spaces.service';
-import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('Spaces V2')
 @ApiBearerAuth('bearer')

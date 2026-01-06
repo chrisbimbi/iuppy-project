@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import '../widgets/web_sheet.dart';
+import '../widgets/image_gallery.dart';
 import '../widgets/video_dialog.dart';
 
 class HtmlContent extends StatelessWidget {
@@ -20,6 +21,62 @@ class HtmlContent extends StatelessWidget {
         return true;
       },
       customWidgetBuilder: (element) {
+        // 1. Tratamento de Imagens
+        if (element.localName == 'img') {
+          final src = element.attributes['src'];
+          if (src != null && src.isNotEmpty) {
+            final parentIsLink = element.parent?.localName == 'a';
+            final linkUrl = parentIsLink ? element.parent?.attributes['href'] : null;
+
+            return GestureDetector(
+              onTap: () {
+                if (linkUrl != null) {
+                  // Tem link: Mostra BottomSheet
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (ctx) => SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.image),
+                            title: const Text('Abrir imagem'),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              openImageGalleryDialog(context, [src], initialIndex: 0);
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.link),
+                            title: const Text('Abrir link'),
+                            subtitle: Text(linkUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              // Pequeno delay para garantir que o BottomSheet feche
+                              await Future.delayed(const Duration(milliseconds: 200));
+                              
+                              var url = linkUrl.trim();
+                              if (!url.startsWith('http')) {
+                                url = 'https://$url';
+                              }
+                              openWebSheet(context, url);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                } else {
+                  // Sem link: Abre galeria direto
+                  openImageGalleryDialog(context, [src], initialIndex: 0);
+                }
+              },
+              child: Image.network(src, fit: BoxFit.cover), // Simples por enquanto, ideal seria CachedNetworkImage
+            );
+          }
+        }
+
+        // 2. Tratamento de IFrames (Youtube)
         if (element.localName == 'iframe') {
           final src = element.attributes['src'] ?? '';
           final id = _tryExtractYoutubeId(src);

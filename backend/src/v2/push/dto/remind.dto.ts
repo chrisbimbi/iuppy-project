@@ -1,11 +1,14 @@
-import { ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator'
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
 
 export class RemindDto {
-  @ApiPropertyOptional({ description: 'Reenviar apenas para quem NÃO abriu', default: true })
+  @ApiPropertyOptional({
+    description: 'Reenviar apenas para quem NÃO abriu',
+    default: true,
+  })
   @IsOptional()
   @IsBoolean()
-  onlyNotOpened?: boolean = true
+  onlyNotOpened?: boolean = true;
 
   @ApiPropertyOptional({
     description:
@@ -14,5 +17,5 @@ export class RemindDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  minHoursSinceDelivery?: number
+  minHoursSinceDelivery?: number;
 }

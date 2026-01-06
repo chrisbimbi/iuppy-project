@@ -1,4 +1,5 @@
 // lib/features/forms/form_submit_page.dart
+import 'dart:ui';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../notifications/notifications_provider.dart';
 import 'providers/forms_provider.dart';
 import 'providers/forms_storage_provider.dart';
-import '../forms/local_form_store.dart'; // 🔥 Import
+// 🔥 Import
 import '../../core/providers.dart'; // 🔥 Import
 import 'package:iuppy_app/features/surveys/widgets/question_widgets.dart';
 
@@ -78,10 +79,11 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
 
   Future<void> _handleBack() async {
     if (await _maybeLeave() && mounted) {
-      if (context.canPop())
+      if (context.canPop()) {
         context.pop();
-      else
+      } else {
         context.go('/home');
+      }
     }
   }
 
@@ -124,7 +126,8 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
             children: options
                 .map((opt) => RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(opt),
+                    title: Text(opt,
+                        style: const TextStyle(fontFamily: 'Space Mono')),
                     value: opt,
                     groupValue: current,
                     onChanged: (v) => setState(() {
@@ -142,14 +145,16 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
             children: options
                 .map((opt) => CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(opt),
+                    title: Text(opt,
+                        style: const TextStyle(fontFamily: 'Space Mono')),
                     value: current.contains(opt),
                     onChanged: (v) => setState(() {
                           final set = <String>{...current};
-                          if (v == true)
+                          if (v == true) {
                             set.add(opt);
-                          else
+                          } else {
                             set.remove(opt);
+                          }
                           _answers[fid] = set;
                           _dirty = true;
                         })))
@@ -180,14 +185,19 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
         input = InkWell(
           onTap: () => _pickDate(fid),
           child: InputDecorator(
-            decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today)),
+            decoration: InputDecoration(
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+                suffixIcon: const Icon(Icons.calendar_today)),
             child: Text(
                 dt != null
                     ? '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}'
                     : 'Selecione uma data',
-                style: dt != null ? null : TextStyle(color: Colors.grey[600])),
+                style: dt != null
+                    ? const TextStyle(fontFamily: 'Space Mono')
+                    : TextStyle(
+                        color: Colors.grey[600], fontFamily: 'Space Mono')),
           ),
         );
         break;
@@ -199,8 +209,20 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
         input = TextFormField(
             controller: controller,
             maxLines: type == 'long_text' ? 4 : 1,
-            decoration: const InputDecoration(
-                hintText: 'Digite sua resposta', border: OutlineInputBorder()),
+            style: const TextStyle(fontFamily: 'Space Mono'),
+            decoration: InputDecoration(
+                hintText: 'Digite sua resposta',
+                hintStyle: TextStyle(
+                    fontFamily: 'Space Mono', color: Colors.grey.shade400),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.black))),
             onChanged: (v) {
               _answers[fid] = v;
               _dirty = true;
@@ -211,24 +233,36 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
         break;
     }
 
-    return Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-            padding: const EdgeInsets.all(12),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Flexible(
-                    child: Text(label.isEmpty ? 'Pergunta' : label,
-                        style: Theme.of(context).textTheme.titleMedium)),
-                if (required)
-                  const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: Text('*', style: TextStyle(color: Colors.red)))
-              ]),
-              const SizedBox(height: 12),
-              input
-            ])));
+    return Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Flexible(
+                child: Text(label.isEmpty ? 'Pergunta' : label,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontFamily: 'Space Mono',
+                        fontWeight: FontWeight.bold))),
+            if (required)
+              const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Text('*', style: TextStyle(color: Colors.red)))
+          ]),
+          const SizedBox(height: 16),
+          input
+        ]));
   }
 
   Future<void> _chooseAttachmentSource() async {
@@ -366,10 +400,20 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
 
     return asyncForm.when(
       loading: () => Scaffold(
-          appBar: AppBar(title: const Text('Carregando...')),
-          body: const Center(child: CircularProgressIndicator())),
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            title: const Text('Carregando...',
+                style: TextStyle(fontFamily: 'Space Mono')),
+            backgroundColor: Colors.white,
+            elevation: 0,
+          ),
+          body: const Center(
+              child: CircularProgressIndicator(color: Colors.black))),
       error: (e, _) => Scaffold(
-          appBar: AppBar(title: const Text('Erro')),
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+              title: const Text('Erro',
+                  style: TextStyle(fontFamily: 'Space Mono'))),
           body: Center(child: Text('Erro: $e'))),
       data: (form) {
         final locale = form['defaultLocale']?.toString() ?? 'pt-BR';
@@ -389,34 +433,68 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
             if (!didPop) await _handleBack();
           },
           child: Scaffold(
+            backgroundColor: Colors.white,
             appBar: AppBar(
-                leading: IconButton(
-                    icon: const Icon(Icons.arrow_back), onPressed: _handleBack),
-                title: Text(title)),
+              leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                  onPressed: _handleBack),
+              title: Text(title,
+                  style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Space Mono')),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             body: Form(
               key: _formKey,
               child: ListView(
                 controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
                 children: [
                   if (description.isNotEmpty) ...[
-                    Text(description),
-                    const SizedBox(height: 12)
+                    Text(description,
+                        style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
+                            fontFamily: 'Space Mono')),
+                    const SizedBox(height: 24)
                   ],
                   for (final f in fields) _buildFieldCard(f, locale),
                   if (attachmentsAllowed) ...[
                     const SizedBox(height: 16),
-                    Text('Anexos',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text('ANEXOS',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                fontFamily: 'Space Mono',
+                                fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       for (final att in _uploadedAttachments)
                         Chip(
-                            label: Text(att['storagePath']
-                                    ?.toString()
-                                    .split('/')
-                                    .last ??
-                                'arquivo'),
+                            label: Text(
+                                att['storagePath']
+                                        ?.toString()
+                                        .split('/')
+                                        .last ??
+                                    'arquivo',
+                                style: const TextStyle(
+                                    fontFamily: 'Space Mono', fontSize: 12)),
                             onDeleted: () => setState(
                                 () => _uploadedAttachments.remove(att)))
                     ]),
@@ -431,30 +509,44 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
                               _buildPendingAttachmentTile(f)
                           ])
                     ],
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       OutlinedButton.icon(
                           onPressed:
                               _uploading ? null : _chooseAttachmentSource,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.black),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
                           icon: const Icon(Icons.add),
-                          label: const Text('Escolher +')),
+                          label: const Text('Escolher +',
+                              style: TextStyle(fontFamily: 'Space Mono'))),
                       const SizedBox(width: 12),
                       FilledButton(
                           onPressed: (!_uploading && hasPending)
                               ? () => _confirmUpload(form)
                               : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
                           child: _uploading
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Confirmar escolha')),
+                              : const Text('Confirmar escolha',
+                                  style: TextStyle(fontFamily: 'Space Mono'))),
                     ]),
                     if (_uploading)
                       LinearProgressIndicator(value: _uploadProgress),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   if (hasPending)
                     const Padding(
                         padding: EdgeInsets.only(bottom: 12),
@@ -462,21 +554,40 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
                             '⚠️ Você tem anexos selecionados. Clique em "Confirmar escolha" acima antes de enviar.',
                             style: TextStyle(
                                 color: Colors.orange,
-                                fontWeight: FontWeight.bold),
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Space Mono'),
                             textAlign: TextAlign.center)),
                   SafeArea(
                     top: false,
-                    child: FilledButton.icon(
-                      onPressed: (_sending || hasPending)
-                          ? null
-                          : () => _onSubmit(form, attachmentsAllowed),
-                      icon: _sending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.send_rounded),
-                      label: Text(_sending ? 'Enviando...' : 'Enviar'),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: (_sending || hasPending)
+                            ? null
+                            : () => _onSubmit(form, attachmentsAllowed),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                          shadowColor: Colors.black.withOpacity(0.4),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                        ),
+                        icon: _sending
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.send_rounded),
+                        label: Text(
+                            _sending ? 'ENVIANDO...' : 'ENVIAR RESPOSTA',
+                            style: const TextStyle(
+                                fontFamily: 'Space Mono',
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1)),
+                      ),
                     ),
                   ),
                 ],
@@ -522,18 +633,24 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
       await showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
-            title: const Text('Resposta enviada!'),
-            content: const Text('Obrigado por preencher.'),
+            title: const Text('Resposta enviada!',
+                style: TextStyle(fontFamily: 'Space Mono')),
+            content: const Text('Obrigado por preencher.',
+                style: TextStyle(fontFamily: 'Space Mono')),
             actions: [
               TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    if (context.canPop())
+                    if (context.canPop()) {
                       context.pop();
-                    else
+                    } else {
                       context.go('/home');
+                    }
                   },
-                  child: const Text('Fechar'))
+                  child: const Text('FECHAR',
+                      style: TextStyle(
+                          fontFamily: 'Space Mono',
+                          fontWeight: FontWeight.bold)))
             ]),
       );
     } catch (e) {

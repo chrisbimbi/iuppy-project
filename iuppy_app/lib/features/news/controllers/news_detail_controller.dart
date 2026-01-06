@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:iuppy_app/data/remote/api_client.dart';
+import 'package:iuppy_app/core/providers.dart'; // ⬅ Import NewsRepo
 
 /// VM imutável consumida pela tela
 class NewsDetailVM {
@@ -20,6 +21,7 @@ class NewsDetailVM {
 
   final String? spaceName;
   final List<String> channelNames;
+  final List<String> hashtags;
 
   // conteúdo
   final String contentHtml;
@@ -32,13 +34,18 @@ class NewsDetailVM {
   final bool shareEnabled;
   final bool ackRequired;
   final bool acknowledged;
+  final bool isFavorited;
 
   // interações/contagens
   final Map<String, int> reactsByType;
   final int totalReacts;
   final int commentsShown;
   final int shares;
+  final int favoritesTotal;
   final String? myReaction;
+  final bool hasViewed;
+  final bool hasCommented;
+  final bool hasShared;
 
   // amostras (react/comment/share)
   final List<({String name, String avatar})> reactorsSample;
@@ -64,6 +71,7 @@ class NewsDetailVM {
     required this.updatedAtStr,
     required this.spaceName,
     required this.channelNames,
+    required this.hashtags,
     required this.contentHtml,
     required this.attachments,
     required this.allowReactions,
@@ -72,11 +80,16 @@ class NewsDetailVM {
     required this.shareEnabled,
     required this.ackRequired,
     required this.acknowledged,
+    required this.isFavorited,
     required this.reactsByType,
     required this.totalReacts,
     required this.commentsShown,
     required this.shares,
+    required this.favoritesTotal,
     required this.myReaction,
+    required this.hasViewed,
+    required this.hasCommented,
+    required this.hasShared,
     required this.reactorsSample,
     required this.commentersSample,
     required this.sharersSample,
@@ -97,6 +110,7 @@ class NewsDetailVM {
     String? updatedAtStr,
     String? spaceName,
     List<String>? channelNames,
+    List<String>? hashtags,
     String? contentHtml,
     List<({String name, String url})>? attachments,
     bool? allowReactions,
@@ -105,11 +119,16 @@ class NewsDetailVM {
     bool? shareEnabled,
     bool? ackRequired,
     bool? acknowledged,
+    bool? isFavorited,
     Map<String, int>? reactsByType,
     int? totalReacts,
     int? commentsShown,
     int? shares,
+    int? favoritesTotal,
     String? myReaction,
+    bool? hasViewed,
+    bool? hasCommented,
+    bool? hasShared,
     List<({String name, String avatar})>? reactorsSample,
     List<({String name, String avatar})>? commentersSample,
     List<({String name, String avatar})>? sharersSample,
@@ -129,6 +148,7 @@ class NewsDetailVM {
       updatedAtStr: updatedAtStr ?? this.updatedAtStr,
       spaceName: spaceName ?? this.spaceName,
       channelNames: channelNames ?? this.channelNames,
+      hashtags: hashtags ?? this.hashtags,
       contentHtml: contentHtml ?? this.contentHtml,
       attachments: attachments ?? this.attachments,
       allowReactions: allowReactions ?? this.allowReactions,
@@ -137,11 +157,16 @@ class NewsDetailVM {
       shareEnabled: shareEnabled ?? this.shareEnabled,
       ackRequired: ackRequired ?? this.ackRequired,
       acknowledged: acknowledged ?? this.acknowledged,
+      isFavorited: isFavorited ?? this.isFavorited,
       reactsByType: reactsByType ?? this.reactsByType,
       totalReacts: totalReacts ?? this.totalReacts,
       commentsShown: commentsShown ?? this.commentsShown,
       shares: shares ?? this.shares,
+      favoritesTotal: favoritesTotal ?? this.favoritesTotal,
       myReaction: myReaction ?? this.myReaction,
+      hasViewed: hasViewed ?? this.hasViewed,
+      hasCommented: hasCommented ?? this.hasCommented,
+      hasShared: hasShared ?? this.hasShared,
       reactorsSample: reactorsSample ?? this.reactorsSample,
       commentersSample: commentersSample ?? this.commentersSample,
       sharersSample: sharersSample ?? this.sharersSample,
@@ -162,11 +187,13 @@ class NewsDetailController extends ChangeNotifier {
   NewsDetailController(
     this.onOpen, {
     required this.api,
+    required this.repo, // ⬅ Recebe Repo
     required this.env,
     required this.newsId,
   });
 
   final ApiClient api;
+  final NewsRepo repo; // ⬅ Armazena Repo
   final void Function()? onOpen;
   final dynamic env; // tem appScheme
   final String newsId;
@@ -315,48 +342,49 @@ class NewsDetailController extends ChangeNotifier {
   Future<void> load() async {
     _me ??= await api.getMe(); // p/ otimistas (nome+avatar)
 
-    final data = await api.getNewsDetail(newsId, cancelToken: _ct);
+    // 🔥 FIX: Usa o Repo para garantir cache atualizado e fallback offline
+    final data = await repo.getById(newsId);
     if (kDebugMode) {
       debugPrint('[NEWS:$newsId] raw.userState=${data['userState']}');
       debugPrint('[NEWS:$newsId] raw.settings=${data['settings']}');
     }
 
-    int _toInt(dynamic v, [int d = 0]) {
+    int toInt(dynamic v, [int d = 0]) {
       if (v == null) return d;
       final n = int.tryParse('$v');
       return n ?? d;
     }
 
-    List<Map<String, dynamic>> _asListOfMap(dynamic v) {
+    List<Map<String, dynamic>> asListOfMap(dynamic v) {
       final raw = (v is List) ? v : const [];
       return raw
-          .where((e) => e is Map)
-          .map((e) => Map<String, dynamic>.from(e as Map))
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
           .toList();
     }
 
-    String _str(dynamic v) => (v == null) ? '' : '$v';
+    String str(dynamic v) => (v == null) ? '' : '$v';
 
     // Principais
-    final title = _str(data['title']).trim();
-    final subtitle = _str(data['subtitle']).trim();
-    final spaceName = _str(data['spaceName']).trim();
+    final title = str(data['title']).trim();
+    final subtitle = str(data['subtitle']).trim();
+    final spaceName = str(data['spaceName']).trim();
     final channelNames = _channelsFrom(data);
-    final contentHtml = _str(
-      _str(data['contentHtml']).isNotEmpty
+    final hashtags = (data['hashtags'] as List<dynamic>? ?? []).cast<String>();
+    final contentHtml = str(
+      str(data['contentHtml']).isNotEmpty
           ? data['contentHtml']
           : data['content'],
     );
 
     // Autor
     final authorId =
-        _str(data['authorId']).trim().isEmpty ? null : _str(data['authorId']);
-    final authorName = _str(data['authorName']).trim().isEmpty
+        str(data['authorId']).trim().isEmpty ? null : str(data['authorId']);
+    final authorName =
+        str(data['authorName']).trim().isEmpty ? null : str(data['authorName']);
+    final authorAvatarUrl = str(data['authorAvatarUrl']).trim().isEmpty
         ? null
-        : _str(data['authorName']);
-    final authorAvatarUrl = _str(data['authorAvatarUrl']).trim().isEmpty
-        ? null
-        : _str(data['authorAvatarUrl']);
+        : str(data['authorAvatarUrl']);
 
     // Settings
     final settings = (data['settings'] as Map?) ?? const {};
@@ -365,38 +393,43 @@ class NewsDetailController extends ChangeNotifier {
     final commentsModerated = _moderated(settings);
     final shareEnabled =
         (settings['allowSharing'] ?? settings['shareEnabled'] ?? true) == true;
-    final ackRequired = (settings['acknowledgementRequired'] ?? false) == true;
+    final ackRequired = (data['mustAcknowledge'] ??
+            settings['acknowledgementRequired'] ??
+            false) ==
+        true;
 
     // Métricas
     final metrics = (data['metrics'] as Map?) ?? const {};
     final reactsByTypeRaw = (metrics['reactionsByType'] as Map?) ?? const {};
     final reactsByType = <String, int>{
-      for (final e in reactsByTypeRaw.entries) '${e.key}': _toInt(e.value),
+      for (final e in reactsByTypeRaw.entries) '${e.key}': toInt(e.value),
     };
-    final totalReacts = _toInt(metrics['reactionsTotal']);
-    final sharesTotal = _toInt(metrics['sharesTotal']);
-    final commentsTotalBackend = _toInt(metrics['commentsTotal']);
+    final totalReacts = toInt(metrics['reactionsTotal']);
+    final sharesTotal = toInt(metrics['sharesTotal']);
+    final favoritesTotal =
+        toInt(metrics['favoritesTotal'] ?? metrics['favorites']);
+    final commentsTotalBackend = toInt(metrics['commentsTotal']);
 
     // Preview de comentários
     final previewCommentsRaw =
-        _asListOfMap(data['previewComments'] ?? data['preview_comments']);
+        asListOfMap(data['previewComments'] ?? data['preview_comments']);
     List<({String name, String avatar, String text})> previewComments;
     if (previewCommentsRaw.isNotEmpty) {
       previewComments = previewCommentsRaw.map((m) {
-        final name = _str(m['name'] ?? m['authorName']).trim();
-        final avatar = _str(m['avatar'] ?? m['authorAvatarUrl']).trim();
-        final text = _str(m['text']).trim();
+        final name = str(m['name'] ?? m['authorName']).trim();
+        final avatar = str(m['avatar'] ?? m['authorAvatarUrl']).trim();
+        final text = str(m['text']).trim();
         return (name: name, avatar: avatar, text: text);
       }).toList();
     } else {
       final legacySamples = (data['samples'] as Map?) ?? const {};
       final commentersSampleRaw =
-          _asListOfMap(legacySamples['commenters'] ?? const []);
+          asListOfMap(legacySamples['commenters'] ?? const []);
       previewComments = commentersSampleRaw
           .map((m) => (
-                name: _str(m['name']).trim(),
-                avatar: _str(m['avatar']).trim(),
-                text: _str(m['text']).trim(),
+                name: str(m['name']).trim(),
+                avatar: str(m['avatar']).trim(),
+                text: str(m['text']).trim(),
               ))
           .where((r) => r.text.isNotEmpty)
           .toList();
@@ -407,33 +440,38 @@ class NewsDetailController extends ChangeNotifier {
         : previewComments.length;
 
     // Previews “quem”
-    List<({String name, String avatar})> _mapPreview(dynamic raw) {
-      final list = _asListOfMap(raw);
+    List<({String name, String avatar})> mapPreview(dynamic raw) {
+      final list = asListOfMap(raw);
       return list
           .map((m) => (
-                name: _str(m['name']).trim(),
-                avatar: _str(m['avatar']).trim(),
+                name: str(m['name']).trim(),
+                avatar: str(m['avatar']).trim(),
               ))
           .toList();
     }
 
     var reactorsSample = (data['reactorsPreview'] != null)
-        ? _mapPreview(data['reactorsPreview'])
-        : _mapPreview((data['samples'] as Map?)?['reactors']);
+        ? mapPreview(data['reactorsPreview'])
+        : mapPreview((data['samples'] as Map?)?['reactors']);
     final commentersSample = (data['commentersPreview'] != null)
-        ? _mapPreview(data['commentersPreview'])
-        : _mapPreview((data['samples'] as Map?)?['commenters']);
+        ? mapPreview(data['commentersPreview'])
+        : mapPreview((data['samples'] as Map?)?['commenters']);
     final sharersSample = (data['sharersPreview'] != null)
-        ? _mapPreview(data['sharersPreview'])
-        : _mapPreview((data['samples'] as Map?)?['sharers']);
+        ? mapPreview(data['sharersPreview'])
+        : mapPreview((data['samples'] as Map?)?['sharers']);
 
     // Estado do usuário
     final userState = (data['userState'] as Map?) ?? const {};
-    final myReactionRaw = _str(userState['myReaction']).trim();
+    final myReactionRaw = str(userState['myReaction']).trim();
     final myReaction = myReactionRaw.isEmpty ? null : myReactionRaw;
-    final acknowledged = userState['acknowledged'] == true ||
-        (userState['acknowledged'] is String &&
-            (userState['acknowledged'] as String).toLowerCase() == 'true');
+    final hasViewed = (userState['hasViewed'] ?? false) == true;
+    final hasCommented = (userState['hasCommented'] ?? false) == true;
+    final hasShared = (userState['hasShared'] ?? false) == true;
+    final acknowledged =
+        (userState['hasAcknowledged'] ?? userState['acknowledged']) == true ||
+            (userState['acknowledged'] is String &&
+                (userState['acknowledged'] as String).toLowerCase() == 'true');
+    final isFavorited = (data['isFavorited'] ?? false) == true;
 
     if (kDebugMode) {
       final us = (data['userState'] as Map?) ?? const {};
@@ -455,15 +493,14 @@ class NewsDetailController extends ChangeNotifier {
     }
 
     // Datas / imagens / anexos
-    final createdAtStr = _fmtDate(_str(data['createdAt']));
-    final updatedAtStr = _fmtDate(_str(data['updatedAt']));
+    final createdAtStr = _fmtDate(str(data['createdAt']));
+    final updatedAtStr = _fmtDate(str(data['updatedAt']));
     final images = _images(data['highlightImages']);
     final attachments = _attachments(data['attachments']);
 
     // Share
     final deeplink = '${env.appScheme}://news/article/$newsId';
-    final shareText =
-        _str(data['shareText'] ?? data['excerpt'] ?? title).trim();
+    final shareText = str(data['shareText'] ?? data['excerpt'] ?? title).trim();
 
     _vm = NewsDetailVM(
       raw: data,
@@ -477,6 +514,7 @@ class NewsDetailController extends ChangeNotifier {
       updatedAtStr: updatedAtStr,
       spaceName: spaceName.isEmpty ? null : spaceName,
       channelNames: channelNames,
+      hashtags: hashtags,
       contentHtml: contentHtml,
       attachments: attachments,
       allowReactions: allowReactions,
@@ -485,11 +523,16 @@ class NewsDetailController extends ChangeNotifier {
       shareEnabled: shareEnabled,
       ackRequired: ackRequired,
       acknowledged: acknowledged,
+      isFavorited: isFavorited,
       reactsByType: reactsByType,
       totalReacts: totalReacts,
       commentsShown: commentsShown,
       shares: sharesTotal,
+      favoritesTotal: favoritesTotal,
       myReaction: myReaction,
+      hasViewed: hasViewed,
+      hasCommented: hasCommented,
+      hasShared: hasShared,
       reactorsSample: reactorsSample,
       commentersSample: commentersSample,
       sharersSample: sharersSample,
@@ -539,7 +582,9 @@ class NewsDetailController extends ChangeNotifier {
     if (_throttleReact) return;
     final now = DateTime.now();
     if (_lastReactAt != null &&
-        now.difference(_lastReactAt!).inMilliseconds < 500) return;
+        now.difference(_lastReactAt!).inMilliseconds < 500) {
+      return;
+    }
     _throttleReact = true;
     _lastReactAt = now;
     if (_vm == null) return;
@@ -695,6 +740,7 @@ class NewsDetailController extends ChangeNotifier {
         commentsShown: s0.commentsShown + 1,
         previewComments: previews.take(6).toList(),
         commentersSample: commenters.take(6).toList(),
+        hasCommented: true,
       );
       notifyListeners();
     }
@@ -713,6 +759,7 @@ class NewsDetailController extends ChangeNotifier {
     _vm = s0.copyWith(
       shares: s0.shares + 1,
       sharersSample: sharers.take(6).toList(),
+      hasShared: true,
     );
     notifyListeners();
 
@@ -770,8 +817,10 @@ class NewsDetailController extends ChangeNotifier {
   Future<void> ack() async {
     if (_vm == null || _throttleAck) return;
     final now = DateTime.now();
-    if (_lastAckAt != null && now.difference(_lastAckAt!).inMilliseconds < 800)
+    if (_lastAckAt != null &&
+        now.difference(_lastAckAt!).inMilliseconds < 800) {
       return;
+    }
     _throttleAck = true;
     _lastAckAt = now;
     final s0 = _vm!;
@@ -788,6 +837,37 @@ class NewsDetailController extends ChangeNotifier {
       notifyListeners();
     } finally {
       _throttleAck = false;
+    }
+  }
+
+  Future<void> toggleFavorite() async {
+    debugPrint('[NEWS_DETAIL_CONTROLLER] toggleFavorite called for $newsId');
+    if (_vm == null) {
+      debugPrint('[NEWS_DETAIL_CONTROLLER] _vm is null, aborting');
+      return;
+    }
+    final s0 = _vm!;
+    final newStatus = !s0.isFavorited;
+    debugPrint('[NEWS_DETAIL_CONTROLLER] Toggling favorite to $newStatus');
+
+    // Optimistic update
+    final newCount = s0.favoritesTotal + (newStatus ? 1 : -1);
+    _vm = s0.copyWith(
+      isFavorited: newStatus,
+      favoritesTotal: newCount >= 0 ? newCount : 0,
+    );
+    notifyListeners();
+    debugPrint('[NEWS_DETAIL_CONTROLLER] notifyListeners called');
+
+    try {
+      await repo.toggleFavorite(newsId);
+    } catch (e) {
+      // Rollback on error
+      _vm = s0;
+      notifyListeners();
+      if (kDebugMode) {
+        debugPrint('[NEWS:$newsId] toggleFavorite ERROR: $e');
+      }
     }
   }
 

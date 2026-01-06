@@ -8,9 +8,10 @@ import { UpdateChannelDto } from './dto/update-channel.dto';
 @Injectable()
 export class ChannelsService {
   constructor(
-    @InjectRepository(Channel) private readonly channelRepository: Repository<Channel>,
+    @InjectRepository(Channel)
+    private readonly channelRepository: Repository<Channel>,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   create(dto: CreateChannelDto) {
     const channel = this.channelRepository.create(dto);
@@ -70,7 +71,9 @@ export class ChannelsService {
       const cases = channelIds
         .map((id, idx) => `WHEN id = '${id.replace(/'/g, "''")}' THEN ${idx}`)
         .join(' ');
-      const idsList = channelIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',');
+      const idsList = channelIds
+        .map((id) => `'${id.replace(/'/g, "''")}'`)
+        .join(',');
 
       await manager.query(
         `

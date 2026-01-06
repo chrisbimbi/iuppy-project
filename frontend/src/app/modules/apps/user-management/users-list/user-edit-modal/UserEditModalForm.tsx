@@ -1,13 +1,15 @@
-import {FC, useState} from 'react'
+import { FC, useState } from 'react'
 import * as Yup from 'yup'
-import {useFormik} from 'formik'
-import {isNotEmpty, toAbsoluteUrl} from '../../../../../..//helpers'
-import {initialUser, User} from '../core/_models'
+import { useFormik } from 'formik'
+import { isNotEmpty, toAbsoluteUrl } from '../../../../../..//helpers'
+import { initialUser, User } from '../core/_models'
 import clsx from 'clsx'
-import {useListView} from '../core/ListViewProvider'
-import {UsersListLoading} from '../components/loading/UsersListLoading'
-import {createUser, updateUser} from '../core/_requests'
-import {useQueryResponse} from '../core/QueryResponseProvider'
+import { useListView } from '../core/ListViewProvider'
+import { UsersListLoading } from '../components/loading/UsersListLoading'
+import { createUser, updateUser } from '../core/_requests'
+
+import { useQueryResponse } from '../core/QueryResponseProvider'
+import { useIntl } from 'react-intl'
 
 type Props = {
   isUserLoading: boolean
@@ -26,9 +28,10 @@ const editUserSchema = Yup.object().shape({
     .required('Name is required'),
 })
 
-const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
-  const {setItemIdForUpdate} = useListView()
-  const {refetch} = useQueryResponse()
+const UserEditModalForm: FC<Props> = ({ user, isUserLoading }) => {
+  const intl = useIntl()
+  const { setItemIdForUpdate } = useListView()
+  const { refetch } = useQueryResponse()
 
   const [userForEdit] = useState<User>({
     ...user,
@@ -52,7 +55,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
   const formik = useFormik({
     initialValues: userForEdit,
     validationSchema: editUserSchema,
-    onSubmit: async (values, {setSubmitting}) => {
+    onSubmit: async (values, { setSubmitting }) => {
       setSubmitting(true)
       try {
         if (isNotEmpty(values.id)) {
@@ -86,19 +89,19 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
           {/* begin::Input group */}
           <div className='fv-row mb-7'>
             {/* begin::Label */}
-            <label className='d-block fw-bold fs-6 mb-5'>Avatar</label>
+            <label className='d-block fw-bold fs-6 mb-5'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.LABEL.AVATAR' })}</label>
             {/* end::Label */}
 
             {/* begin::Image input */}
             <div
               className='image-input image-input-outline'
               data-kt-image-input='true'
-              style={{backgroundImage: `url('${blankImg}')`}}
+              style={{ backgroundImage: `url('${blankImg}')` }}
             >
               {/* begin::Preview existing avatar */}
               <div
                 className='image-input-wrapper w-125px h-125px'
-                style={{backgroundImage: `url('${userAvatarImg}')`}}
+                style={{ backgroundImage: `url('${userAvatarImg}')` }}
               ></div>
               {/* end::Preview existing avatar */}
 
@@ -149,18 +152,18 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
           {/* begin::Input group */}
           <div className='fv-row mb-7'>
             {/* begin::Label */}
-            <label className='required fw-bold fs-6 mb-2'>Full Name</label>
+            <label className='required fw-bold fs-6 mb-2'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.LABEL.FULL_NAME' })}</label>
             {/* end::Label */}
 
             {/* begin::Input */}
             <input
-              placeholder='Full name'
+              placeholder={intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.PLACEHOLDER.FULL_NAME' })}
               {...formik.getFieldProps('name')}
               type='text'
               name='name'
               className={clsx(
                 'form-control form-control-solid mb-3 mb-lg-0',
-                {'is-invalid': formik.touched.name && formik.errors.name},
+                { 'is-invalid': formik.touched.name && formik.errors.name },
                 {
                   'is-valid': formik.touched.name && !formik.errors.name,
                 }
@@ -182,16 +185,16 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
           {/* begin::Input group */}
           <div className='fv-row mb-7'>
             {/* begin::Label */}
-            <label className='required fw-bold fs-6 mb-2'>Email</label>
+            <label className='required fw-bold fs-6 mb-2'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.LABEL.EMAIL' })}</label>
             {/* end::Label */}
 
             {/* begin::Input */}
             <input
-              placeholder='Email'
+              placeholder={intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.PLACEHOLDER.EMAIL' })}
               {...formik.getFieldProps('email')}
               className={clsx(
                 'form-control form-control-solid mb-3 mb-lg-0',
-                {'is-invalid': formik.touched.email && formik.errors.email},
+                { 'is-invalid': formik.touched.email && formik.errors.email },
                 {
                   'is-valid': formik.touched.email && !formik.errors.email,
                 }
@@ -213,7 +216,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
           {/* begin::Input group */}
           <div className='mb-7'>
             {/* begin::Label */}
-            <label className='required fw-bold fs-6 mb-5'>Role</label>
+            <label className='required fw-bold fs-6 mb-5'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.LABEL.ROLE' })}</label>
             {/* end::Label */}
             {/* begin::Roles */}
             {/* begin::Input row */}
@@ -235,9 +238,9 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
                 {/* end::Input */}
                 {/* begin::Label */}
                 <label className='form-check-label' htmlFor='kt_modal_update_role_option_0'>
-                  <div className='fw-bolder text-gray-800'>Administrator</div>
+                  <div className='fw-bolder text-gray-800'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.ADMINISTRATOR' })}</div>
                   <div className='text-gray-600'>
-                    Best for business owners and company administrators
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.ADMINISTRATOR.DESC' })}
                   </div>
                 </label>
                 {/* end::Label */}
@@ -264,9 +267,9 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
                 {/* end::Input */}
                 {/* begin::Label */}
                 <label className='form-check-label' htmlFor='kt_modal_update_role_option_1'>
-                  <div className='fw-bolder text-gray-800'>Developer</div>
+                  <div className='fw-bolder text-gray-800'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.DEVELOPER' })}</div>
                   <div className='text-gray-600'>
-                    Best for developers or people primarily using the API
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.DEVELOPER.DESC' })}
                   </div>
                 </label>
                 {/* end::Label */}
@@ -294,10 +297,9 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
                 {/* end::Input */}
                 {/* begin::Label */}
                 <label className='form-check-label' htmlFor='kt_modal_update_role_option_2'>
-                  <div className='fw-bolder text-gray-800'>Analyst</div>
+                  <div className='fw-bolder text-gray-800'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.ANALYST' })}</div>
                   <div className='text-gray-600'>
-                    Best for people who need full access to analytics data, but don't need to update
-                    business settings
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.ANALYST.DESC' })}
                   </div>
                 </label>
                 {/* end::Label */}
@@ -324,9 +326,9 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
                 {/* end::Input */}
                 {/* begin::Label */}
                 <label className='form-check-label' htmlFor='kt_modal_update_role_option_3'>
-                  <div className='fw-bolder text-gray-800'>Support</div>
+                  <div className='fw-bolder text-gray-800'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.SUPPORT' })}</div>
                   <div className='text-gray-600'>
-                    Best for employees who regularly refund payments and respond to disputes
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.SUPPORT.DESC' })}
                   </div>
                 </label>
                 {/* end::Label */}
@@ -353,10 +355,9 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
                 {/* end::Input */}
                 {/* begin::Label */}
                 <label className='form-check-label' htmlFor='kt_modal_update_role_option_4'>
-                  <div className='fw-bolder text-gray-800'>Trial</div>
+                  <div className='fw-bolder text-gray-800'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.TRIAL' })}</div>
                   <div className='text-gray-600'>
-                    Best for people who need to preview content data, but don't need to make any
-                    updates
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.ROLE.TRIAL.DESC' })}
                   </div>
                 </label>
                 {/* end::Label */}
@@ -379,7 +380,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
             data-kt-users-modal-action='cancel'
             disabled={formik.isSubmitting || isUserLoading}
           >
-            Discard
+            {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.BUTTON.DISCARD' })}
           </button>
 
           <button
@@ -388,10 +389,10 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
             data-kt-users-modal-action='submit'
             disabled={isUserLoading || formik.isSubmitting || !formik.isValid || !formik.touched}
           >
-            <span className='indicator-label'>Submit</span>
+            <span className='indicator-label'>{intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.BUTTON.SUBMIT' })}</span>
             {(formik.isSubmitting || isUserLoading) && (
               <span className='indicator-progress'>
-                Please wait...{' '}
+                {intl.formatMessage({ id: 'USER_MANAGEMENT.EDIT_MODAL.BUTTON.WAIT' })}{' '}
                 <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
               </span>
             )}
@@ -404,4 +405,4 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
   )
 }
 
-export {UserEditModalForm}
+export { UserEditModalForm }

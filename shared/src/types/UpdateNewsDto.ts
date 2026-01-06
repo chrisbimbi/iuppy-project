@@ -1,5 +1,5 @@
 import { NewsSettings } from "./NewsSettings";
-import { NewsType } from "./NewsType";
+
 
 export interface UpdateNewsDto {
   companyId: string;
@@ -8,8 +8,9 @@ export interface UpdateNewsDto {
   content: string;
   channelId: string;
   authorId: string;
-  type: NewsType; // Deve corresponder ao enum ou tipo usado no backend
-  isPublished: boolean;
+  hashtags?: string[];
+  isPublished?: boolean;
+  mustAcknowledge?: boolean;
   attachments: { url: string; name: string }[]; // Exemplo de estrutura para arquivos
   highlightImages: {
     name: any; url: string; altText?: string

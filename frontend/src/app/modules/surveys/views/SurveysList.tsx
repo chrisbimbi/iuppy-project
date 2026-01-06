@@ -2,6 +2,7 @@
 import { FC } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
+import { useIntl } from 'react-intl'
 import { Survey, SurveyStatus } from '@shared/types'
 import SurveyTotalResponses from './SurveyTotalResponses'
 
@@ -26,6 +27,7 @@ const SurveysList: FC<Props> = ({
 }) => {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
+    const intl = useIntl()
 
     const spaceId = searchParams.get('spaceId') || ''
     const filteredData = spaceId
@@ -40,7 +42,7 @@ const SurveysList: FC<Props> = ({
         <div className="card">
             <div className="card-header border-0 pt-5">
                 <h3 className="card-title align-items-start flex-column">
-                    <span className="card-label fw-bold fs-3 mb-1">Enquetes Cadastradas</span>
+                    <span className="card-label fw-bold fs-3 mb-1">{intl.formatMessage({ id: 'SURVEYS.LIST.TITLE', defaultMessage: 'Enquetes Cadastradas' })}</span>
                 </h3>
             </div>
 
@@ -61,28 +63,28 @@ const SurveysList: FC<Props> = ({
                                         />
                                     </div>
                                 </th>
-                                <th>Título</th>
-                                <th>Status</th>
-                                <th>Criado em</th>
-                                <th>Atualizado em</th>
-                                <th># de Questões</th>
-                                <th>Respostas</th>
-                                <th className="text-end">Ações</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.TITLE', defaultMessage: 'Título' })}</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.STATUS', defaultMessage: 'Status' })}</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.CREATED_AT', defaultMessage: 'Criado em' })}</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.QUESTIONS', defaultMessage: '# de Questões' })}</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.RESPONSES', defaultMessage: 'Respostas' })}</th>
+                                <th className="text-end">{intl.formatMessage({ id: 'SURVEYS.LIST.HEADER.ACTIONS', defaultMessage: 'Ações' })}</th>
                             </tr>
                         </thead>
 
                         <tbody className="text-gray-600 fw-semibold">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8}>Carregando...</td>
+                                    <td colSpan={8}>{intl.formatMessage({ id: 'SURVEYS.LIST.STATE.LOADING', defaultMessage: 'Carregando...' })}</td>
                                 </tr>
                             ) : filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8}>Nenhuma enquete encontrada.</td>
+                                    <td colSpan={8}>{intl.formatMessage({ id: 'SURVEYS.LIST.STATE.EMPTY', defaultMessage: 'Nenhuma enquete encontrada.' })}</td>
                                 </tr>
                             ) : (
                                 filteredData.map((survey) => {
                                     const hasQuestions = (survey.questions?.length ?? 0) > 0
+                                    const isPublished = survey.status === SurveyStatus.Published
 
                                     return (
                                         <tr key={survey.id}>
@@ -103,65 +105,66 @@ const SurveysList: FC<Props> = ({
                                                 </div>
                                             </td>
 
-                                            <td className="text-gray-800">{survey.title}</td>
+                                            <td>
+                                                <span className="text-gray-800 fw-bold d-block fs-6">{survey.title}</span>
+                                                <span className="text-muted fw-semibold d-block fs-7">{survey.description || ''}</span>
+                                            </td>
 
                                             <td>
-                                                {survey.status === SurveyStatus.Published ? (
-                                                    <span className="badge badge-light-success">Ativa</span>
+                                                {isPublished ? (
+                                                    <span className="badge badge-light-success">{intl.formatMessage({ id: 'SURVEYS.LIST.STATUS.ACTIVE', defaultMessage: 'Ativa' })}</span>
                                                 ) : (
-                                                    <span className="badge badge-light-danger">Inativa</span>
+                                                    <span className="badge badge-light-warning">{intl.formatMessage({ id: 'SURVEYS.LIST.STATUS.DRAFT', defaultMessage: 'Rascunho' })}</span>
                                                 )}
                                             </td>
 
                                             <td>{new Date(survey.createdAt as any).toLocaleDateString()}</td>
-                                            <td>{new Date(survey.updatedAt as any).toLocaleDateString()}</td>
 
                                             <td>{survey.questions?.length ?? 0}</td>
 
                                             <td>
-                                                <SurveyTotalResponses surveyId={survey.id} />
+                                                <span className="badge badge-light fw-bold text-muted px-3 py-2">
+                                                    <SurveyTotalResponses surveyId={survey.id} />
+                                                </span>
                                             </td>
 
                                             <td className="text-end">
                                                 <div className="dropdown">
                                                     <button
-                                                        className="btn btn-icon"
+                                                        className="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
                                                         data-bs-toggle="dropdown"
                                                         aria-expanded="false"
                                                     >
-                                                        <i className="bi bi-three-dots-vertical"></i>
+                                                        <i className="bi bi-three-dots-vertical fs-3"></i>
                                                     </button>
 
-                                                    <ul className="dropdown-menu dropdown-menu-end">
+                                                    <ul className="dropdown-menu dropdown-menu-end menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-200px py-4">
                                                         <li>
-                                                            <button className="dropdown-item" onClick={() => onEdit(survey)}>
-                                                                Editar
+                                                            <button className="dropdown-item px-3" onClick={() => onEdit(survey)}>
+                                                                {intl.formatMessage({ id: 'SURVEYS.LIST.ACTION.EDIT', defaultMessage: 'Editar' })}
                                                             </button>
                                                         </li>
 
-                                                        <li>
-                                                            <button
-                                                                className="dropdown-item"
-                                                                onClick={() => navigate(`/modules/surveys/${survey.id}/edit?step=3`)}
-                                                                title="Ir direto para o passo de perguntas"
-                                                            >
-                                                                Ir para Perguntas
-                                                            </button>
-                                                        </li>
+                                                        {/* Atalho para editar perguntas se for rascunho */}
+                                                        {!isPublished && (
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item px-3"
+                                                                    onClick={() => navigate(`/modules/surveys/${survey.id}/edit?step=3`)}
+                                                                >
+                                                                    {intl.formatMessage({ id: 'SURVEYS.LIST.ACTION.EDIT_QUESTIONS', defaultMessage: 'Editar Perguntas' })}
+                                                                </button>
+                                                            </li>
+                                                        )}
 
                                                         <li>
                                                             <button
-                                                                className={clsx('dropdown-item', { disabled: !hasQuestions })}
+                                                                className={clsx('dropdown-item px-3', { disabled: !hasQuestions })}
                                                                 onClick={() => {
                                                                     if (hasQuestions) navigate(`/surveys/${survey.id}/results`)
                                                                 }}
-                                                                title={
-                                                                    hasQuestions
-                                                                        ? 'Ver resultados da enquete'
-                                                                        : 'Adicione perguntas para habilitar os resultados'
-                                                                }
                                                             >
-                                                                Ver Resultados
+                                                                {intl.formatMessage({ id: 'SURVEYS.LIST.ACTION.RESULTS', defaultMessage: 'Ver Resultados' })}
                                                             </button>
                                                         </li>
 
@@ -169,19 +172,19 @@ const SurveysList: FC<Props> = ({
 
                                                         <li>
                                                             <button
-                                                                className="dropdown-item"
+                                                                className="dropdown-item px-3"
                                                                 onClick={() => onDuplicate(survey)}
                                                             >
-                                                                Duplicar
+                                                                {intl.formatMessage({ id: 'SURVEYS.LIST.ACTION.DUPLICATE', defaultMessage: 'Duplicar' })}
                                                             </button>
                                                         </li>
 
                                                         <li>
                                                             <button
-                                                                className="dropdown-item text-danger"
+                                                                className="dropdown-item px-3 text-danger"
                                                                 onClick={() => onDelete([survey.id])}
                                                             >
-                                                                Excluir
+                                                                {intl.formatMessage({ id: 'SURVEYS.LIST.ACTION.DELETE', defaultMessage: 'Excluir' })}
                                                             </button>
                                                         </li>
                                                     </ul>

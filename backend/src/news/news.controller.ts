@@ -15,22 +15,33 @@ import {
 import { CreateNewDto } from './dto/create-news.dto';
 import { UpdateNewDto } from './dto/update-news.dto';
 import { NewsService } from './news.service';
+import { NewsAnalyticsService } from './news-analytics.service';
+import { HashtagAnalyticsService } from './hashtag-analytics.service';
 import { AudienceResolverService } from './audience-resolver.service';
+import { AccessControlService } from 'src/access-control/access-control.service';
 import { AudienceProbeDto } from './dto/audience-probe.dto';
-import { AudienceMode, News } from '@shared/types';
+import { AudienceMode, News, Role } from '@shared/types';
 import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
+import { AuthenticatedRequest } from 'src/common/types/authenticated-request.interface';
+import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-access.guard';
 
 @Controller('news')
 export class NewsController {
   constructor(
     private readonly newsService: NewsService,
     private readonly audienceResolverService: AudienceResolverService,
-  ) {}
+    private readonly newsAnalyticsService: NewsAnalyticsService,
+    private readonly hashtagAnalyticsService: HashtagAnalyticsService,
+    private readonly accessControlService: AccessControlService,
+  ) { }
 
   @Post()
   @UseGuards(JwtAccessGuard)
-  async create(@Req() req: any, @Body() dto: CreateNewDto): Promise<News> {
-    const user = req.user || {};
+  async create(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateNewDto,
+  ): Promise<News> {
+    const user = req.user;
     const payload: CreateNewDto = {
       ...dto,
       companyId: user.companyId ?? dto.companyId,
@@ -39,19 +50,62 @@ export class NewsController {
     try {
       return await this.newsService.create(payload);
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
   /** Se for passado ?channelId=xxx, retorna só esse canal; senão, tudo. */
   @Get()
-  async findAll(@Query('channelId') channelId?: string): Promise<News[]> {
-    return await this.newsService.findAll(channelId);
+  @UseGuards(OptionalJwtAuthGuard)
+  async findAll(
+    @Query('channelId') channelId?: string,
+    @Req() req?: any,
+  ): Promise<News[]> {
+    const user = req?.user;
+    const companyId = user?.companyId;
+    const role = user?.role;
+    const userId = user?.id || user?.sub;
+
+    let filterUserId: string | undefined;
+    let allowedSpaceIds: string[] | undefined;
+
+    if (role === Role.User) {
+      // Regular users: strict segmentation
+      filterUserId = userId;
+    } else {
+      // Admins/Managers: Check ACL capabilities
+      const caps = await this.accessControlService.capabilities(companyId, { id: userId, role });
+      const newsCaps = caps.modules.news;
+
+      if (!newsCaps?.canView) {
+        // If no view access to News module, return empty
+        return [];
+      }
+
+      if (newsCaps.scopeType === 'SPACE_IDS') {
+        allowedSpaceIds = newsCaps.spaceIds;
+      }
+      // If scopeType is ALL_SPACES, allowedSpaceIds remains undefined (no filter)
+    }
+
+    return await this.newsService.findAll(companyId, channelId, filterUserId, allowedSpaceIds);
+  }
+
+  @Get('hashtags')
+  @UseGuards(JwtAccessGuard)
+  async getHashtags(@Req() req: AuthenticatedRequest, @Query('q') q?: string): Promise<string[]> {
+    const user = req.user;
+    return await this.newsService.getHashtags(user.companyId, q);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<News> {
-    const news = await this.newsService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  async findOne(@Param('id') id: string, @Req() req?: any): Promise<News> {
+    const userId = req?.user?.id || req?.user?.sub;
+    const news = await this.newsService.findOne(id, userId);
     if (!news) {
       throw new HttpException('News not found', HttpStatus.NOT_FOUND);
     }
@@ -60,8 +114,12 @@ export class NewsController {
 
   @Put(':id')
   @UseGuards(JwtAccessGuard)
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateNewDto): Promise<News> {
-    const user = req.user || {};
+  async update(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateNewDto,
+  ): Promise<News> {
+    const user = req.user;
     const toUpdate: UpdateNewDto = {
       ...dto,
       companyId: user.companyId ?? dto.companyId,
@@ -82,12 +140,18 @@ export class NewsController {
 
   @Post(':id/publish')
   @UseGuards(JwtAccessGuard)
-  async publishNews(@Req() req: any, @Param('id') id: string): Promise<News> {
-    const user = req.user || {};
+  async publishNews(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ): Promise<News> {
+    const user = req.user;
     try {
       return await this.newsService.publish(id, user.companyId);
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -95,15 +159,18 @@ export class NewsController {
   @Post(':id/resend')
   @UseGuards(JwtAccessGuard)
   async resendNewsToUnopened(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body?: { pushTitle?: string; pushContent?: string },
   ): Promise<{ sent?: number; requested?: number }> {
-    const user = req.user || {};
+    const user = req.user;
     try {
       return await this.newsService.resendToUnopened(id, user.companyId, body);
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -111,32 +178,66 @@ export class NewsController {
   @Get(':id/unopened-users')
   @UseGuards(JwtAccessGuard)
   async getUnopenedUsers(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-  ): Promise<Array<{ id: string; name?: string | null; email?: string | null }>> {
-    const user = req.user || {};
+  ): Promise<
+    Array<{ id: string; name?: string | null; email?: string | null }>
+  > {
+    const user = req.user;
     try {
       return await this.newsService.listUnopenedUsers(id, user.companyId);
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
   @Post('audience/probe')
   @UseGuards(JwtAccessGuard)
   async probeAudience(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: AudienceProbeDto,
-  ): Promise<{ totalUsuarios: number; comTokenAtivo: number; mode: AudienceMode; identifiers: Record<string, any> }> {
-    const user = req.user || {};
+  ): Promise<{
+    totalUsuarios: number;
+    comTokenAtivo: number;
+    mode: AudienceMode;
+    identifiers: Record<string, any>;
+  }> {
+    const user = req.user;
     try {
       return await this.audienceResolverService.probe(
         user.companyId,
         dto.mode,
-        { spaceId: dto.spaceId, channelIds: dto.channelIds, groupIds: dto.groupIds },
+        {
+          spaceId: dto.spaceId,
+          channelIds: dto.channelIds,
+          groupIds: dto.groupIds,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post(':id/acknowledge')
+  @UseGuards(JwtAccessGuard)
+  async acknowledge(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ): Promise<void> {
+    const user = req.user;
+    try {
+      await this.newsService.acknowledge(id, user.id, user.companyId);
+    } catch (error: any) {
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -148,7 +249,7 @@ export class NewsController {
   @Get(':id/users/opened')
   @UseGuards(JwtAccessGuard)
   async usersOpened(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -156,16 +257,23 @@ export class NewsController {
     @Query('offset') offset?: string,
     @Query('q') q?: string,
   ) {
-    const user = req.user || {};
+    const user = req.user;
     try {
-      return await this.newsService.listOpenedUsers(
+      return await this.newsAnalyticsService.listOpenedUsers(
         id,
         user.companyId,
         { from, to },
-        { limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined, q },
+        {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+          q,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -173,7 +281,7 @@ export class NewsController {
   @Get(':id/users/acknowledged')
   @UseGuards(JwtAccessGuard)
   async usersAcknowledged(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -181,16 +289,23 @@ export class NewsController {
     @Query('offset') offset?: string,
     @Query('q') q?: string,
   ) {
-    const user = req.user || {};
+    const user = req.user;
     try {
-      return await this.newsService.listAcknowledgedUsers(
+      return await this.newsAnalyticsService.listAcknowledgedUsers(
         id,
         user.companyId,
         { from, to },
-        { limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined, q },
+        {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+          q,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -198,7 +313,7 @@ export class NewsController {
   @Get(':id/users/reacted')
   @UseGuards(JwtAccessGuard)
   async usersReacted(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -206,16 +321,23 @@ export class NewsController {
     @Query('offset') offset?: string,
     @Query('q') q?: string,
   ) {
-    const user = req.user || {};
+    const user = req.user;
     try {
-      return await this.newsService.listReactedUsers(
+      return await this.newsAnalyticsService.listReactedUsers(
         id,
         user.companyId,
         { from, to },
-        { limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined, q },
+        {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+          q,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -223,7 +345,7 @@ export class NewsController {
   @Get(':id/users/commented')
   @UseGuards(JwtAccessGuard)
   async usersCommented(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -231,16 +353,23 @@ export class NewsController {
     @Query('offset') offset?: string,
     @Query('q') q?: string,
   ) {
-    const user = req.user || {};
+    const user = req.user;
     try {
-      return await this.newsService.listCommentedUsers(
+      return await this.newsAnalyticsService.listCommentedUsers(
         id,
         user.companyId,
         { from, to },
-        { limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined, q },
+        {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+          q,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -248,7 +377,7 @@ export class NewsController {
   @Get(':id/users/shared')
   @UseGuards(JwtAccessGuard)
   async usersShared(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -256,16 +385,37 @@ export class NewsController {
     @Query('offset') offset?: string,
     @Query('q') q?: string,
   ) {
-    const user = req.user || {};
+    const user = req.user;
     try {
-      return await this.newsService.listSharedUsers(
+      return await this.newsAnalyticsService.listSharedUsers(
         id,
         user.companyId,
         { from, to },
-        { limit: limit ? Number(limit) : undefined, offset: offset ? Number(offset) : undefined, q },
+        {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+          q,
+        },
       );
     } catch (error: any) {
-      throw new HttpException(error?.message || 'Bad Request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error?.message || 'Bad Request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
+  }
+
+  @Get('analytics/hashtags/top')
+  @UseGuards(JwtAccessGuard)
+  async getTopHashtags(@Req() req: AuthenticatedRequest, @Query('limit') limit?: string) {
+    const user = req.user;
+    return await this.hashtagAnalyticsService.getTopHashtags(user.companyId, limit ? Number(limit) : undefined);
+  }
+
+  @Get('analytics/hashtags/:tag')
+  @UseGuards(JwtAccessGuard)
+  async getHashtagEngagement(@Req() req: AuthenticatedRequest, @Param('tag') tag: string) {
+    const user = req.user;
+    return await this.hashtagAnalyticsService.getHashtagEngagement(user.companyId, tag);
   }
 }

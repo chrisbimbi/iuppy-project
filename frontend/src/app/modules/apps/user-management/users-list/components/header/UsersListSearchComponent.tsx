@@ -1,11 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import {useEffect, useState} from 'react'
-import {initialQueryState, KTIcon, useDebounce} from '../../../../../../..//helpers'
-import {useQueryRequest} from '../../core/QueryRequestProvider'
+import { useEffect, useState } from 'react'
+import { initialQueryState, KTIcon, useDebounce } from '../../../../../../..//helpers'
+import { useQueryRequest } from '../../core/QueryRequestProvider'
+import { useIntl } from 'react-intl'
 
 const UsersListSearchComponent = () => {
-  const {updateState} = useQueryRequest()
+  const intl = useIntl()
+  const { updateState } = useQueryRequest()
   const [searchTerm, setSearchTerm] = useState<string>('')
   // Debounce search term so that it only gives us latest value ...
   // ... if searchTerm has not been updated within last 500ms.
@@ -16,7 +18,7 @@ const UsersListSearchComponent = () => {
   useEffect(
     () => {
       if (debouncedSearchTerm !== undefined && searchTerm !== undefined) {
-        updateState({search: debouncedSearchTerm, ...initialQueryState})
+        updateState({ search: debouncedSearchTerm, ...initialQueryState })
       }
     },
     [debouncedSearchTerm] // Only call effect if debounced search term changes
@@ -32,7 +34,7 @@ const UsersListSearchComponent = () => {
           type='text'
           data-kt-user-table-filter='search'
           className='form-control form-control-solid w-250px ps-14'
-          placeholder='Search user'
+          placeholder={intl.formatMessage({ id: 'USER_MANAGEMENT.SEARCH.PLACEHOLDER' })}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -42,4 +44,4 @@ const UsersListSearchComponent = () => {
   )
 }
 
-export {UsersListSearchComponent}
+export { UsersListSearchComponent }

@@ -2,6 +2,7 @@ export enum ChannelType {
   ARTICLES = 'articles',
   MEDIA = 'media',
   UPDATES = 'updates',
+  SOCIAL = 'social',
 }
 
 export interface Channel {

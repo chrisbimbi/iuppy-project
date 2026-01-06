@@ -1,6 +1,6 @@
 // src/app/routing/PrivateRoutes.tsx
 
-import { FC, Suspense } from 'react'
+import React, { FC, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TopBarProgress from 'react-topbar-progress-indicator'
 
@@ -10,7 +10,9 @@ import BuilderPageWrapper from '../pages/layout-builder/BuilderPageWrapper'
 
 import NewsStatsPage from 'src/app/modules/communication/views/NewsStatsPage'
 import NewsCommentsPage from 'src/app/modules/communication/views/NewsCommentsPage'
+import CampaignsPage from '../modules/communication/views/CampaignsPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
+import { UsersPage } from '../modules/users/controllers/UsersPage'
 import ChannelsPage from '../modules/channels/controllers/ChannelsPage'
 
 import SurveysPage from '../modules/surveys/controllers/SurveysPage'
@@ -35,6 +37,27 @@ import FormSubmissionsPage from '../modules/forms/controllers/FormSubmissionsPag
 import FormStatsPage from '../modules/forms/controllers/FormStatsPage'
 // 🔥 CORREÇÃO: Importação com caminho relativo
 import FormsDashboardPage from '../modules/forms/controllers/FormsDashboardPage'
+import JourneysPage from '../modules/journeys/JourneysPage'
+import { SocialAnalyticsPage } from '../modules/social/SocialAnalyticsPage'
+import Nr1ParticipationHub from '../modules/nr1/views/ParticipationHub'
+import RiskInventoryPage from '../modules/nr1/views/risk-inventory/RiskInventoryPage'
+import ActionPlansPage from '../modules/nr1/views/action-plans/ActionPlansPage'
+import EmergencyPage from '../modules/nr1/views/emergency/EmergencyPage'
+import TrainingsPage from '../modules/nr1/views/trainings/TrainingsPage'
+import AuditExportPage from '../modules/nr1/views/audit/AuditExportPage'
+import EsocialQueuePage from '../modules/nr1/views/esocial/EsocialQueuePage'
+import AnalyticsPage from '../modules/nr1/views/analytics/AnalyticsPage'
+
+// 🔥 MODULES
+import VacationDashboard from '../modules/vacations/views/VacationDashboard'
+import VacationRequestsPage from '../modules/vacations/views/VacationRequestsPage'
+import { VacationPolicyConfig } from '../modules/vacations/views/VacationPolicyConfig'
+import { MyVacationsPage } from '../modules/vacations/views/MyVacationsPage'
+import PerformanceDashboard from '../modules/performance/views/PerformanceDashboard'
+import { OneOnOnePage } from '../modules/performance/views/OneOnOnePage'
+import { MyPDIPage } from '../modules/performance/views/MyPDIPage'
+import { CompanyGoals } from '../modules/performance/views/CompanyGoals'
+import IntegrationsWorkspace from '../modules/integrations/IntegrationsWorkspace'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -53,6 +76,94 @@ const PrivateRoutes: FC = () => {
         {/* Analytics – visão geral de conteúdos */}
         <Route path="analytics/contents" element={<ContentsOverviewPage />} />
 
+
+
+        {/* Social Analytics */}
+        <Route
+          path="social-analytics"
+          element={
+            <RequireModule moduleKey="social">
+              <SocialAnalyticsPage />
+            </RequireModule>
+          }
+        />
+
+        {/* Vacations */}
+        <Route
+          path="vacations/policy"
+          element={
+            <RequireModule moduleKey="vacations">
+              <VacationPolicyConfig />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="vacations/requests"
+          element={
+            <RequireModule moduleKey="vacations">
+              <VacationRequestsPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="vacations"
+          element={
+            <RequireModule moduleKey="vacations">
+              <VacationDashboard />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="vacations/my-vacations"
+          element={
+            <RequireModule moduleKey="vacations">
+              <MyVacationsPage />
+            </RequireModule>
+          }
+        />
+
+        {/* Performance */}
+        <Route
+          path="performance"
+          element={
+            <RequireModule moduleKey="performance">
+              <PerformanceDashboard />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="performance/1on1"
+          element={
+            <RequireModule moduleKey="performance">
+              <OneOnOnePage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="performance/my-pdi"
+          element={
+            <RequireModule moduleKey="performance">
+              <MyPDIPage />
+            </RequireModule>
+          }
+        />
+        <Route
+          path="performance/goals"
+          element={
+            <RequireModule moduleKey="performance">
+              <CompanyGoals />
+            </RequireModule>
+          }
+        />
+
+        {/* Integrations Workspace */}
+        <Route
+          path="integrations"
+          element={
+            <IntegrationsWorkspace />
+          }
+        />
+
         {/* 🔥 NOVO: Analytics – visão geral de FORMS */}
         <Route
           path="forms/dashboard"
@@ -63,11 +174,104 @@ const PrivateRoutes: FC = () => {
           }
         />
 
+        {/* Usuários */}
+        <Route path="users" element={<UsersPage />} />
+
         {/* Grupos */}
         <Route path="groups" element={<GroupsPage />} />
 
         {/* Canais */}
         <Route path="channels" element={<ChannelsPage />} />
+
+        {/* 🔥 NR-1 */}
+        <Route
+          path="modules/nr1/participation"
+          element={
+            <RequireModule moduleKey="nr1">
+              {/* Lazy load helps, but direct import is fine for now if we import it */}
+              <React.Suspense fallback={<TopBarProgress />}>
+                <Nr1ParticipationHub />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/risks"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <RiskInventoryPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/actions"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <ActionPlansPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/emergency"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <EmergencyPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/trainings"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <TrainingsPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/audit"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <AuditExportPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/esocial"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <EsocialQueuePage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/analytics"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <AnalyticsPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
 
         {/* Surveys */}
         <Route path="modules" element={<ModulesLanding />} />
@@ -157,6 +361,16 @@ const PrivateRoutes: FC = () => {
           element={
             <RequireModule moduleKey="forms">
               <FormStatsPage />
+            </RequireModule>
+          }
+        />
+
+        {/* Journeys */}
+        <Route
+          path="journeys/*"
+          element={
+            <RequireModule moduleKey="journeys">
+              <JourneysPage />
             </RequireModule>
           }
         />

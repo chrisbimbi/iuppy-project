@@ -43,18 +43,49 @@
 
 /* Begin PBXFileReference section */
 		0768B810F77DC93E3AFC90CA /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		0843FBC9DBB55C021B1C1C67 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		0A2F9B6B8DE7301B68DAEDD3 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
+		0C18A9EF8CA50E0861288E99 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		18B52817DB36C7EBFCBC5E23 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
 		194240874FB3200533661285 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		25BE1370FC4EA82DC604D731 /* Pods-Runner.debug-iuppydev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-iuppydev.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-iuppydev.xcconfig"; sourceTree = "<group>"; };
+		26C7158405F4AA7AF46276C4 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		2FF1280836D820C3044DECFE /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		303A34D57CA21838CE92176E /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		32BCB9E3F6629ED815B6F5DD /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		333E3E024B20D15B1ECC08DB /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		41096BAD9489ECCD6AD90D1C /* Pods-Runner.debug-iuppyprod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-iuppyprod.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-iuppyprod.xcconfig"; sourceTree = "<group>"; };
+		48852B6724227A45B848976F /* Pods-Runner.release-iuppyprod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release-iuppyprod.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release-iuppyprod.xcconfig"; sourceTree = "<group>"; };
+		4AD39A5EE9292B0A4E5171CC /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
+		4C4F1518531E314B2ED334A5 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
 		5010AD322E7AC411005F4894 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		53FFDF245122BB6DDDB869A0 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		5EF4A9C5225A131419CDE3EB /* Pods-Runner.release-nextsalesdev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release-nextsalesdev.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release-nextsalesdev.xcconfig"; sourceTree = "<group>"; };
 		5F5B586454AE19A46F41FBBF /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		61CD9F3445C1F6000A9E8F4B /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		637666215825CDF4E8F9341F /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		65DC9D8C36BE82CDC8EDE874 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		6D0C2F3561B925C193C858F8 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
+		6EBD55915448F1F6839DDA4B /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		745894C919CF3DA4DD82BE3C /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7719F40899F2C6424D2AA914 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
 		78A5251E974E2818246D2F89 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		7994453DEA1C020C33940AA5 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		7A4A611BB5BF959728DF8F74 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		7D83C7DADEF1955F7C9917ED /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		7EEAD728D68DB11C0D22EC76 /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		81D8A4DB2403D7C35092A4AA /* Pods-Runner.debug-nextsalesprod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-nextsalesprod.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-nextsalesprod.xcconfig"; sourceTree = "<group>"; };
+		85172DD11B07259721CC9F77 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		8717F25D6A41B2DDB8B7AE8F /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		92EA2F0317A1DA7BBB3A7F95 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,7 +93,28 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		98103859252407252264D486 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
+		9D9F8498E44AF4A5841ED24B /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		9EC937F061D57240EA81F462 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		A05A8560EBB714E1428BAD5D /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
 		A5E035C09D43B58F0751A5C3 /* libPods-Runner.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Runner.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE751847A429907FD86C5472 /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		B118771E4B95FD7D7F5C2FBF /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		B9655E4B6B074F75C4D029CC /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		C5F931D2CDC1F5402058293E /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		C7751179D8356FBBA816A410 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		C8F7FA50364E91369E28EFD2 /* Pods-Runner.debug-nextsalesdev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-nextsalesdev.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-nextsalesdev.xcconfig"; sourceTree = "<group>"; };
+		CAC584C79741A719C9AEE3EF /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		CFBC37250CE7EB3A5D9616E1 /* nextsalesDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesDev.xcconfig; path = Flutter/nextsalesDev.xcconfig; sourceTree = "<group>"; };
+		D4A5BA8ED66D125FD3A49FB7 /* iuppyDev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyDev.xcconfig; path = Flutter/iuppyDev.xcconfig; sourceTree = "<group>"; };
+		E02365708373694180A08962 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		E44A615C3EFCD2D4448A2DE1 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		E7ACDD92687611C20A61061B /* Pods-Runner.release-nextsalesprod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release-nextsalesprod.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release-nextsalesprod.xcconfig"; sourceTree = "<group>"; };
+		E805D70C6D626BD2C1A3DD6E /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
+		EDB846007504ED65560B463C /* Pods-Runner.release-iuppydev.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release-iuppydev.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release-iuppydev.xcconfig"; sourceTree = "<group>"; };
+		F5C88C97746709CD5498659C /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		F9739AB02CDB0535C3D470DD /* iuppyProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = iuppyProd.xcconfig; path = Flutter/iuppyProd.xcconfig; sourceTree = "<group>"; };
+		F9E6CEB3D460DD9F2E606377 /* nextsalesProd.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = nextsalesProd.xcconfig; path = Flutter/nextsalesProd.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +158,14 @@
 				194240874FB3200533661285 /* Pods-Runner.debug.xcconfig */,
 				78A5251E974E2818246D2F89 /* Pods-Runner.release.xcconfig */,
 				5F5B586454AE19A46F41FBBF /* Pods-Runner.profile.xcconfig */,
+				25BE1370FC4EA82DC604D731 /* Pods-Runner.debug-iuppydev.xcconfig */,
+				EDB846007504ED65560B463C /* Pods-Runner.release-iuppydev.xcconfig */,
+				41096BAD9489ECCD6AD90D1C /* Pods-Runner.debug-iuppyprod.xcconfig */,
+				48852B6724227A45B848976F /* Pods-Runner.release-iuppyprod.xcconfig */,
+				C8F7FA50364E91369E28EFD2 /* Pods-Runner.debug-nextsalesdev.xcconfig */,
+				5EF4A9C5225A131419CDE3EB /* Pods-Runner.release-nextsalesdev.xcconfig */,
+				81D8A4DB2403D7C35092A4AA /* Pods-Runner.debug-nextsalesprod.xcconfig */,
+				E7ACDD92687611C20A61061B /* Pods-Runner.release-nextsalesprod.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -117,6 +177,50 @@
 				9740EEB21CF90195004384FC /* Debug.xcconfig */,
 				7AFA3C8E1D35360C0083082E /* Release.xcconfig */,
 				9740EEB31CF90195004384FC /* Generated.xcconfig */,
+				333E3E024B20D15B1ECC08DB /* iuppyDev.xcconfig */,
+				7EEAD728D68DB11C0D22EC76 /* iuppyProd.xcconfig */,
+				6D0C2F3561B925C193C858F8 /* iuppyDev.xcconfig */,
+				F5C88C97746709CD5498659C /* iuppyProd.xcconfig */,
+				D4A5BA8ED66D125FD3A49FB7 /* iuppyDev.xcconfig */,
+				745894C919CF3DA4DD82BE3C /* iuppyProd.xcconfig */,
+				4C4F1518531E314B2ED334A5 /* iuppyDev.xcconfig */,
+				C5F931D2CDC1F5402058293E /* iuppyProd.xcconfig */,
+				92EA2F0317A1DA7BBB3A7F95 /* iuppyDev.xcconfig */,
+				B118771E4B95FD7D7F5C2FBF /* iuppyProd.xcconfig */,
+				98103859252407252264D486 /* iuppyDev.xcconfig */,
+				A05A8560EBB714E1428BAD5D /* iuppyProd.xcconfig */,
+				7719F40899F2C6424D2AA914 /* iuppyDev.xcconfig */,
+				B9655E4B6B074F75C4D029CC /* iuppyProd.xcconfig */,
+				32BCB9E3F6629ED815B6F5DD /* iuppyDev.xcconfig */,
+				AE751847A429907FD86C5472 /* iuppyProd.xcconfig */,
+				0A2F9B6B8DE7301B68DAEDD3 /* iuppyDev.xcconfig */,
+				CAC584C79741A719C9AEE3EF /* iuppyProd.xcconfig */,
+				4AD39A5EE9292B0A4E5171CC /* iuppyDev.xcconfig */,
+				F9739AB02CDB0535C3D470DD /* iuppyProd.xcconfig */,
+				26C7158405F4AA7AF46276C4 /* nextsalesDev.xcconfig */,
+				7D83C7DADEF1955F7C9917ED /* nextsalesProd.xcconfig */,
+				637666215825CDF4E8F9341F /* nextsalesDev.xcconfig */,
+				65DC9D8C36BE82CDC8EDE874 /* nextsalesProd.xcconfig */,
+				8717F25D6A41B2DDB8B7AE8F /* nextsalesDev.xcconfig */,
+				53FFDF245122BB6DDDB869A0 /* nextsalesProd.xcconfig */,
+				7994453DEA1C020C33940AA5 /* nextsalesDev.xcconfig */,
+				F9E6CEB3D460DD9F2E606377 /* nextsalesProd.xcconfig */,
+				C7751179D8356FBBA816A410 /* nextsalesDev.xcconfig */,
+				0843FBC9DBB55C021B1C1C67 /* nextsalesProd.xcconfig */,
+				85172DD11B07259721CC9F77 /* nextsalesDev.xcconfig */,
+				7A4A611BB5BF959728DF8F74 /* nextsalesProd.xcconfig */,
+				2FF1280836D820C3044DECFE /* nextsalesDev.xcconfig */,
+				0C18A9EF8CA50E0861288E99 /* nextsalesProd.xcconfig */,
+				61CD9F3445C1F6000A9E8F4B /* nextsalesDev.xcconfig */,
+				E44A615C3EFCD2D4448A2DE1 /* nextsalesProd.xcconfig */,
+				9D9F8498E44AF4A5841ED24B /* nextsalesDev.xcconfig */,
+				303A34D57CA21838CE92176E /* nextsalesProd.xcconfig */,
+				CFBC37250CE7EB3A5D9616E1 /* nextsalesDev.xcconfig */,
+				18B52817DB36C7EBFCBC5E23 /* nextsalesProd.xcconfig */,
+				6EBD55915448F1F6839DDA4B /* nextsalesDev.xcconfig */,
+				E805D70C6D626BD2C1A3DD6E /* nextsalesProd.xcconfig */,
+				9EC937F061D57240EA81F462 /* nextsalesDev.xcconfig */,
+				E02365708373694180A08962 /* nextsalesProd.xcconfig */,
 			);
 			name = Flutter;
 			sourceTree = "<group>";
@@ -192,6 +296,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				BE2A11A1E5DFFB5ECD272C1A /* [CP] Copy Pods Resources */,
+				7D0763613AA439C9EAA6AAB0 /* Copy Google Service */,
 			);
 			buildRules = (
 			);
@@ -279,6 +384,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		7D0763613AA439C9EAA6AAB0 /* Copy Google Service */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Google Service";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/copy_google_service.sh\"";
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -459,6 +582,77 @@
 			};
 			name = Profile;
 		};
+		29F98607152ED75A70515689 /* Debug-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 26C7158405F4AA7AF46276C4 /* nextsalesDev.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-nextsales";
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Next Sales DEV";
+				BUNDLE_SUFFIX = .dev;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEEP_LINK_SCHEME = nextsalesdev;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy.nextsales;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug-nextsalesDev";
+		};
 		331C8088294A63A400263BE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -505,6 +699,285 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
 			};
 			name = Profile;
+		};
+		4983694FF5F4DF11A934DAD3 /* Release-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6D0C2F3561B925C193C858F8 /* iuppyDev.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Iuppy DEV";
+				BUNDLE_SUFFIX = .dev;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEEP_LINK_SCHEME = iuppydev;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iuppy.app;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-iuppyDev";
+		};
+		502FD77B2F0BF76100453313 /* Debug-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 25BE1370FC4EA82DC604D731 /* Pods-Runner.debug-iuppydev.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = "Debug-iuppyDev";
+		};
+		502FD77C2F0BF76100453313 /* Release-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EDB846007504ED65560B463C /* Pods-Runner.release-iuppydev.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+			};
+			name = "Release-iuppyDev";
+		};
+		502FD77D2F0BF76100453313 /* Debug-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 41096BAD9489ECCD6AD90D1C /* Pods-Runner.debug-iuppyprod.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Debug-iuppyProd";
+		};
+		502FD77E2F0BF76100453313 /* Release-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 48852B6724227A45B848976F /* Pods-Runner.release-iuppyprod.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Release-iuppyProd";
+		};
+		502FD77F2F0BF76100453313 /* Debug-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C8F7FA50364E91369E28EFD2 /* Pods-Runner.debug-nextsalesdev.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Debug-nextsalesDev";
+		};
+		502FD7802F0BF76100453313 /* Release-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5EF4A9C5225A131419CDE3EB /* Pods-Runner.release-nextsalesdev.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Release-nextsalesDev";
+		};
+		502FD7812F0BF76100453313 /* Debug-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 81D8A4DB2403D7C35092A4AA /* Pods-Runner.debug-nextsalesprod.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Debug-nextsalesProd";
+		};
+		502FD7822F0BF76100453313 /* Release-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E7ACDD92687611C20A61061B /* Pods-Runner.release-nextsalesprod.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				DEVELOPMENT_TEAM = W2YT45XQPT;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy;
+				PRODUCT_NAME = Runner;
+			};
+			name = "Release-nextsalesProd";
+		};
+		502FD7832F0BF76100453313 /* Debug-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Debug-iuppyDev";
+		};
+		502FD7842F0BF76100453313 /* Release-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Release-iuppyDev";
+		};
+		502FD7852F0BF76100453313 /* Debug-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Debug-iuppyProd";
+		};
+		502FD7862F0BF76100453313 /* Release-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Release-iuppyProd";
+		};
+		502FD7872F0BF76100453313 /* Debug-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Debug-nextsalesDev";
+		};
+		502FD7882F0BF76100453313 /* Release-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Release-nextsalesDev";
+		};
+		502FD7892F0BF76100453313 /* Debug-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Debug-nextsalesProd";
+		};
+		502FD78A2F0BF76100453313 /* Release-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = RunnerTests;
+			};
+			name = "Release-nextsalesProd";
+		};
+		90A93833DAA8AFEEAFFD7899 /* Debug-iuppyDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 333E3E024B20D15B1ECC08DB /* iuppyDev.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Iuppy DEV";
+				BUNDLE_SUFFIX = .dev;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEEP_LINK_SCHEME = iuppydev;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iuppy.app;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug-iuppyDev";
 		};
 		97C147031CF9000F007C117D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -664,6 +1137,342 @@
 			};
 			name = Release;
 		};
+		AD893DEA0E8FA2AEA5B778D2 /* Release-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 65DC9D8C36BE82CDC8EDE874 /* nextsalesProd.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-nextsales";
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Next Sales";
+				BUNDLE_SUFFIX = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEEP_LINK_SCHEME = nextsales;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy.nextsales;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-nextsalesProd";
+		};
+		B813FE14BD96BE10B3EC41A5 /* Debug-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7EEAD728D68DB11C0D22EC76 /* iuppyProd.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = Iuppy;
+				BUNDLE_SUFFIX = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEEP_LINK_SCHEME = iuppy;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iuppy.app;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug-iuppyProd";
+		};
+		BC724571ED11B3004489CCD9 /* Release-iuppyProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F5C88C97746709CD5498659C /* iuppyProd.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = Iuppy;
+				BUNDLE_SUFFIX = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEEP_LINK_SCHEME = iuppy;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.iuppy.app;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-iuppyProd";
+		};
+		E5A6BA3F0D95AB377C98C25C /* Debug-nextsalesProd */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7D83C7DADEF1955F7C9917ED /* nextsalesProd.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-nextsales";
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Next Sales";
+				BUNDLE_SUFFIX = "";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEEP_LINK_SCHEME = nextsales;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy.nextsales;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Debug-nextsalesProd";
+		};
+		ECB2FECA4C870972C67FF8B4 /* Release-nextsalesDev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 637666215825CDF4E8F9341F /* nextsalesDev.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-nextsales";
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
+				BUNDLE_DISPLAY_NAME = "Next Sales DEV";
+				BUNDLE_SUFFIX = .dev;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEEP_LINK_SCHEME = nextsalesdev;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(inherited)";
+				INFOPLIST_FILE = Runner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.br.iuppy.nextsales;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "$(PROJECT_DIR)/Runner/Runner-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "Release-nextsalesDev";
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -673,6 +1482,14 @@
 				331C8088294A63A400263BE5 /* Debug */,
 				331C8089294A63A400263BE5 /* Release */,
 				331C808A294A63A400263BE5 /* Profile */,
+				502FD7832F0BF76100453313 /* Debug-iuppyDev */,
+				502FD7842F0BF76100453313 /* Release-iuppyDev */,
+				502FD7852F0BF76100453313 /* Debug-iuppyProd */,
+				502FD7862F0BF76100453313 /* Release-iuppyProd */,
+				502FD7872F0BF76100453313 /* Debug-nextsalesDev */,
+				502FD7882F0BF76100453313 /* Release-nextsalesDev */,
+				502FD7892F0BF76100453313 /* Debug-nextsalesProd */,
+				502FD78A2F0BF76100453313 /* Release-nextsalesProd */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -683,6 +1500,14 @@
 				97C147031CF9000F007C117D /* Debug */,
 				97C147041CF9000F007C117D /* Release */,
 				249021D3217E4FDB00AE95B9 /* Profile */,
+				90A93833DAA8AFEEAFFD7899 /* Debug-iuppyDev */,
+				4983694FF5F4DF11A934DAD3 /* Release-iuppyDev */,
+				B813FE14BD96BE10B3EC41A5 /* Debug-iuppyProd */,
+				BC724571ED11B3004489CCD9 /* Release-iuppyProd */,
+				29F98607152ED75A70515689 /* Debug-nextsalesDev */,
+				ECB2FECA4C870972C67FF8B4 /* Release-nextsalesDev */,
+				E5A6BA3F0D95AB377C98C25C /* Debug-nextsalesProd */,
+				AD893DEA0E8FA2AEA5B778D2 /* Release-nextsalesProd */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -693,6 +1518,14 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+				502FD77B2F0BF76100453313 /* Debug-iuppyDev */,
+				502FD77C2F0BF76100453313 /* Release-iuppyDev */,
+				502FD77D2F0BF76100453313 /* Debug-iuppyProd */,
+				502FD77E2F0BF76100453313 /* Release-iuppyProd */,
+				502FD77F2F0BF76100453313 /* Debug-nextsalesDev */,
+				502FD7802F0BF76100453313 /* Release-nextsalesDev */,
+				502FD7812F0BF76100453313 /* Debug-nextsalesProd */,
+				502FD7822F0BF76100453313 /* Release-nextsalesProd */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -11,9 +11,10 @@ import ChannelModal from 'src/app/modules/channels/components/ChannelModal'
 import { Modal } from 'bootstrap'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR, enUS, es } from 'date-fns/locale'
 import { UsersService } from '../../users/services/users.service'
 import { User } from '@shared/types'
+import { useIntl } from 'react-intl'
 
 interface Metrics {
     postsCount: number
@@ -23,6 +24,7 @@ interface Metrics {
 }
 
 const ChannelsPage: React.FC = () => {
+    const intl = useIntl()
     const { currentUser } = useAuth()
     const [spaces, setSpaces] = useState<any[]>([])
     const [spaceId, setSpaceId] = useState<string | null>(null)
@@ -41,6 +43,13 @@ const ChannelsPage: React.FC = () => {
     const deleteRef = useRef<HTMLDivElement>(null)
     const [deleteModal, setDeleteModal] = useState<Modal | null>(null)
     const [toDeleteChannelId, setToDeleteChannelId] = useState<string>()
+
+    const getDateFnsLocale = () => {
+        const locale = intl.locale
+        if (locale === 'en') return enUS
+        if (locale === 'es') return es
+        return ptBR
+    }
 
     // carregar usuários (p/ métricas: total de usuários)
     useEffect(() => {
@@ -214,10 +223,10 @@ const ChannelsPage: React.FC = () => {
                 <thead>
                     <tr className="text-gray-400 fw-bold">
                         <th className="w-30px" />
-                        <th>Nome</th>
-                        <th>Locais</th>
-                        <th>Status</th>
-                        <th className="text-end">Ações</th>
+                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.NAME' })}</th>
+                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.LOCATIONS' })}</th>
+                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.STATUS' })}</th>
+                        <th className="text-end">{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.ACTIONS' })}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -231,14 +240,14 @@ const ChannelsPage: React.FC = () => {
                                 <div className="fw-bold">{c.name}</div>
                                 {metrics[c.id] && (
                                     <div className="text-gray-600 fs-7">
-                                        Posts: <strong>{metrics[c.id].postsCount}</strong> |
-                                        Usuários: <strong>{metrics[c.id].usersCount}</strong> |
-                                        Espaço(s): <strong>{metrics[c.id].spaceNames.join(', ')}</strong>
+                                        {intl.formatMessage({ id: 'CHANNELS.METRICS.POSTS' })}: <strong>{metrics[c.id].postsCount}</strong> |
+                                        {intl.formatMessage({ id: 'CHANNELS.METRICS.USERS' })}: <strong>{metrics[c.id].usersCount}</strong> |
+                                        {intl.formatMessage({ id: 'CHANNELS.METRICS.SPACES' })}: <strong>{metrics[c.id].spaceNames.join(', ')}</strong>
                                         {metrics[c.id].lastPostDate && (
                                             <>
-                                                | Última:{' '}
+                                                | {intl.formatMessage({ id: 'CHANNELS.METRICS.LAST' })}:{' '}
                                                 <strong>
-                                                    {format(metrics[c.id].lastPostDate!, 'dd/MM/yyyy, HH:mm', { locale: ptBR })}
+                                                    {format(metrics[c.id].lastPostDate!, 'dd/MM/yyyy, HH:mm', { locale: getDateFnsLocale() })}
                                                 </strong>
                                             </>
                                         )}
@@ -257,9 +266,9 @@ const ChannelsPage: React.FC = () => {
                             </td>
                             <td>
                                 {c.isPublished ? (
-                                    <span className="badge badge-success">Publicado</span>
+                                    <span className="badge badge-success">{intl.formatMessage({ id: 'CHANNELS.STATUS.PUBLISHED' })}</span>
                                 ) : (
-                                    <span className="badge badge-secondary">Despublicado</span>
+                                    <span className="badge badge-secondary">{intl.formatMessage({ id: 'CHANNELS.STATUS.UNPUBLISHED' })}</span>
                                 )}
                             </td>
                             <td className="text-end">
@@ -271,7 +280,7 @@ const ChannelsPage: React.FC = () => {
                                         <li>
                                             <button className="dropdown-item" onClick={() => openChannelModal(c.id)}>
                                                 <i className="bi bi-pencil me-2" />
-                                                Editar
+                                                {intl.formatMessage({ id: 'CHANNELS.ACTION.EDIT' })}
                                             </button>
                                         </li>
                                         <li>
@@ -280,13 +289,13 @@ const ChannelsPage: React.FC = () => {
                                                 onClick={() => handleTogglePublish(c.id, !c.isPublished)}
                                             >
                                                 <i className={`bi me-2 ${c.isPublished ? 'bi-toggle-off' : 'bi-toggle-on'}`} />
-                                                {c.isPublished ? 'Despublicar' : 'Publicar'}
+                                                {c.isPublished ? intl.formatMessage({ id: 'CHANNELS.ACTION.UNPUBLISH' }) : intl.formatMessage({ id: 'CHANNELS.ACTION.PUBLISH' })}
                                             </button>
                                         </li>
                                         <li>
                                             <button className="dropdown-item text-danger" onClick={() => openDeleteModal(c.id)}>
                                                 <i className="bi bi-trash me-2" />
-                                                Apagar
+                                                {intl.formatMessage({ id: 'CHANNELS.ACTION.DELETE' })}
                                             </button>
                                         </li>
                                     </ul>
@@ -310,10 +319,10 @@ const ChannelsPage: React.FC = () => {
                                 <thead>
                                     <tr className="text-gray-400 fw-bold">
                                         <th className="w-30px" />
-                                        <th>Nome</th>
-                                        <th>Locais</th>
-                                        <th>Status</th>
-                                        <th className="text-end">Ações</th>
+                                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.NAME' })}</th>
+                                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.LOCATIONS' })}</th>
+                                        <th>{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.STATUS' })}</th>
+                                        <th className="text-end">{intl.formatMessage({ id: 'CHANNELS.TABLE.HEADER.ACTIONS' })}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -331,14 +340,14 @@ const ChannelsPage: React.FC = () => {
                                                         <div className="fw-bold">{c.name}</div>
                                                         {metrics[c.id] && (
                                                             <div className="text-gray-600 fs-7">
-                                                                Posts: <strong>{metrics[c.id].postsCount}</strong> |
-                                                                Usuários: <strong>{metrics[c.id].usersCount}</strong> |
-                                                                Espaço(s): <strong>{metrics[c.id].spaceNames.join(', ')}</strong>
+                                                                {intl.formatMessage({ id: 'CHANNELS.METRICS.POSTS' })}: <strong>{metrics[c.id].postsCount}</strong> |
+                                                                {intl.formatMessage({ id: 'CHANNELS.METRICS.USERS' })}: <strong>{metrics[c.id].usersCount}</strong> |
+                                                                {intl.formatMessage({ id: 'CHANNELS.METRICS.SPACES' })}: <strong>{metrics[c.id].spaceNames.join(', ')}</strong>
                                                                 {metrics[c.id].lastPostDate && (
                                                                     <>
-                                                                        | Última:{' '}
+                                                                        | {intl.formatMessage({ id: 'CHANNELS.METRICS.LAST' })}:{' '}
                                                                         <strong>
-                                                                            {format(metrics[c.id].lastPostDate!, 'dd/MM/yyyy, HH:mm', { locale: ptBR })}
+                                                                            {format(metrics[c.id].lastPostDate!, 'dd/MM/yyyy, HH:mm', { locale: getDateFnsLocale() })}
                                                                         </strong>
                                                                     </>
                                                                 )}
@@ -357,9 +366,9 @@ const ChannelsPage: React.FC = () => {
                                                     </td>
                                                     <td>
                                                         {c.isPublished ? (
-                                                            <span className="badge badge-success">Publicado</span>
+                                                            <span className="badge badge-success">{intl.formatMessage({ id: 'CHANNELS.STATUS.PUBLISHED' })}</span>
                                                         ) : (
-                                                            <span className="badge badge-secondary">Despublicado</span>
+                                                            <span className="badge badge-secondary">{intl.formatMessage({ id: 'CHANNELS.STATUS.UNPUBLISHED' })}</span>
                                                         )}
                                                     </td>
                                                     <td className="text-end">
@@ -371,19 +380,19 @@ const ChannelsPage: React.FC = () => {
                                                                 <li>
                                                                     <span className="dropdown-item disabled">
                                                                         <i className="bi bi-pencil me-2" />
-                                                                        Editar
+                                                                        {intl.formatMessage({ id: 'CHANNELS.ACTION.EDIT' })}
                                                                     </span>
                                                                 </li>
                                                                 <li>
                                                                     <span className="dropdown-item disabled">
                                                                         <i className="bi bi-toggle-off me-2" />
-                                                                        Publicar/Despublicar
+                                                                        {intl.formatMessage({ id: 'CHANNELS.ACTION.PUBLISH' })}/{intl.formatMessage({ id: 'CHANNELS.ACTION.UNPUBLISH' })}
                                                                     </span>
                                                                 </li>
                                                                 <li>
                                                                     <span className="dropdown-item disabled text-danger">
                                                                         <i className="bi bi-trash me-2" />
-                                                                        Apagar
+                                                                        {intl.formatMessage({ id: 'CHANNELS.ACTION.DELETE' })}
                                                                     </span>
                                                                 </li>
                                                             </ul>
@@ -412,7 +421,7 @@ const ChannelsPage: React.FC = () => {
                         <Content>
                             {/* header + botões */}
                             <div className="d-flex align-items-center justify-content-between mb-6">
-                                <h2 className="fw-bold text-dark m-0">Canais</h2>
+                                <h2 className="fw-bold text-dark m-0">{intl.formatMessage({ id: 'CHANNELS.PAGE.TITLE' })}</h2>
                                 <div>
                                     {!isReordering ? (
                                         <button
@@ -422,7 +431,7 @@ const ChannelsPage: React.FC = () => {
                                                 setIsReordering(true)
                                             }}
                                         >
-                                            Reordenar canais
+                                            {intl.formatMessage({ id: 'CHANNELS.PAGE.BUTTON.REORDER' })}
                                         </button>
                                     ) : (
                                         <>
@@ -433,7 +442,7 @@ const ChannelsPage: React.FC = () => {
                                                     setIsReordering(false)
                                                 }}
                                             >
-                                                Cancelar
+                                                {intl.formatMessage({ id: 'CHANNELS.PAGE.BUTTON.CANCEL' })}
                                             </button>
                                             <button
                                                 className="btn btn-primary me-2"
@@ -449,19 +458,19 @@ const ChannelsPage: React.FC = () => {
                                                     }
                                                 }}
                                             >
-                                                Salvar nova ordem
+                                                {intl.formatMessage({ id: 'CHANNELS.PAGE.BUTTON.SAVE_ORDER' })}
                                             </button>
                                         </>
                                     )}
                                     <button className="btn btn-primary" onClick={() => openChannelModal()} disabled={isReordering}>
-                                        Criar canal
+                                        {intl.formatMessage({ id: 'CHANNELS.PAGE.BUTTON.CREATE' })}
                                     </button>
                                 </div>
                             </div>
 
                             {/* filtro por espaço */}
                             <div className="mb-4 d-flex align-items-center">
-                                <label className="me-2 mb-0">Locais:</label>
+                                <label className="me-2 mb-0">{intl.formatMessage({ id: 'CHANNELS.PAGE.LABEL.LOCATIONS' })}</label>
                                 <select
                                     className="form-select w-auto"
                                     value={spaceId ?? ''}
@@ -498,20 +507,20 @@ const ChannelsPage: React.FC = () => {
                                 <div className="modal-dialog">
                                     <div className="modal-content p-4">
                                         <div className="modal-header">
-                                            <h3 className="modal-title">Confirmação de exclusão</h3>
+                                            <h3 className="modal-title">{intl.formatMessage({ id: 'CHANNELS.DELETE_MODAL.TITLE' })}</h3>
                                             <div className="btn btn-icon btn-sm btn-active-light-primary ms-2" data-bs-dismiss="modal">
                                                 <i className="bi bi-x fs-2" />
                                             </div>
                                         </div>
                                         <div className="modal-body">
-                                            <p>Tem certeza que deseja excluir este canal? Esta ação não poderá ser desfeita.</p>
+                                            <p>{intl.formatMessage({ id: 'CHANNELS.DELETE_MODAL.BODY' })}</p>
                                         </div>
                                         <div className="modal-footer">
                                             <button type="button" className="btn btn-light" data-bs-dismiss="modal">
-                                                Cancelar
+                                                {intl.formatMessage({ id: 'CHANNELS.DELETE_MODAL.CANCEL' })}
                                             </button>
                                             <button type="button" className="btn btn-danger" onClick={confirmDelete}>
-                                                Confirmar exclusão
+                                                {intl.formatMessage({ id: 'CHANNELS.DELETE_MODAL.CONFIRM' })}
                                             </button>
                                         </div>
                                     </div>

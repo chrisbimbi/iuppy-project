@@ -22,5 +22,6 @@ export interface CompanySettings {
   defaultLocale: Locale
   supportedLocales: Locale[] // ex.: ['pt','en','es','de']
   branding: CompanyBranding
+  menuConfig?: any
   updatedAt: string | Date
 }

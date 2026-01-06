@@ -1,5 +1,6 @@
 // frontend/src/app/modules/surveys/views/wizard/SurveyStep2Publish.tsx
 import { FC } from 'react'
+import { useIntl } from 'react-intl'
 import { CreateSurveyDto, SurveyStatus } from '@shared/types'
 
 type Props = {
@@ -17,24 +18,25 @@ const toLocalInputValue = (iso?: string) => {
 const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
     const scheduleOn = !!data.scheduleSurvey
     const expireOn = !!data.expireSurvey
+    const intl = useIntl()
 
     return (
         <div className="w-100">
             <div className="pb-8">
-                <h3 className="fw-bold text-dark">Publicação & Notificações</h3>
-                <div className="text-muted">Status, agendamento, expiração e notificações</div>
+                <h3 className="fw-bold text-dark">{intl.formatMessage({ id: 'SURVEYS.STEP2.TITLE', defaultMessage: 'Publicação & Notificações' })}</h3>
+                <div className="text-muted">{intl.formatMessage({ id: 'SURVEYS.STEP2.SUBTITLE', defaultMessage: 'Status, agendamento, expiração e notificações' })}</div>
             </div>
 
             <div className="mb-6">
-                <label className="form-label">Status</label>
+                <label className="form-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.LABEL.STATUS', defaultMessage: 'Status' })}</label>
                 <select
                     className="form-select"
                     value={data.status || 'draft'}
                     onChange={(e) => setFieldValue('status', e.target.value as SurveyStatus, true)}
                 >
-                    <option value="draft">Rascunho</option>
-                    <option value="published">Publicada</option>
-                    <option value="archived">Arquivada</option>
+                    <option value="draft">{intl.formatMessage({ id: 'SURVEYS.STEP2.OPTION.DRAFT', defaultMessage: 'Rascunho' })}</option>
+                    <option value="published">{intl.formatMessage({ id: 'SURVEYS.STEP2.OPTION.PUBLISHED', defaultMessage: 'Publicada' })}</option>
+                    <option value="archived">{intl.formatMessage({ id: 'SURVEYS.STEP2.OPTION.ARCHIVED', defaultMessage: 'Arquivada' })}</option>
                 </select>
             </div>
 
@@ -47,7 +49,7 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                             checked={scheduleOn}
                             onChange={e => setFieldValue('scheduleSurvey', e.target.checked, true)}
                         />
-                        <label className="form-check-label">Agendar início</label>
+                        <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.SCHEDULE', defaultMessage: 'Agendar início' })}</label>
                     </div>
                     {scheduleOn && (
                         <input
@@ -67,7 +69,7 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                             checked={expireOn}
                             onChange={e => setFieldValue('expireSurvey', e.target.checked, true)}
                         />
-                        <label className="form-check-label">Definir expiração</label>
+                        <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.EXPIRE', defaultMessage: 'Definir expiração' })}</label>
                     </div>
                     {expireOn && (
                         <input
@@ -81,7 +83,7 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
             </div>
 
             <div className="pb-4 mt-2">
-                <h5 className="fw-semibold">Notificações</h5>
+                <h5 className="fw-semibold">{intl.formatMessage({ id: 'SURVEYS.STEP2.SECTION.NOTIFICATIONS', defaultMessage: 'Notificações' })}</h5>
             </div>
             <div className="row">
                 <div className="col-md-4 mb-6">
@@ -92,19 +94,19 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                             checked={!!data.pushNotification}
                             onChange={e => setFieldValue('pushNotification', e.target.checked, true)}
                         />
-                        <label className="form-check-label">Push</label>
+                        <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.PUSH', defaultMessage: 'Push' })}</label>
                     </div>
                     {data.pushNotification && (
                         <>
                             <input
                                 className="form-control form-control-solid mt-2"
-                                placeholder="Título do push (opcional)"
+                                placeholder={intl.formatMessage({ id: 'SURVEYS.STEP2.PLACEHOLDER.PUSH_TITLE', defaultMessage: 'Título do push (opcional)' })}
                                 value={data.pushTitle || ''}
                                 onChange={e => setFieldValue('pushTitle', e.target.value, true)}
                             />
                             <textarea
                                 className="form-control form-control-solid mt-2"
-                                placeholder="Conteúdo do push (opcional)"
+                                placeholder={intl.formatMessage({ id: 'SURVEYS.STEP2.PLACEHOLDER.PUSH_CONTENT', defaultMessage: 'Conteúdo do push (opcional)' })}
                                 rows={2}
                                 value={data.pushContent || ''}
                                 onChange={e => setFieldValue('pushContent', e.target.value, true)}
@@ -120,7 +122,7 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                             checked={!!data.emailNotification}
                             onChange={e => setFieldValue('emailNotification', e.target.checked, true)}
                         />
-                        <label className="form-check-label">E-mail</label>
+                        <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.EMAIL', defaultMessage: 'E-mail' })}</label>
                     </div>
                 </div>
                 <div className="col-md-4 mb-6">
@@ -131,13 +133,13 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                             checked={!!data.inAppNotification}
                             onChange={e => setFieldValue('inAppNotification', e.target.checked, true)}
                         />
-                        <label className="form-check-label">In-app</label>
+                        <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.IN_APP', defaultMessage: 'In-app' })}</label>
                     </div>
                 </div>
             </div>
 
             <div className="pb-4 mt-2">
-                <h5 className="fw-semibold">Confirmação do Colaborador</h5>
+                <h5 className="fw-semibold">{intl.formatMessage({ id: 'SURVEYS.STEP2.SECTION.ACKNOWLEDGEMENT', defaultMessage: 'Confirmação do Colaborador' })}</h5>
             </div>
             <div className="form-check form-switch form-switch-custom form-switch-solid">
                 <input
@@ -146,7 +148,7 @@ const SurveyStep2Publish: FC<Props> = ({ data, setFieldValue }) => {
                     checked={!!data.acknowledgementRequired}
                     onChange={e => setFieldValue('acknowledgementRequired', e.target.checked, true)}
                 />
-                <label className="form-check-label">Exigir "Li e Concordo"</label>
+                <label className="form-check-label">{intl.formatMessage({ id: 'SURVEYS.STEP2.CHECKBOX.ACKNOWLEDGEMENT', defaultMessage: 'Exigir "Li e Concordo"' })}</label>
             </div>
         </div>
     )

@@ -1,26 +1,28 @@
 import React from 'react'
-import {Navigate, Outlet, Route, Routes} from 'react-router-dom'
-import {PageLink, PageTitle} from '../../..//layout/core'
-import {Overview} from './components/Overview'
-import {Settings} from './components/settings/Settings'
-import {AccountHeader} from './AccountHeader'
-
-const accountBreadCrumbs: Array<PageLink> = [
-  {
-    title: 'Account',
-    path: '/crafted/account/overview',
-    isSeparator: false,
-    isActive: false,
-  },
-  {
-    title: '',
-    path: '',
-    isSeparator: true,
-    isActive: false,
-  },
-]
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { PageLink, PageTitle } from '../../..//layout/core'
+import { Overview } from './components/Overview'
+import { Settings } from './components/settings/Settings'
+import { AccountHeader } from './AccountHeader'
+import { useIntl } from 'react-intl'
 
 const AccountPage: React.FC = () => {
+  const intl = useIntl()
+  const accountBreadCrumbs: Array<PageLink> = [
+    {
+      title: intl.formatMessage({ id: 'ACCOUNT.BREADCRUMBS.ACCOUNT' }),
+      path: '/crafted/account/overview',
+      isSeparator: false,
+      isActive: false,
+    },
+    {
+      title: '',
+      path: '',
+      isSeparator: true,
+      isActive: false,
+    },
+  ]
+
   return (
     <Routes>
       <Route
@@ -35,7 +37,9 @@ const AccountPage: React.FC = () => {
           path='overview'
           element={
             <>
-              <PageTitle breadcrumbs={accountBreadCrumbs}>Overview</PageTitle>
+              <PageTitle breadcrumbs={accountBreadCrumbs}>
+                {intl.formatMessage({ id: 'ACCOUNT.OVERVIEW' })}
+              </PageTitle>
               <Overview />
             </>
           }
@@ -44,7 +48,9 @@ const AccountPage: React.FC = () => {
           path='settings'
           element={
             <>
-              <PageTitle breadcrumbs={accountBreadCrumbs}>Settings</PageTitle>
+              <PageTitle breadcrumbs={accountBreadCrumbs}>
+                {intl.formatMessage({ id: 'ACCOUNT.SETTINGS' })}
+              </PageTitle>
               <Settings />
             </>
           }

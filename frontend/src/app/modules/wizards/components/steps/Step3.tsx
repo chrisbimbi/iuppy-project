@@ -1,24 +1,26 @@
-import React, {FC} from 'react'
-import {Field, ErrorMessage} from 'formik'
+import React, { FC } from 'react'
+import { Field, ErrorMessage } from 'formik'
+import { useIntl } from 'react-intl'
 
 const Step3: FC = () => {
+  const intl = useIntl()
   return (
     <div className='w-100'>
       <div className='pb-10 pb-lg-12'>
-        <h2 className='fw-bolder text-gray-900'>Business Details</h2>
+        <h2 className='fw-bolder text-gray-900'>{intl.formatMessage({ id: 'WIZARDS.STEP3.TITLE', defaultMessage: 'Business Details' })}</h2>
 
         <div className='text-gray-500 fw-bold fs-6'>
-          If you need more info, please check out
+          {intl.formatMessage({ id: 'WIZARDS.COMMON.MORE_INFO', defaultMessage: 'If you need more info, please check out' })}
           <a href='/dashboard' className='link-primary fw-bolder'>
             {' '}
-            Help Page
+            {intl.formatMessage({ id: 'WIZARDS.COMMON.HELP_PAGE', defaultMessage: 'Help Page' })}
           </a>
           .
         </div>
       </div>
 
       <div className='fv-row mb-10'>
-        <label className='form-label required'>Business Name</label>
+        <label className='form-label required'>{intl.formatMessage({ id: 'WIZARDS.STEP3.BUSINESS_NAME', defaultMessage: 'Business Name' })}</label>
 
         <Field name='businessName' className='form-control form-control-lg form-control-solid' />
         <div className='text-danger mt-2'>
@@ -28,7 +30,7 @@ const Step3: FC = () => {
 
       <div className='fv-row mb-10'>
         <label className='d-flex align-items-center form-label'>
-          <span className='required'>Shortened Descriptor</span>
+          <span className='required'>{intl.formatMessage({ id: 'WIZARDS.STEP3.SHORTENED_DESCRIPTOR', defaultMessage: 'Shortened Descriptor' })}</span>
         </label>
 
         <Field
@@ -40,12 +42,12 @@ const Step3: FC = () => {
         </div>
 
         <div className='form-text'>
-          Customers will see this shortened version of your statement descriptor
+          {intl.formatMessage({ id: 'WIZARDS.STEP3.DESCRIPTOR_HELP', defaultMessage: 'Customers will see this shortened version of your statement descriptor' })}
         </div>
       </div>
 
       <div className='fv-row mb-10'>
-        <label className='form-label required'>Corporation Type</label>
+        <label className='form-label required'>{intl.formatMessage({ id: 'WIZARDS.STEP3.CORPORATION_TYPE', defaultMessage: 'Corporation Type' })}</label>
 
         <Field
           as='select'
@@ -53,12 +55,12 @@ const Step3: FC = () => {
           className='form-select form-select-lg form-select-solid'
         >
           <option></option>
-          <option value='1'>S Corporation</option>
-          <option value='1'>C Corporation</option>
-          <option value='2'>Sole Proprietorship</option>
-          <option value='3'>Non-profit</option>
-          <option value='4'>Limited Liability</option>
-          <option value='5'>General Partnership</option>
+          <option value='1'>{intl.formatMessage({ id: 'WIZARDS.STEP3.S_CORPORATION', defaultMessage: 'S Corporation' })}</option>
+          <option value='1'>{intl.formatMessage({ id: 'WIZARDS.STEP3.C_CORPORATION', defaultMessage: 'C Corporation' })}</option>
+          <option value='2'>{intl.formatMessage({ id: 'WIZARDS.STEP3.SOLE_PROPRIETORSHIP', defaultMessage: 'Sole Proprietorship' })}</option>
+          <option value='3'>{intl.formatMessage({ id: 'WIZARDS.STEP3.NON_PROFIT', defaultMessage: 'Non-profit' })}</option>
+          <option value='4'>{intl.formatMessage({ id: 'WIZARDS.STEP3.LIMITED_LIABILITY', defaultMessage: 'Limited Liability' })}</option>
+          <option value='5'>{intl.formatMessage({ id: 'WIZARDS.STEP3.GENERAL_PARTNERSHIP', defaultMessage: 'General Partnership' })}</option>
         </Field>
         <div className='text-danger mt-2'>
           <ErrorMessage name='businessType' />
@@ -66,7 +68,7 @@ const Step3: FC = () => {
       </div>
 
       <div className='fv-row mb-10'>
-        <label className='form-label'>Business Description</label>
+        <label className='form-label'>{intl.formatMessage({ id: 'WIZARDS.STEP3.BUSINESS_DESCRIPTION', defaultMessage: 'Business Description' })}</label>
 
         <Field
           as='textarea'
@@ -77,7 +79,7 @@ const Step3: FC = () => {
       </div>
 
       <div className='fv-row mb-0'>
-        <label className='fs-6 fw-bold form-label required'>Contact Email</label>
+        <label className='fs-6 fw-bold form-label required'>{intl.formatMessage({ id: 'WIZARDS.STEP3.CONTACT_EMAIL', defaultMessage: 'Contact Email' })}</label>
 
         <Field name='businessEmail' className='form-control form-control-lg form-control-solid' />
         <div className='text-danger mt-2'>
@@ -88,4 +90,4 @@ const Step3: FC = () => {
   )
 }
 
-export {Step3}
+export { Step3 }

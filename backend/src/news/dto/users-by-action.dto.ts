@@ -12,7 +12,9 @@ export class UsersByActionQueryDto {
 
   @IsOptional()
   @Transform(({ value }) =>
-    value === undefined || value === null || value === '' ? undefined : Number(value),
+    value === undefined || value === null || value === ''
+      ? undefined
+      : Number(value),
   )
   @IsInt()
   @Min(0)
@@ -20,7 +22,9 @@ export class UsersByActionQueryDto {
 
   @IsOptional()
   @Transform(({ value }) =>
-    value === undefined || value === null || value === '' ? undefined : Number(value),
+    value === undefined || value === null || value === ''
+      ? undefined
+      : Number(value),
   )
   @IsInt()
   @Min(1)

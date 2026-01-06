@@ -1,4 +1,5 @@
 import { FC, useEffect, useMemo, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { Survey, SurveyQuestion, CreateSurveyQuestionDto } from '@shared/types'
 import { SurveyService } from '../../services/surveys.service'
 import QuestionForm from '../questions/QuestionForm'
@@ -9,6 +10,7 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
     const [survey, setSurvey] = useState<Survey | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const intl = useIntl()
 
     const [showForm, setShowForm] = useState(false)
     const [editing, setEditing] = useState<SurveyQuestion | null>(null)
@@ -25,7 +27,7 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
         setLoading(true)
         SurveyService.getOne(companyId, surveyId)
             .then(setSurvey)
-            .catch(e => setError(e?.message ?? 'Erro ao carregar perguntas'))
+            .catch(e => setError(e?.message ?? intl.formatMessage({ id: 'SURVEYS.STEP3.ERROR.LOAD', defaultMessage: 'Erro ao carregar perguntas' })))
             .finally(() => setLoading(false))
     }, [companyId, surveyId])
 
@@ -34,12 +36,12 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
 
     const handleDelete = async (q: SurveyQuestion) => {
         if (!surveyId) return
-        if (!confirm('Remover esta pergunta?')) return
+        if (!confirm(intl.formatMessage({ id: 'SURVEYS.STEP3.CONFIRM.DELETE', defaultMessage: 'Remover esta pergunta?' }))) return
         try {
             await SurveyService.removeQuestion(companyId, q.id)
             setSurvey(prev => prev ? { ...prev, questions: prev.questions.filter(x => x.id !== q.id) } : prev)
         } catch (e) {
-            alert('Não foi possível remover a pergunta.')
+            alert(intl.formatMessage({ id: 'SURVEYS.STEP3.ERROR.DELETE', defaultMessage: 'Não foi possível remover a pergunta.' }))
             console.error(e)
         }
     }
@@ -62,7 +64,7 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
             setShowForm(false)
             setEditing(null)
         } catch (e) {
-            alert('Não foi possível salvar a pergunta.')
+            alert(intl.formatMessage({ id: 'SURVEYS.STEP3.ERROR.SAVE', defaultMessage: 'Não foi possível salvar a pergunta.' }))
             console.error(e)
         }
     }
@@ -99,38 +101,45 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
             )
             setDirtyOrder(false)
         } catch (e) {
-            alert('Não foi possível salvar a nova ordem.')
+            alert(intl.formatMessage({ id: 'SURVEYS.STEP3.ERROR.ORDER', defaultMessage: 'Não foi possível salvar a nova ordem.' }))
             console.error(e)
         }
     }
 
     const typeLabel = (t: SurveyQuestion['type']) =>
-        ({ text: 'Texto', single: 'Única', multi: 'Múltipla', stars: 'Estrelas', scale: 'Escala', nps: 'NPS' }[t])
+    ({
+        text: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.TEXT', defaultMessage: 'Texto' }),
+        single: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.SINGLE', defaultMessage: 'Única' }),
+        multi: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.MULTI', defaultMessage: 'Múltipla' }),
+        stars: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.STARS', defaultMessage: 'Estrelas' }),
+        scale: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.SCALE', defaultMessage: 'Escala' }),
+        nps: intl.formatMessage({ id: 'SURVEYS.STEP3.TYPE.NPS', defaultMessage: 'NPS' })
+    }[t])
 
     return (
         <div>
             <div className="pb-8 d-flex justify-content-between align-items-end">
                 <div>
-                    <h3 className="fw-bold text-dark">Perguntas</h3>
-                    <div className="text-muted">Arraste para reordenar. As alterações de ordem precisam ser salvas.</div>
+                    <h3 className="fw-bold text-dark">{intl.formatMessage({ id: 'SURVEYS.STEP3.TITLE', defaultMessage: 'Perguntas' })}</h3>
+                    <div className="text-muted">{intl.formatMessage({ id: 'SURVEYS.STEP3.SUBTITLE', defaultMessage: 'Arraste para reordenar. As alterações de ordem precisam ser salvas.' })}</div>
                 </div>
                 <div className="d-flex gap-2">
                     {dirtyOrder && (
                         <button className="btn btn-success" onClick={saveOrder}>
-                            Salvar ordem
+                            {intl.formatMessage({ id: 'SURVEYS.STEP3.BUTTON.SAVE_ORDER', defaultMessage: 'Salvar ordem' })}
                         </button>
                     )}
                     <button className="btn btn-primary" onClick={openCreate} disabled={!surveyId}>
-                        + Nova Pergunta
+                        {intl.formatMessage({ id: 'SURVEYS.STEP3.BUTTON.NEW', defaultMessage: '+ Nova Pergunta' })}
                     </button>
                 </div>
             </div>
 
-            {loading && <div className="alert alert-info">Carregando...</div>}
+            {loading && <div className="alert alert-info">{intl.formatMessage({ id: 'SURVEYS.STEP3.STATE.LOADING', defaultMessage: 'Carregando...' })}</div>}
             {error && <div className="alert alert-danger">{error}</div>}
 
             {(questions.length === 0 && !loading) && (
-                <div className="alert alert-warning">Nenhuma pergunta ainda.</div>
+                <div className="alert alert-warning">{intl.formatMessage({ id: 'SURVEYS.STEP3.STATE.EMPTY', defaultMessage: 'Nenhuma pergunta ainda.' })}</div>
             )}
 
             {questions.length > 0 && (
@@ -139,9 +148,9 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
                         <thead>
                             <tr>
                                 <th style={{ width: 60 }} />
-                                <th style={{ width: 80 }}>Ordem</th>
-                                <th style={{ width: 120 }}>Tipo</th>
-                                <th>Enunciado</th>
+                                <th style={{ width: 80 }}>{intl.formatMessage({ id: 'SURVEYS.STEP3.HEADER.ORDER', defaultMessage: 'Ordem' })}</th>
+                                <th style={{ width: 120 }}>{intl.formatMessage({ id: 'SURVEYS.STEP3.HEADER.TYPE', defaultMessage: 'Tipo' })}</th>
+                                <th>{intl.formatMessage({ id: 'SURVEYS.STEP3.HEADER.TEXT', defaultMessage: 'Enunciado' })}</th>
                                 <th style={{ width: 160 }} />
                             </tr>
                         </thead>
@@ -164,10 +173,10 @@ const SurveyStep3Questions: FC<Props> = ({ companyId, surveyId }) => {
                                     </td>
                                     <td className="text-end">
                                         <button className="btn btn-light btn-sm me-2" onClick={() => openEdit(q)}>
-                                            Editar
+                                            {intl.formatMessage({ id: 'SURVEYS.STEP3.ACTION.EDIT', defaultMessage: 'Editar' })}
                                         </button>
                                         <button className="btn btn-light-danger btn-sm" onClick={() => handleDelete(q)}>
-                                            Remover
+                                            {intl.formatMessage({ id: 'SURVEYS.STEP3.ACTION.REMOVE', defaultMessage: 'Remover' })}
                                         </button>
                                     </td>
                                 </tr>

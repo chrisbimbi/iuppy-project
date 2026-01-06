@@ -1,17 +1,20 @@
 
-import {FC} from 'react'
-import {Card1} from '../../../../..//partials/content/cards/Card1'
+import { FC } from 'react'
+import { Card1 } from '../../../../..//partials/content/cards/Card1'
 import { Toolbar } from '../../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../../..//layout/components/Content'
 
+import { useIntl } from 'react-intl'
+
 const Drawer: FC = () => {
+  const intl = useIntl()
   return (
     <>
       <Toolbar />
       <Content>
         <div className='d-flex flex-wrap flex-stack mb-6'>
           <h3 className='fw-bolder my-2'>
-            My Contacts
+            {intl.formatMessage({ id: 'APPS.CHAT.CONTACTS.TITLE' })}
             <span className='fs-6 text-gray-500 fw-bold ms-1'>(59)</span>
           </h3>
 
@@ -23,10 +26,10 @@ const Drawer: FC = () => {
               className='form-select form-select-white form-select-sm w-125px'
               defaultValue='Online'
             >
-              <option value='Online'>Online</option>
-              <option value='Pending'>Pending</option>
-              <option value='Declined'>Declined</option>
-              <option value='Accepted'>Accepted</option>
+              <option value='Online'>{intl.formatMessage({ id: 'APPS.CHAT.STATUS.ONLINE' })}</option>
+              <option value='Pending'>{intl.formatMessage({ id: 'APPS.CHAT.STATUS.PENDING' })}</option>
+              <option value='Declined'>{intl.formatMessage({ id: 'APPS.CHAT.STATUS.DECLINED' })}</option>
+              <option value='Accepted'>{intl.formatMessage({ id: 'APPS.CHAT.STATUS.ACCEPTED' })}</option>
             </select>
           </div>
         </div>
@@ -148,7 +151,12 @@ const Drawer: FC = () => {
         </div>
 
         <div className='d-flex flex-stack flex-wrap pt-10'>
-          <div className='fs-6 fw-bold text-gray-700'>Showing 1 to 10 of 50 entries</div>
+          <div className='fs-6 fw-bold text-gray-700'>
+            {intl.formatMessage(
+              { id: 'APPS.CHAT.PAGINATION.SHOWING' },
+              { from: 1, to: 10, total: 50 }
+            )}
+          </div>
 
           <ul className='pagination'>
             <li className='page-item previous'>
@@ -205,4 +213,4 @@ const Drawer: FC = () => {
   )
 }
 
-export {Drawer}
+export { Drawer }

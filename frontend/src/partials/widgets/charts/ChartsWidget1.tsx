@@ -1,9 +1,10 @@
 // src/_metronic/partials/widgets/charts/ChartsWidget1.tsx
 
-import React, { useEffect, useRef } from 'react'
-import ApexCharts, { ApexOptions } from 'apexcharts'
+import React from 'react'
+import { ApexOptions } from 'apexcharts'
 import { getCSSVariableValue } from '../../../assets/ts/_utils'
 import { useThemeMode } from '../../layout/theme-mode/ThemeModeProvider'
+import { BaseChart } from '../../../app/components/charts/BaseChart'
 
 type Props = {
   className: string
@@ -15,31 +16,7 @@ type Props = {
 }
 
 const ChartsWidget1: React.FC<Props> = ({ className, data }) => {
-  const chartRef = useRef<HTMLDivElement | null>(null)
   const { mode } = useThemeMode()
-
-  useEffect(() => {
-    const chart = refreshChart()
-
-    return () => {
-      if (chart) {
-        chart.destroy()
-      }
-    }
-  }, [chartRef, mode, data])
-
-  const refreshChart = () => {
-    if (!chartRef.current) {
-      return
-    }
-
-    const chart = new ApexCharts(chartRef.current, chartOptions(data))
-    if (chart) {
-      chart.render()
-    }
-
-    return chart
-  }
 
   return (
     <div className={`card ${className}`}>
@@ -50,7 +27,7 @@ const ChartsWidget1: React.FC<Props> = ({ className, data }) => {
         </h3>
       </div>
       <div className='card-body'>
-        <div ref={chartRef} id='kt_charts_widget_1_chart' style={{ height: '350px' }}></div>
+        <BaseChart className='w-100' options={chartOptions(data)} height={350} />
       </div>
     </div>
   )

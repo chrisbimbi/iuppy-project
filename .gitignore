@@ -23,7 +23,7 @@ yarn-error.log*
 
 # IDEs
 .idea/
-.vscode/
+
 
 # Flutter/Dart specific
 **/ios/Flutter/.last_build_id
@@ -77,3 +77,4 @@ backend/creds/firebase-admin.json
 
 # Secrets
 backend/creds/firebase-admin.json
+secrets/

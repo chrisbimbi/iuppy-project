@@ -17,7 +17,7 @@ import { RespondDto } from './dto/respond.dto';
 
 @Controller('forms')
 export class FormsController {
-  constructor(private readonly formsService: FormsService) { }
+  constructor(private readonly formsService: FormsService) {}
 
   private getCompanyIdSync(req: any): string | null {
     return (
@@ -57,10 +57,7 @@ export class FormsController {
 
   // GET /forms/segments  (CMS usa)
   @Get('segments')
-  async segments(
-    @Req() req: any,
-    @Query('companyId') companyIdQ?: string,
-  ) {
+  async segments(@Req() req: any, @Query('companyId') companyIdQ?: string) {
     let companyId = companyIdQ || this.getCompanyIdSync(req);
     const userId = this.getUserId(req);
 
@@ -77,10 +74,7 @@ export class FormsController {
 
   // POST /forms
   @Post()
-  async create(
-    @Req() req: any,
-    @Body() dto: CreateFormDto,
-  ) {
+  async create(@Req() req: any, @Body() dto: CreateFormDto) {
     let companyId = dto.companyId || this.getCompanyIdSync(req);
     const userId = this.getUserId(req);
 
@@ -216,13 +210,7 @@ export class FormsController {
       throw new BadRequestException('userId missing');
     }
 
-    return this.formsService.respond(
-      companyId,
-      id,
-      submissionId,
-      userId,
-      dto,
-    );
+    return this.formsService.respond(companyId, id, submissionId, userId, dto);
   }
 
   // GET /forms/:id/notification-settings
@@ -273,5 +261,4 @@ export class FormsController {
       body.items || [],
     );
   }
-
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useIntl } from 'react-intl';
 import { useTags } from '../provider/useTags';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 const TagInput: React.FC<Props> = ({ value, onChange }) => {
+    const intl = useIntl();
     const { tags } = useTags();
     const [text, setText] = useState('');
     const filtered = tags.filter(t => t.includes(text) && !value.includes(t));
@@ -33,7 +35,7 @@ const TagInput: React.FC<Props> = ({ value, onChange }) => {
             <input
                 type="text"
                 className="form-control"
-                placeholder="Digite para buscar tag..."
+                placeholder={intl.formatMessage({ id: 'GROUPS.TAG_INPUT.PLACEHOLDER.SEARCH' })}
                 value={text}
                 onChange={e => setText(e.target.value)}
             />

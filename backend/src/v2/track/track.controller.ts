@@ -3,7 +3,11 @@ import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
 import { TrackV2Service } from './track.service';
 
 class TrackBatchDto {
-  events!: Array<{ type: 'app_open'|'module_open'; at: string; meta?: Record<string, any> }>;
+  events!: Array<{
+    type: 'app_open' | 'module_open';
+    at: string;
+    meta?: Record<string, any>;
+  }>;
 }
 
 @UseGuards(JwtAccessGuard)

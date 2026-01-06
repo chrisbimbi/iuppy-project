@@ -1,19 +1,20 @@
 // src/app/modules/news/components/helpers/validationSchemas.ts
 import * as Yup from 'yup'
-import { NewsType } from '@shared/types'
 
-export const createNewSchema = Yup.object().shape({
-  title: Yup.string().required('O título é obrigatório'),
+import { IntlShape } from 'react-intl'
+
+export const createNewSchema = (intl: IntlShape) => Yup.object().shape({
+  title: Yup.string().required(intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.TITLE_REQUIRED' })),
   subtitle: Yup.string(),
-  content: Yup.string().required('O conteúdo é obrigatório'),
-  type: Yup.mixed<NewsType>().oneOf(Object.values(NewsType)).required('O tipo é obrigatório'),
-  authorId: Yup.string().required('O ID do autor é obrigatório'),
+  content: Yup.string().required(intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.CONTENT_REQUIRED' })),
+  hashtags: Yup.array().of(Yup.string()),
+  authorId: Yup.string().required(intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.AUTHOR_REQUIRED' })),
   isPublished: Yup.boolean(),
   highlightImages: Yup.array().of(
-    Yup.mixed().test('fileSize', 'Arquivo muito grande', v => !(v instanceof File) || v.size <= 10485760)
+    Yup.mixed().test('fileSize', intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.FILE_TOO_LARGE' }), v => !(v instanceof File) || v.size <= 10485760)
   ),
   attachments: Yup.array().of(
-    Yup.mixed().test('fileSize', 'Arquivo muito grande', v => !(v instanceof File) || v.size <= 10485760)
+    Yup.mixed().test('fileSize', intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.FILE_TOO_LARGE' }), v => !(v instanceof File) || v.size <= 10485760)
   ),
   settings: Yup.object().shape({
     visibility: Yup.string().oneOf(['public', 'private', 'specific_groups']).required(),
@@ -24,12 +25,12 @@ export const createNewSchema = Yup.object().shape({
     pushNotification: Yup.boolean().required(),
     pushTitle: Yup.string().when('pushNotification', {
       is: true,
-      then: (s) => s.trim().required('Título do push é obrigatório'),
+      then: (s) => s.trim().required(intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.PUSH_TITLE_REQUIRED' })),
       otherwise: (s) => s.notRequired(),
     }),
     pushContent: Yup.string().when('pushNotification', {
       is: true,
-      then: (s) => s.trim().required('Conteúdo do push é obrigatório'),
+      then: (s) => s.trim().required(intl.formatMessage({ id: 'COMMUNICATION.FORM.VALIDATION.PUSH_CONTENT_REQUIRED' })),
       otherwise: (s) => s.notRequired(),
     }),
     emailNotification: Yup.boolean().required(),

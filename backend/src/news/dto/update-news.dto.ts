@@ -5,45 +5,70 @@ import {
   IsEnum,
   IsBoolean,
   IsArray,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { NewsType } from '@shared/types/NewsType';
+
 import { NewSettingsDto } from './news-settings-dto';
 
 export class UpdateNewDto {
-  @IsOptional() @IsUUID()
+  @IsOptional()
+  @IsUUID()
   companyId?: string;
 
-  @IsOptional() @IsUUID()
+  @IsOptional()
+  @IsUUID()
   authorId?: string;
 
-  @IsOptional() @IsUUID()
+  @IsOptional()
+  @IsUUID()
   channelId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   title?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   subtitle?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   content?: string;
 
-  @IsOptional() @IsEnum(NewsType)
-  type?: NewsType;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  hashtags?: string[];
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isPublished?: boolean;
 
-  @IsOptional() @IsArray()
+  @IsOptional()
+  @IsArray()
   attachments?: { url: string; name: string }[];
 
-  @IsOptional() @IsArray()
+  @IsOptional()
+  @IsArray()
   highlightImages?: { url: string; altText?: string }[];
 
   @IsOptional()
   @ValidateNested()
   @Type(() => NewSettingsDto)
   settings?: NewSettingsDto;
+
+  @IsOptional()
+  @IsBoolean()
+  mustAcknowledge?: boolean;
+
+  // --- AI Fields ---
+  @IsOptional()
+  @IsString()
+  ai_summary?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  ai_tags?: string[];
 }

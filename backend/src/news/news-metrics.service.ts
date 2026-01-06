@@ -46,18 +46,31 @@ export class NewsMetricsService {
     }
   }
 
-  private parseRange(fromStr?: string, toStr?: string): { from?: string; to?: string } {
+  private parseRange(
+    fromStr?: string,
+    toStr?: string,
+  ): { from?: string; to?: string } {
     const isDateOnly = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
     let from: string | undefined;
     let to: string | undefined;
-    if (fromStr) from = isDateOnly(fromStr) ? `${fromStr}T00:00:00.000Z` : fromStr;
+    if (fromStr)
+      from = isDateOnly(fromStr) ? `${fromStr}T00:00:00.000Z` : fromStr;
     if (toStr) to = isDateOnly(toStr) ? `${toStr}T23:59:59.999Z` : toStr;
     return { from, to };
   }
 
   // ========= ROTA PRINCIPAL (tabela unificada) =========
   private async listUsersNIE(params: ListUsersParams) {
-    const { companyId, newsId, kind, from, to, limit = 50, offset = 0, q } = params;
+    const {
+      companyId,
+      newsId,
+      kind,
+      from,
+      to,
+      limit = 50,
+      offset = 0,
+      q,
+    } = params;
 
     // Tipos sempre em UPPER para comparação case-insensitive
     const types = this.kindsToTypes(kind).map((t) => t.toUpperCase());
@@ -99,12 +112,12 @@ export class NewsMetricsService {
       kind === 'opened'
         ? 'openCount'
         : kind === 'acknowledged'
-        ? 'ackCount'
-        : kind === 'reacted'
-        ? 'reactionCount'
-        : kind === 'commented'
-        ? 'commentCount'
-        : 'shareCount';
+          ? 'ackCount'
+          : kind === 'reacted'
+            ? 'reactionCount'
+            : kind === 'commented'
+              ? 'commentCount'
+              : 'shareCount';
 
     // Seleciona displayName também e faz GROUP BY consistente
     const sqlItems = `
@@ -141,7 +154,10 @@ export class NewsMetricsService {
     const normalized = rows.map((r) => ({
       id: r.id,
       // Preferir displayName quando existir
-      name: r.displayName && String(r.displayName).trim() ? r.displayName : (r.name ?? null),
+      name:
+        r.displayName && String(r.displayName).trim()
+          ? r.displayName
+          : (r.name ?? null),
       email: r.email ?? null,
       openCount: r.opencount ?? r.openCount ?? undefined,
       ackCount: r.ackcount ?? r.ackCount ?? undefined,
@@ -155,7 +171,16 @@ export class NewsMetricsService {
 
   // ========= FALLBACK LEGADO =========
   private async listUsersLegacy(params: ListUsersParams) {
-    const { companyId, newsId, kind, from, to, limit = 50, offset = 0, q } = params;
+    const {
+      companyId,
+      newsId,
+      kind,
+      from,
+      to,
+      limit = 50,
+      offset = 0,
+      q,
+    } = params;
     const { from: fromIso, to: toIso } = this.parseRange(from, to);
     const manager = this.interactionRepo.manager;
 
@@ -189,7 +214,10 @@ export class NewsMetricsService {
     };
 
     if (kind === 'reacted') {
-      const where = [`r."companyId"::text = $1::text`, `r."newsId"::text = $2::text`];
+      const where = [
+        `r."companyId"::text = $1::text`,
+        `r."newsId"::text = $2::text`,
+      ];
       const args: any[] = [companyId, newsId];
       let i = addRange(where, args, 'r');
       const { qClause, next } = addSearch(i, args);
@@ -215,7 +243,11 @@ export class NewsMetricsService {
          ORDER BY a."lastReactionAt" DESC NULLS LAST
          LIMIT $${i} OFFSET $${i + 1}
       `;
-      const items = await manager.query(itemsSql, [...args, Number(limit), Number(offset)]);
+      const items = await manager.query(itemsSql, [
+        ...args,
+        Number(limit),
+        Number(offset),
+      ]);
 
       const totalSql = `
         WITH agg AS (
@@ -232,7 +264,10 @@ export class NewsMetricsService {
       return {
         items: items.map((r: any) => ({
           id: r.id,
-          name: r.displayName && String(r.displayName).trim() ? r.displayName : (r.name ?? null),
+          name:
+            r.displayName && String(r.displayName).trim()
+              ? r.displayName
+              : (r.name ?? null),
           email: r.email ?? null,
           reactionCount: r.reactioncount ?? r.reactionCount ?? undefined,
         })),
@@ -241,7 +276,10 @@ export class NewsMetricsService {
     }
 
     if (kind === 'shared') {
-      const where = [`s."companyId"::text = $1::text`, `s."newsId"::text = $2::text`];
+      const where = [
+        `s."companyId"::text = $1::text`,
+        `s."newsId"::text = $2::text`,
+      ];
       const args: any[] = [companyId, newsId];
       let i = addRange(where, args, 's');
       const { qClause, next } = addSearch(i, args);
@@ -267,7 +305,11 @@ export class NewsMetricsService {
          ORDER BY a."lastShareAt" DESC NULLS LAST
          LIMIT $${i} OFFSET $${i + 1}
       `;
-      const items = await manager.query(itemsSql, [...args, Number(limit), Number(offset)]);
+      const items = await manager.query(itemsSql, [
+        ...args,
+        Number(limit),
+        Number(offset),
+      ]);
 
       const totalSql = `
         WITH agg AS (
@@ -284,7 +326,10 @@ export class NewsMetricsService {
       return {
         items: items.map((r: any) => ({
           id: r.id,
-          name: r.displayName && String(r.displayName).trim() ? r.displayName : (r.name ?? null),
+          name:
+            r.displayName && String(r.displayName).trim()
+              ? r.displayName
+              : (r.name ?? null),
           email: r.email ?? null,
           shareCount: r.sharecount ?? r.shareCount ?? undefined,
         })),
@@ -293,7 +338,10 @@ export class NewsMetricsService {
     }
 
     if (kind === 'commented') {
-      const where = [`c."companyId"::text = $1::text`, `c."newsId"::text = $2::text`];
+      const where = [
+        `c."companyId"::text = $1::text`,
+        `c."newsId"::text = $2::text`,
+      ];
       const args: any[] = [companyId, newsId];
       let i = addRange(where, args, 'c');
       const { qClause, next } = addSearch(i, args);
@@ -319,7 +367,11 @@ export class NewsMetricsService {
          ORDER BY a."lastCommentAt" DESC NULLS LAST
          LIMIT $${i} OFFSET $${i + 1}
       `;
-      const items = await manager.query(itemsSql, [...args, Number(limit), Number(offset)]);
+      const items = await manager.query(itemsSql, [
+        ...args,
+        Number(limit),
+        Number(offset),
+      ]);
 
       const totalSql = `
         WITH agg AS (
@@ -336,7 +388,10 @@ export class NewsMetricsService {
       return {
         items: items.map((r: any) => ({
           id: r.id,
-          name: r.displayName && String(r.displayName).trim() ? r.displayName : (r.name ?? null),
+          name:
+            r.displayName && String(r.displayName).trim()
+              ? r.displayName
+              : (r.name ?? null),
           email: r.email ?? null,
           commentCount: r.commentcount ?? r.commentCount ?? undefined,
         })),

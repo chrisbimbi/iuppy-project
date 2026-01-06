@@ -14,18 +14,20 @@ import {
   OverlayTrigger,
 } from 'react-bootstrap';
 import ReactApexChart from 'react-apexcharts';
+import { useIntl } from 'react-intl';
 import WordCloudCanvas from '../components/WordCloudCanvas';
 
 // 1. Mapa de Tradução (UX Polished)
+// 1. Mapa de Tradução (UX Polished)
 const FIELD_TYPE_TRANSLATIONS: Record<string, string> = {
-  short_text: 'Texto Curto',
-  long_text: 'Texto Longo',
-  number: 'Numérico',
-  date: 'Data',
-  single_choice: 'Escolha Única',
-  multi_choice: 'Múltipla Escolha',
-  stars: 'Avaliação (Estrelas)',
-  scale: 'Escala (NPS)',
+  short_text: 'FORMS.STATS.FIELD_TYPE.SHORT_TEXT',
+  long_text: 'FORMS.STATS.FIELD_TYPE.LONG_TEXT',
+  number: 'FORMS.STATS.FIELD_TYPE.NUMBER',
+  date: 'FORMS.STATS.FIELD_TYPE.DATE',
+  single_choice: 'FORMS.STATS.FIELD_TYPE.SINGLE_CHOICE',
+  multi_choice: 'FORMS.STATS.FIELD_TYPE.MULTI_CHOICE',
+  stars: 'FORMS.STATS.FIELD_TYPE.STARS',
+  scale: 'FORMS.STATS.FIELD_TYPE.SCALE',
 };
 
 type StatsData = {
@@ -90,23 +92,24 @@ type AuditLog = {
 };
 
 const AUDIT_ACTION_MAP: Record<string, string> = {
-  form_created: 'Formulário Criado',
-  form_updated: 'Formulário Atualizado',
-  form_status_changed: 'Status Alterado',
-  form_published: 'Formulário Publicado',
-  form_duplicated: 'Formulário Duplicado',
-  form_deleted: 'Formulário Apagado',
-  form_push_sent: 'Push de Publicação Enviado',
-  notification_settings_updated: 'E-mails de Notificação Atualizados',
-  submission_replied: 'Envio Respondido (Legado)',
-  submission_approved: 'Envio Aprovado',
-  submission_rejected: 'Envio Rejeitado',
-  submission_chat_sent: 'Mensagem de Chat Enviada',
-  submission_chat_closed: 'Chat Encerrado',
+  form_created: 'FORMS.STATS.AUDIT.FORM_CREATED',
+  form_updated: 'FORMS.STATS.AUDIT.FORM_UPDATED',
+  form_status_changed: 'FORMS.STATS.AUDIT.FORM_STATUS_CHANGED',
+  form_published: 'FORMS.STATS.AUDIT.FORM_PUBLISHED',
+  form_duplicated: 'FORMS.STATS.AUDIT.FORM_DUPLICATED',
+  form_deleted: 'FORMS.STATS.AUDIT.FORM_DELETED',
+  form_push_sent: 'FORMS.STATS.AUDIT.FORM_PUSH_SENT',
+  notification_settings_updated: 'FORMS.STATS.AUDIT.NOTIFICATION_SETTINGS_UPDATED',
+  submission_replied: 'FORMS.STATS.AUDIT.SUBMISSION_REPLIED',
+  submission_approved: 'FORMS.STATS.AUDIT.SUBMISSION_APPROVED',
+  submission_rejected: 'FORMS.STATS.AUDIT.SUBMISSION_REJECTED',
+  submission_chat_sent: 'FORMS.STATS.AUDIT.SUBMISSION_CHAT_SENT',
+  submission_chat_closed: 'FORMS.STATS.AUDIT.SUBMISSION_CHAT_CLOSED',
 };
 
-const getAuditLogTranslation = (action: string) => {
-  return AUDIT_ACTION_MAP[action] || action;
+const getAuditLogTranslation = (action: string, intl: any) => {
+  const key = AUDIT_ACTION_MAP[action];
+  return key ? intl.formatMessage({ id: key }) : action;
 };
 
 const toLocalDateInput = (date: Date) => {
@@ -119,6 +122,7 @@ const today = toLocalDateInput(new Date());
 const sevenDaysAgo = toLocalDateInput(new Date(new Date().setDate(new Date().getDate() - 7)));
 
 export default function FormStatsPage() {
+  const intl = useIntl();
   const { formId } = useParams<{ formId: string }>();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StatsData | null>(null);
@@ -189,7 +193,7 @@ export default function FormStatsPage() {
       }
       loadData();
     } catch (e: any) {
-      setBackfillErr(e.message ?? 'Falha ao rodar agregação');
+      setBackfillErr(e.message ?? intl.formatMessage({ id: 'FORMS.STATS.ERROR.BACKFILL' }));
     } finally {
       setBackfillLoading(false);
     }
@@ -204,7 +208,7 @@ export default function FormStatsPage() {
         filters: { ...filters, spaceId: filters.spaceId || undefined, groupId: filters.groupId || undefined },
       });
     } catch (e: any) {
-      setErr('Falha ao gerar exportação: ' + (e as any).message);
+      setErr(intl.formatMessage({ id: 'FORMS.STATS.ERROR.EXPORT' }) + (e as any).message);
     } finally {
       setExportLoading(false);
     }
@@ -215,7 +219,7 @@ export default function FormStatsPage() {
       <Card>
         <Card.Body className="d-flex align-items-center gap-2">
           <Spinner animation="border" size="sm" />
-          <span>Carregando estatísticas…</span>
+          <span>{intl.formatMessage({ id: 'FORMS.STATS.LOADING.STATS' })}</span>
         </Card.Body>
       </Card>
     );
@@ -232,30 +236,30 @@ export default function FormStatsPage() {
   }
 
   if (!data) {
-    return <div className="p-6">Sem dados para esse formulário.</div>;
+    return <div className="p-6">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.FORM' })}</div>;
   }
 
   const formTitle =
-    (data.form.title as TranslatableString)?.[
-    data.form.defaultLocale || 'pt-BR'
-    ] ?? (data.form.title as string);
+    (data.form.title as TranslatableString)?.[data.form.defaultLocale || 'pt-BR'] ??
+    (data.form.title as TranslatableString)?.['pt'] ??
+    (typeof data.form.title === 'string' ? data.form.title : Object.values(data.form.title)[0] as string);
 
   return (
     <div className="container-xxl">
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
           <h1 className="mb-0 fs-2">{formTitle}</h1>
-          <span className="text-muted">Estatísticas do formulário</span>
+          <span className="text-muted">{intl.formatMessage({ id: 'FORMS.STATS.SUBTITLE' })}</span>
         </div>
         <div>
           <Button variant="light" onClick={handleExport} disabled={exportLoading} className="me-2">
-            {exportLoading ? 'Gerando...' : 'Exportar XLSX'}
+            {exportLoading ? intl.formatMessage({ id: 'FORMS.STATS.BUTTON.GENERATING' }) : intl.formatMessage({ id: 'FORMS.STATS.BUTTON.EXPORT' })}
           </Button>
           <Link to={`/forms/${formId}/submissions`} className="btn btn-primary me-2">
-            Ver Envios (Inbox)
+            {intl.formatMessage({ id: 'FORMS.STATS.BUTTON.INBOX' })}
           </Link>
           <Link to={`/forms/${formId}/edit`} className="btn btn-light">
-            Editar Formulário
+            {intl.formatMessage({ id: 'FORMS.STATS.BUTTON.EDIT' })}
           </Link>
         </div>
       </div>
@@ -264,33 +268,33 @@ export default function FormStatsPage() {
         <Card.Body>
           <div className="row g-3">
             <div className="col-md-2">
-              <label className="form-label">De:</label>
+              <label className="form-label">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.FROM' })}</label>
               <input type="date" className="form-control" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} />
             </div>
             <div className="col-md-2">
-              <label className="form-label">Até:</label>
+              <label className="form-label">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.TO' })}</label>
               <input type="date" className="form-control" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} />
             </div>
             <div className="col-md-3">
-              <label className="form-label">Space:</label>
+              <label className="form-label">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.SPACE' })}</label>
               <select className="form-select" value={filters.spaceId} onChange={e => setFilters(f => ({ ...f, spaceId: e.target.value }))}>
-                <option value="">Todos os Spaces</option>
+                <option value="">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.ALL_SPACES' })}</option>
                 {segData.spaces.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div className="col-md-3">
-              <label className="form-label">Grupo:</label>
+              <label className="form-label">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.GROUP' })}</label>
               <select className="form-select" value={filters.groupId} onChange={e => setFilters(f => ({ ...f, groupId: e.target.value }))}>
-                <option value="">Todos os Grupos</option>
+                <option value="">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.ALL_GROUPS' })}</option>
                 {segData.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
             <div className="col-md-2">
-              <label className="form-label">Audiência:</label>
+              <label className="form-label">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.AUDIENCE' })}</label>
               <select className="form-select" value={filters.audience} onChange={e => setFilters(f => ({ ...f, audience: e.target.value as any }))}>
-                <option value="all">Todos</option>
-                <option value="internal">Interno</option>
-                <option value="external">Externo</option>
+                <option value="all">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.ALL' })}</option>
+                <option value="internal">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.INTERNAL' })}</option>
+                <option value="external">{intl.formatMessage({ id: 'FORMS.STATS.FILTER.EXTERNAL' })}</option>
               </select>
             </div>
           </div>
@@ -299,19 +303,19 @@ export default function FormStatsPage() {
 
       <Alert variant="info" className="d-flex justify-content-between align-items-center">
         <div>
-          As estatísticas são agregadas diariamente (às 2:00). Para dados em tempo real, use o botão ao lado.
+          {intl.formatMessage({ id: 'FORMS.STATS.INFO.AGGREGATION' })}
           {backfillErr && <div className="text-danger small mt-1">{backfillErr}</div>}
         </div>
         <Button variant="info" onClick={handleBackfill} disabled={backfillLoading}>
-          {backfillLoading ? <Spinner size="sm" /> : 'Atualizar Agora'}
+          {backfillLoading ? <Spinner size="sm" /> : intl.formatMessage({ id: 'FORMS.STATS.BUTTON.UPDATE_NOW' })}
         </Button>
       </Alert>
 
       <Tabs defaultActiveKey="overview" className="mb-3" id="forms-stats-tabs">
-        <Tab eventKey="overview" title="Visão Geral">
+        <Tab eventKey="overview" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.OVERVIEW' })}>
           <OverviewTab data={data} />
         </Tab>
-        <Tab eventKey="questions" title="Perguntas (Resumo)">
+        <Tab eventKey="questions" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.QUESTIONS' })}>
           <QuestionsTab
             fieldData={fieldData}
             loading={loading}
@@ -319,7 +323,7 @@ export default function FormStatsPage() {
             defaultLocale={data.form.defaultLocale || 'pt-BR'}
           />
         </Tab>
-        <Tab eventKey="fields" title="Análise (Fricção)">
+        <Tab eventKey="fields" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.FIELDS' })}>
           <FieldsAnalysisTab
             fieldData={fieldData}
             loading={loading}
@@ -327,13 +331,13 @@ export default function FormStatsPage() {
             defaultLocale={data.form.defaultLocale || 'pt-BR'}
           />
         </Tab>
-        <Tab eventKey="segments" title="Segmentação">
+        <Tab eventKey="segments" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.SEGMENTS' })}>
           <SegmentsTab data={data} />
         </Tab>
-        <Tab eventKey="reminders" title="Lembretes">
+        <Tab eventKey="reminders" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.REMINDERS' })}>
           <RemindersTab data={data} />
         </Tab>
-        <Tab eventKey="logs" title="Logs de Auditoria">
+        <Tab eventKey="logs" title={intl.formatMessage({ id: 'FORMS.STATS.TAB.LOGS' })}>
           <AuditLogsTab formId={formId!} filters={filters} />
         </Tab>
       </Tabs>
@@ -365,6 +369,7 @@ const formatMsToHuman = (ms: number | null | undefined) => {
 };
 
 const OverviewTab = ({ data }: { data: StatsData }) => {
+  const intl = useIntl();
   const kpis = data.kpis;
   const chartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'area', height: 200, toolbar: { show: false } },
@@ -377,14 +382,22 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
   };
   const chartSeries = [
     {
-      name: 'Submissões',
+      name: intl.formatMessage({ id: 'FORMS.STATS.CHART.SUBMISSIONS' }),
       data: data.series.activity.map((d: any) => d.submissions),
     },
   ];
 
   const heatmapSeries = useMemo(() => {
     const daysOrder = [1, 2, 3, 4, 5, 6, 0];
-    const dayLabels: Record<number, string> = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
+    const dayLabels: Record<number, string> = {
+      0: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.SUN' }),
+      1: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.MON' }),
+      2: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.TUE' }),
+      3: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.WED' }),
+      4: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.THU' }),
+      5: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.FRI' }),
+      6: intl.formatMessage({ id: 'FORMS.STATS.WEEKDAY.SAT' })
+    };
     const base = new Map<string, number>();
     (data.heatmap ?? []).forEach(h => {
       base.set(`${h.day}-${h.hour}`, h.count);
@@ -399,8 +412,8 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
     chart: { type: 'heatmap', toolbar: { show: false } },
     dataLabels: { enabled: false },
     plotOptions: { heatmap: { shadeIntensity: 0.5 } },
-    xaxis: { title: { text: 'Hora do dia (UTC)' } },
-    yaxis: { title: { text: 'Dia da semana' } },
+    xaxis: { title: { text: intl.formatMessage({ id: 'FORMS.STATS.CHART.HOUR_UTC' }) } },
+    yaxis: { title: { text: intl.formatMessage({ id: 'FORMS.STATS.CHART.WEEKDAY' }) } },
   };
 
   const globalWords = data.globalWordCloud?.topWords ?? [];
@@ -408,14 +421,14 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
   const funnelData = useMemo(() => {
     const k = data.kpis;
     return [
-      { x: 'Elegíveis', y: k.eligibles || 0 },
-      { x: 'Aberturas', y: k.opens || 0 },
-      { x: 'Inícios', y: k.starts || 0 },
-      { x: 'Envios', y: k.submissions || 0 },
+      { x: intl.formatMessage({ id: 'FORMS.STATS.FUNNEL.ELIGIBLES' }), y: k.eligibles || 0 },
+      { x: intl.formatMessage({ id: 'FORMS.STATS.FUNNEL.OPENS' }), y: k.opens || 0 },
+      { x: intl.formatMessage({ id: 'FORMS.STATS.FUNNEL.STARTS' }), y: k.starts || 0 },
+      { x: intl.formatMessage({ id: 'FORMS.STATS.FUNNEL.SUBMISSIONS' }), y: k.submissions || 0 },
     ].filter(d => d.y > 0).sort((a, b) => b.y - a.y);
   }, [data.kpis]);
 
-  const funnelSeries = [{ name: 'Usuários', data: funnelData.map(d => d.y) }];
+  const funnelSeries = [{ name: intl.formatMessage({ id: 'FORMS.STATS.CHART.USERS' }), data: funnelData.map(d => d.y) }];
   const funnelCategories = funnelData.map(d => d.x);
   const funnelTotal = funnelData[0]?.y || 0;
 
@@ -456,7 +469,7 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
       labels: { show: false }
     },
     title: {
-      text: 'Funil de Conversão',
+      text: intl.formatMessage({ id: 'FORMS.STATS.CHART.FUNNEL' }),
       align: 'left',
     },
     tooltip: {
@@ -470,31 +483,31 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
   };
 
   return (
-    <div className="row g-4">
+    <div className="row g-4" >
       <div className="col-md-3 col-6">
-        <Kpi title="Total de Envios" value={kpis.submissions} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.SUBMISSIONS' })} value={kpis.submissions} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Pendentes p/ RH" value={kpis.pendingForRh} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.PENDING_RH' })} value={kpis.pendingForRh} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Respostas do RH" value={kpis.rhReplies} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.RH_REPLIES' })} value={kpis.rhReplies} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Tempo 1ª Resp. (P50)" value={formatMsToHuman(kpis.firstResponseMsP50)} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.FIRST_RESPONSE' })} value={formatMsToHuman(kpis.firstResponseMsP50)} />
       </div>
 
       <div className="col-md-3 col-6">
-        <Kpi title="Total de Perguntas" value={kpis.totalQuestions} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.TOTAL_QUESTIONS' })} value={kpis.totalQuestions} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Usuários Únicos" value={kpis.uniqueUsers} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.UNIQUE_USERS' })} value={kpis.uniqueUsers} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Envios no Prazo" value={formatPct(kpis.onTimeRate)} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.ON_TIME' })} value={formatPct(kpis.onTimeRate)} />
       </div>
       <div className="col-md-3 col-6">
-        <Kpi title="Uplift (Lembretes)" value={`${data.reminders.reduce((acc, r) => acc + r.submitsAfter, 0)} envios`} />
+        <Kpi title={intl.formatMessage({ id: 'FORMS.STATS.KPI.UPLIFT' })} value={intl.formatMessage({ id: 'FORMS.STATS.KPI.UPLIFT_VALUE' }, { count: data.reminders.reduce((acc, r) => acc + r.submitsAfter, 0) })} />
       </div>
 
       <div className="col-12">
@@ -508,7 +521,7 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
                 height={Math.max(250, funnelData.length * 60)}
               />
             ) : (
-              <Alert variant="info" className="m-0">Sem dados de funil para exibir no período.</Alert>
+              <Alert variant="info" className="m-0">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.FUNNEL' })}</Alert>
             )}
           </Card.Body>
         </Card>
@@ -517,7 +530,7 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
       <div className="col-12">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Atividade (Envios/dia)</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.CHART.ACTIVITY' })}</h5>
           </Card.Header>
           <Card.Body>
             <ReactApexChart
@@ -533,24 +546,24 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
       <div className="col-md-7">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Horários de Submissão (Dia/Hora UTC)</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.CHART.HEATMAP' })}</h5>
           </Card.Header>
           <Card.Body>
             {(data.heatmap ?? []).length > 0 ? (
               <ReactApexChart options={heatmapOptions} series={heatmapSeries} type="heatmap" height={360} />
             ) : (
               <div className="text-center text-muted p-4" style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                Sem dados de heatmap no período.
+                {intl.formatMessage({ id: 'FORMS.STATS.EMPTY.HEATMAP' })}
               </div>
             )}
           </Card.Body>
         </Card>
-      </div>
+      </div >
 
       <div className="col-md-5">
         <Card>
           <Card.Header>
-            <h5 className="card-title">WordCloud (Todas as Respostas)</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.CHART.WORDCLOUD' })}</h5>
           </Card.Header>
           <Card.Body>
             {globalWords.length > 0 ? (
@@ -565,17 +578,17 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
               </div>
             ) : (
               <div className="text-center text-muted p-4" style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                Sem respostas de texto suficientes para gerar a nuvem de palavras.
+                {intl.formatMessage({ id: 'FORMS.STATS.EMPTY.WORDCLOUD' })}
               </div>
             )}
           </Card.Body>
         </Card>
-      </div>
+      </div >
 
       <div className="col-md-6">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Ações do RH (por dia)</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.CHART.RH_ACTIONS' })}</h5>
           </Card.Header>
           <Card.Body>
             <ReactApexChart
@@ -585,15 +598,15 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
               }}
               series={[
                 {
-                  name: 'Respostas',
+                  name: intl.formatMessage({ id: 'FORMS.STATS.CHART.REPLIES' }),
                   data: data.series.rh.map((d: any) => d.replies),
                 },
                 {
-                  name: 'Aprovações',
+                  name: intl.formatMessage({ id: 'FORMS.STATS.CHART.APPROVALS' }),
                   data: data.series.rh.map((d: any) => d.approvals),
                 },
                 {
-                  name: 'Rejeições',
+                  name: intl.formatMessage({ id: 'FORMS.STATS.CHART.REJECTIONS' }),
                   data: data.series.rh.map((d: any) => d.rejections),
                 },
               ]}
@@ -606,18 +619,18 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
       <div className="col-md-6">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Notificações (por dia)</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.CHART.NOTIFICATIONS' })}</h5>
           </Card.Header>
           <Card.Body>
             <ReactApexChart
               options={chartOptions}
               series={[
                 {
-                  name: 'Push Enviado',
+                  name: intl.formatMessage({ id: 'FORMS.STATS.CHART.PUSH_SENT' }),
                   data: data.series.notifications.map((d: any) => d.pushSent),
                 },
                 {
-                  name: 'Push Aberto',
+                  name: intl.formatMessage({ id: 'FORMS.STATS.CHART.PUSH_OPENED' }),
                   data: data.series.notifications.map((d: any) => d.pushOpened),
                 },
               ]}
@@ -627,7 +640,7 @@ const OverviewTab = ({ data }: { data: StatsData }) => {
           </Card.Body>
         </Card>
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -635,12 +648,13 @@ const QuestionsTab = (
   { fieldData, loading, error, defaultLocale }:
     { fieldData: FieldStat[], loading: boolean, error: string | null, defaultLocale: string }
 ) => {
+  const intl = useIntl();
   if (loading) {
     return (
       <Card>
         <Card.Body className="d-flex align-items-center gap-2">
           <Spinner animation="border" size="sm" />
-          <span>Carregando perguntas...</span>
+          <span>{intl.formatMessage({ id: 'FORMS.STATS.LOADING.QUESTIONS' })}</span>
         </Card.Body>
       </Card>
     );
@@ -668,14 +682,14 @@ const QuestionsTab = (
   return (
     <Card>
       <Card.Header>
-        <h5 className="card-title">Resumo por Pergunta</h5>
+        <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.TAB.QUESTIONS' })}</h5>
       </Card.Header>
       <Table striped responsive>
         <thead>
           <tr>
-            <th>Título da Pergunta</th>
-            <th>Tipo da Pergunta</th>
-            <th className="text-end"># de Respostas</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.QUESTION_TITLE' })}</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.QUESTION_TYPE' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.RESPONSES_COUNT' })}</th>
           </tr>
         </thead>
         <tbody>
@@ -683,7 +697,7 @@ const QuestionsTab = (
             <tr key={field.fieldId}>
               <td>{getLabel(field.label)}</td>
               <td>
-                <span className="badge badge-light">{FIELD_TYPE_TRANSLATIONS[field.type] || field.type}</span>
+                <span className="badge badge-light">{intl.formatMessage({ id: FIELD_TYPE_TRANSLATIONS[field.type] || field.type })}</span>
               </td>
               <td className="text-end fw-bold">{countResponses(field)}</td>
             </tr>
@@ -691,7 +705,7 @@ const QuestionsTab = (
           {fieldData.length === 0 && (
             <tr>
               <td colSpan={3} className="text-center text-muted p-4">
-                Nenhuma pergunta encontrada neste formulário.
+                {intl.formatMessage({ id: 'FORMS.STATS.EMPTY.QUESTIONS' })}
               </td>
             </tr>
           )}
@@ -703,20 +717,21 @@ const QuestionsTab = (
 
 
 const SegmentsTab = ({ data }: { data: StatsData }) => {
+  const intl = useIntl();
   const segments = data.segments;
   return (
     <div className="row g-4">
       <div className="col-md-4">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Por Audiência</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.SEGMENT.AUDIENCE' })}</h5>
           </Card.Header>
           <Table striped>
             <tbody>
               {segments.byAudience.map((it: any) => (
                 <tr key={it.type}>
-                  <td>{it.type === 'internal' ? 'Interno' : 'Externo'}</td>
-                  <td className="text-end fw-bold">{it.submits}</td>
+                  <td>{it.type === 'internal' ? intl.formatMessage({ id: 'FORMS.STATS.FILTER.INTERNAL' }) : intl.formatMessage({ id: 'FORMS.STATS.FILTER.EXTERNAL' })}</td>
+                  <td className="text-end fw-bold">{it.submissions}</td>
                 </tr>
               ))}
             </tbody>
@@ -726,7 +741,7 @@ const SegmentsTab = ({ data }: { data: StatsData }) => {
       <div className="col-md-4">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Por Space</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.SEGMENT.SPACE' })}</h5>
           </Card.Header>
           <Table striped>
             <tbody>
@@ -743,7 +758,7 @@ const SegmentsTab = ({ data }: { data: StatsData }) => {
       <div className="col-md-4">
         <Card>
           <Card.Header>
-            <h5 className="card-title">Por Grupo</h5>
+            <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.SEGMENT.GROUP' })}</h5>
           </Card.Header>
           <Table striped>
             <tbody>
@@ -762,20 +777,21 @@ const SegmentsTab = ({ data }: { data: StatsData }) => {
 };
 
 const RemindersTab = ({ data }: { data: StatsData }) => {
+  const intl = useIntl();
   return (
     <Card>
       <Card.Header>
-        <h5 className="card-title">Eficácia dos Lembretes</h5>
+        <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.TITLE.REMINDERS' })}</h5>
       </Card.Header>
       <Table striped>
         <thead>
           <tr>
-            <th>Lembrete</th>
-            <th className="text-end">Enviados</th>
-            <th className="text-end">Abertos</th>
-            <th className="text-end">Taxa Abertura</th>
-            <th className="text-end">Envios Pós (48h)</th>
-            <th className="text-end">Uplift (%)</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.REMINDER' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.SENT' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.OPENED' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.OPEN_RATE' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.SUBMITS_AFTER' })}</th>
+            <th className="text-end">{intl.formatMessage({ id: 'FORMS.STATS.TABLE.UPLIFT_PCT' })}</th>
           </tr>
         </thead>
         <tbody>
@@ -798,7 +814,7 @@ const RemindersTab = ({ data }: { data: StatsData }) => {
           {data.reminders.length === 0 && (
             <tr>
               <td colSpan={6} className="text-muted text-center p-4">
-                Nenhum lembrete configurado ou enviado para este formulário.
+                {intl.formatMessage({ id: 'FORMS.STATS.EMPTY.REMINDERS' })}
               </td>
             </tr>
           )}
@@ -813,12 +829,14 @@ const FieldsAnalysisTab = (
     { fieldData: FieldStat[], loading: boolean, error: string | null, defaultLocale: string }
 ) => {
 
+  const intl = useIntl();
+
   if (loading) {
     return (
       <Card>
         <Card.Body className="d-flex align-items-center gap-2">
           <Spinner animation="border" size="sm" />
-          <span>Analisando fricção e respostas...</span>
+          <span>{intl.formatMessage({ id: 'FORMS.STATS.LOADING.ANALYSIS' })}</span>
         </Card.Body>
       </Card>
     );
@@ -829,7 +847,7 @@ const FieldsAnalysisTab = (
   }
 
   if (!fieldData || fieldData.length === 0) {
-    return <Alert variant="info">Nenhuma pergunta encontrada para este formulário.</Alert>;
+    return <Alert variant="info">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.QUESTIONS' })}</Alert>;
   }
 
   const getAverage = (choices: Array<{ value: any; count: number }>): number | null => {
@@ -859,7 +877,7 @@ const FieldsAnalysisTab = (
         return `${val} (${pct.toFixed(0)}%)`;
       }
     },
-    xaxis: { categories: labels, title: { text: 'Contagem' } },
+    xaxis: { categories: labels, title: { text: intl.formatMessage({ id: 'FORMS.STATS.CHART.COUNT' }) } },
     yaxis: { labels: { maxWidth: 200 } },
     legend: { show: false },
     title: { text: title },
@@ -869,7 +887,7 @@ const FieldsAnalysisTab = (
     chart: { type: 'bar', height: 320, toolbar: { show: false } },
     plotOptions: { bar: { columnWidth: '50%', distributed: true } },
     dataLabels: { enabled: true },
-    xaxis: { categories: labels, title: { text: 'Valor' } },
+    xaxis: { categories: labels, title: { text: intl.formatMessage({ id: 'FORMS.STATS.CHART.VALUE' }) } },
     legend: { show: false },
     title: { text: title },
     annotations: average ? {
@@ -880,7 +898,7 @@ const FieldsAnalysisTab = (
           label: {
             borderColor: '#FF4560',
             style: { color: '#fff', background: '#FF4560' },
-            text: `Média: ${average.toFixed(2)}`,
+            text: `${intl.formatMessage({ id: 'FORMS.STATS.KPI.AVERAGE' })}: ${average.toFixed(2)}`,
           },
         },
       ],
@@ -897,20 +915,21 @@ const FieldsAnalysisTab = (
   return (
     <div className="d-flex flex-column gap-6">
       {fieldData.map(q => {
-        const cardTitle = (q.label as TranslatableString)?.[defaultLocale] ?? (q.label as string);
+        const labelObj = q.label as any;
+        const cardTitle = typeof labelObj === 'string' ? labelObj : (labelObj?.[defaultLocale] || labelObj?.['pt-BR'] || labelObj?.['pt'] || Object.values(labelObj || {})[0] || '');
         const hasDistribution = q.distribution && q.distribution.choices.length > 0;
         const hasWordCloud = q.topWords && q.topWords.length > 0;
 
         const metrics = q.metrics;
         const kpis = [
-          { label: 'Interações', value: metrics.focus, tooltip: 'Nº de vezes que usuários clicaram ou focaram neste campo.' },
-          { label: 'Mudanças', value: metrics.changes, tooltip: 'Nº de vezes que usuários alteraram o valor do campo.' },
-          { label: 'Erros', value: metrics.validationErrors, tooltip: 'Nº de vezes que um erro de validação (ex: obrigatório) foi disparado.' },
-          { label: 'Taxa de Erro', value: formatPct(metrics.errorRate), tooltip: '(Erros / Interações). Indica a dificuldade de preenchimento.' },
+          { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.INTERACTIONS' }), value: metrics.focus, tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.INTERACTIONS' }) },
+          { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.CHANGES' }), value: metrics.changes, tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.CHANGES' }) },
+          { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.ERRORS' }), value: metrics.validationErrors, tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.ERRORS' }) },
+          { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.ERROR_RATE' }), value: formatPct(metrics.errorRate), tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.ERROR_RATE' }) },
         ];
 
         // 2. Uso da tradução no título do Card
-        const typeLabel = FIELD_TYPE_TRANSLATIONS[q.type] || q.type;
+        const typeLabel = intl.formatMessage({ id: FIELD_TYPE_TRANSLATIONS[q.type] || q.type });
 
         if (q.type === 'single_choice' || q.type === 'multi_choice') {
           const labels = (q.distribution?.choices ?? []).map((c: any) => c.value);
@@ -926,15 +945,15 @@ const FieldsAnalysisTab = (
                 {hasDistribution ? (
                   <>
                     <ReactApexChart
-                      options={barOptions('Distribuição de Respostas', labels)}
-                      series={[{ name: 'Respostas', data }]}
+                      options={barOptions(intl.formatMessage({ id: 'FORMS.STATS.CHART.DISTRIBUTION' }), labels)}
+                      series={[{ name: intl.formatMessage({ id: 'FORMS.STATS.CHART.REPLIES' }), data }]}
                       type="bar"
                       height={Math.max(320, labels.length * 35)}
                     />
                     <KpiRow kpis={kpis} />
                   </>
                 ) : (
-                  <div className="text-muted text-center p-4">Sem respostas para esta pergunta.</div>
+                  <div className="text-muted text-center p-4">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.FIELD_RESPONSES' })}</div>
                 )}
               </Card.Body>
             </Card>
@@ -958,8 +977,8 @@ const FieldsAnalysisTab = (
 
           const fieldKpis = [
             ...kpis,
-            { label: 'Média', value: average?.toFixed(2) ?? 'N/A', tooltip: 'Média aritmética das respostas.' },
-            { label: 'Mediana', value: median, tooltip: 'O valor do meio (P50) das respostas.' },
+            { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.AVERAGE' }), value: average?.toFixed(2) ?? 'N/A', tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.AVERAGE' }) },
+            { label: intl.formatMessage({ id: 'FORMS.STATS.KPI.MEDIAN' }), value: median, tooltip: intl.formatMessage({ id: 'FORMS.STATS.TOOLTIP.MEDIAN' }) },
           ];
 
           return (
@@ -973,7 +992,7 @@ const FieldsAnalysisTab = (
                 {hasDistribution ? (
                   <>
                     <ReactApexChart
-                      options={histOptions('Distribuição de Respostas', labels, average)}
+                      options={histOptions(intl.formatMessage({ id: 'FORMS.STATS.CHART.DISTRIBUTION' }), labels, average)}
                       series={[{ name: 'Qtd', data }]}
                       type="bar"
                       height={320}
@@ -981,7 +1000,7 @@ const FieldsAnalysisTab = (
                     <KpiRow kpis={fieldKpis} />
                   </>
                 ) : (
-                  <div className="text-muted text-center p-4">Sem respostas para esta pergunta.</div>
+                  <div className="text-muted text-center p-4">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.FIELD_RESPONSES' })}</div>
                 )}
               </Card.Body>
             </Card>
@@ -1011,7 +1030,7 @@ const FieldsAnalysisTab = (
                       <div className="row g-6 mt-4">
                         {q.bigrams?.length ? (
                           <div className="col-md-6">
-                            <div className="fw-semibold mb-2">Top bigramas</div>
+                            <div className="fw-semibold mb-2">{intl.formatMessage({ id: 'FORMS.STATS.LABEL.TOP_BIGRAMS' })}</div>
                             <div className="d-flex flex-wrap gap-2">
                               {q.bigrams.slice(0, 20).map(b => (
                                 <span key={b.phrase} className="badge badge-light">
@@ -1023,7 +1042,7 @@ const FieldsAnalysisTab = (
                         ) : null}
                         {q.trigrams?.length ? (
                           <div className="col-md-6">
-                            <div className="fw-semibold mb-2">Top trigramas</div>
+                            <div className="fw-semibold mb-2">{intl.formatMessage({ id: 'FORMS.STATS.LABEL.TOP_TRIGRAMS' })}</div>
                             <div className="d-flex flex-wrap gap-2">
                               {q.trigrams.slice(0, 20).map(t => (
                                 <span key={t.phrase} className="badge badge-light">
@@ -1038,7 +1057,7 @@ const FieldsAnalysisTab = (
                     <KpiRow kpis={kpis} />
                   </>
                 ) : (
-                  <div className="text-muted text-center p-4">Sem respostas de texto suficientes para gerar a nuvem de palavras.</div>
+                  <div className="text-muted text-center p-4">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.WORDCLOUD' })}</div>
                 )}
               </Card.Body>
             </Card>
@@ -1053,7 +1072,7 @@ const FieldsAnalysisTab = (
               </h5>
             </Card.Header>
             <Card.Body>
-              <p className="text-muted">Sem visualização gráfica para este tipo de pergunta (Ex: Data, Número).</p>
+              <p className="text-muted">{intl.formatMessage({ id: 'FORMS.STATS.EMPTY.FIELD_CHART' })}</p>
               <KpiRow kpis={kpis} />
             </Card.Body>
           </Card>
@@ -1064,6 +1083,7 @@ const FieldsAnalysisTab = (
 };
 
 const AuditLogsTab = ({ formId, filters }: { formId: string, filters: any }) => {
+  const intl = useIntl();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -1073,7 +1093,7 @@ const AuditLogsTab = ({ formId, filters }: { formId: string, filters: any }) => 
     setErr(null);
     FormsApi.analyticsGetLogs(formId, filters)
       .then((res: any) => setLogs(res.items))
-      .catch(e => setErr(e.message || 'Falha ao carregar logs'))
+      .catch(e => setErr(e.message || intl.formatMessage({ id: 'FORMS.STATS.ERROR.LOGS' })))
       .finally(() => setLoading(false));
   }, [formId, filters]);
 
@@ -1087,20 +1107,20 @@ const AuditLogsTab = ({ formId, filters }: { formId: string, filters: any }) => 
   return (
     <Card>
       <Card.Header>
-        <h5 className="card-title">Logs de Auditoria do Formulário</h5>
+        <h5 className="card-title">{intl.formatMessage({ id: 'FORMS.STATS.TITLE.LOGS' })}</h5>
       </Card.Header>
       <Table striped hover responsive>
         <thead>
           <tr>
-            <th>Data</th>
-            <th>Usuário (RH)</th>
-            <th>Ação</th>
-            <th>Detalhes</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.DATE' })}</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.USER_RH' })}</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.ACTION' })}</th>
+            <th>{intl.formatMessage({ id: 'FORMS.STATS.TABLE.DETAILS' })}</th>
           </tr>
         </thead>
         <tbody>
           {logs.map(log => {
-            const actionText = getAuditLogTranslation(log.action);
+            const actionText = getAuditLogTranslation(log.action, intl);
 
             return (
               <tr key={log.id}>
@@ -1118,7 +1138,7 @@ const AuditLogsTab = ({ formId, filters }: { formId: string, filters: any }) => 
           {logs.length === 0 && (
             <tr>
               <td colSpan={4} className="text-center text-muted p-4">
-                Nenhum log de auditoria encontrado para este formulário no período selecionado.
+                {intl.formatMessage({ id: 'FORMS.STATS.EMPTY.LOGS' })}
               </td>
             </tr>
           )}

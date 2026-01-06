@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  Index,
-} from 'typeorm'
+import { Column, Entity, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 /**
  * Eventos de uso do formulário (append-only)
@@ -13,34 +8,34 @@ import {
 @Index(['companyId', 'ts'])
 export class FormEventEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('text')
-  type: string
+  type: string;
 
   @Column('uuid', { nullable: true })
-  userId: string | null
+  userId: string | null;
 
   @Column('boolean', { default: false })
-  external: boolean
+  external: boolean;
 
   @Column('text', { nullable: true })
-  externalEmail: string | null
+  externalEmail: string | null;
 
   @Column('uuid', { nullable: true })
-  fieldId: string | null
+  fieldId: string | null;
 
   @Column('jsonb', { nullable: true })
-  meta: any | null
+  meta: any | null;
 
   @Column('timestamptz')
-  ts: Date
+  ts: Date;
 }
 
 /**
@@ -51,40 +46,40 @@ export class FormEventEntity {
 @Index(['companyId', 'ts'])
 export class NotificationEventEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('text')
-  objectType: string // 'form'
+  objectType: string; // 'form'
 
   @Column('uuid')
-  objectId: string
+  objectId: string;
 
   @Column('text')
-  channel: 'push' | 'email' | 'webhook'
+  channel: 'push' | 'email' | 'webhook';
 
   @Column('text')
-  type: string // scheduled|sent|delivered|opened|clicked|failed
+  type: string; // scheduled|sent|delivered|opened|clicked|failed
 
   @Column('uuid', { nullable: true })
-  userId: string | null
+  userId: string | null;
 
   @Column('text', { nullable: true })
-  externalEmail: string | null
+  externalEmail: string | null;
 
   @Column('int', { nullable: true })
-  latencyMs: number | null
+  latencyMs: number | null;
 
   @Column('text', { nullable: true })
-  status: string | null
+  status: string | null;
 
   @Column('jsonb', { nullable: true })
-  meta: any | null
+  meta: any | null;
 
   @Column('timestamptz')
-  ts: Date
+  ts: Date;
 }
 
 /**
@@ -95,31 +90,31 @@ export class NotificationEventEntity {
 @Index(['companyId', 'ts'])
 export class ReminderEventEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('text')
-  kind: string // D-1, D-2, ...
+  kind: string; // D-1, D-2, ...
 
   @Column('text')
-  type: string // scheduled|sent|opened
+  type: string; // scheduled|sent|opened
 
   @Column('uuid', { nullable: true })
-  userId: string | null
+  userId: string | null;
 
   @Column('text', { nullable: true })
-  externalEmail: string | null
+  externalEmail: string | null;
 
   @Column('jsonb', { nullable: true })
-  meta: any | null
+  meta: any | null;
 
   @Column('timestamptz')
-  ts: Date
+  ts: Date;
 }
 
 /**
@@ -129,55 +124,55 @@ export class ReminderEventEntity {
 @Index(['companyId', 'formId', 'date'], { unique: true })
 export class FormMetricsDailyEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('date')
-  date: string
+  date: string;
 
   @Column('int', { default: 0 })
-  eligibles: number
+  eligibles: number;
 
   @Column('int', { default: 0 })
-  impressions: number
+  impressions: number;
 
   @Column('int', { default: 0 })
-  opens: number
+  opens: number;
 
   @Column('int', { default: 0 })
-  starts: number
+  starts: number;
 
   @Column('int', { default: 0 })
-  submits: number
+  submits: number;
 
   @Column('int', { default: 0 })
-  onTimeSubmits: number
+  onTimeSubmits: number;
 
   @Column('int', { default: 0 })
-  internalSubmits: number
+  internalSubmits: number;
 
   @Column('int', { default: 0 })
-  externalSubmits: number
+  externalSubmits: number;
 
   @Column('int', { default: 0 })
-  pushSent: number
+  pushSent: number;
 
   @Column('int', { default: 0 })
-  pushOpened: number
+  pushOpened: number;
 
   @Column('int', { default: 0 })
-  emailSent: number
+  emailSent: number;
 
   @Column('int', { default: 0 })
-  emailOpened: number
+  emailOpened: number;
 
   @Column('int', { default: 0 })
-  emailClicked: number
+  emailClicked: number;
 }
 
 /**
@@ -187,20 +182,20 @@ export class FormMetricsDailyEntity {
 @Index(['companyId', 'cmsUserId', 'formId'], { unique: true })
 export class FormBadgeStateEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  cmsUserId: string
+  cmsUserId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('timestamptz', { nullable: true })
-  lastSeenAt: Date | null
+  lastSeenAt: Date | null;
 
   @Column('int', { default: 0 })
-  newCount: number
+  newCount: number;
 }

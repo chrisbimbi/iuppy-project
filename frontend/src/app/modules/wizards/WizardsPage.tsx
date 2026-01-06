@@ -1,47 +1,52 @@
-import {Navigate, Outlet, Route, Routes} from 'react-router-dom'
-import {PageLink, PageTitle} from '../../..//layout/core'
-import {Vertical} from './components/Vertical'
-import {Horizontal} from './components/Horizontal'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { PageLink, PageTitle } from '../../..//layout/core'
+import { Vertical } from './components/Vertical'
+import { Horizontal } from './components/Horizontal'
+import { useIntl } from 'react-intl'
 
-const wizardsBreadCrumbs: Array<PageLink> = [
-  {
-    title: 'Wizards',
-    path: '/crafted/pages/wizards/horizontal',
-    isSeparator: false,
-    isActive: false,
-  },
-  {
-    title: '',
-    path: '',
-    isSeparator: true,
-    isActive: false,
-  },
-]
+const WizardsPage = () => {
+  const intl = useIntl()
 
-const WizardsPage = () => (
-  <Routes>
-    <Route element={<Outlet />}>
-      <Route
-        path='horizontal'
-        element={
-          <>
-            <PageTitle breadcrumbs={wizardsBreadCrumbs}>Horizontal</PageTitle>
-            <Horizontal />
-          </>
-        }
-      />
-      <Route
-        path='vertical'
-        element={
-          <>
-            <PageTitle breadcrumbs={wizardsBreadCrumbs}>Vertical</PageTitle>
-            <Vertical />
-          </>
-        }
-      />
-      <Route index element={<Navigate to='/crafted/pages/wizards/horizontal' />} />
-    </Route>
-  </Routes>
-)
+  const wizardsBreadCrumbs: Array<PageLink> = [
+    {
+      title: intl.formatMessage({ id: 'MENU.WIZARDS', defaultMessage: 'Wizards' }),
+      path: '/crafted/pages/wizards/horizontal',
+      isSeparator: false,
+      isActive: false,
+    },
+    {
+      title: '',
+      path: '',
+      isSeparator: true,
+      isActive: false,
+    },
+  ]
+
+  return (
+    <Routes>
+      <Route element={<Outlet />}>
+        <Route
+          path='horizontal'
+          element={
+            <>
+              <PageTitle breadcrumbs={wizardsBreadCrumbs}>{intl.formatMessage({ id: 'WIZARDS.HORIZONTAL', defaultMessage: 'Horizontal' })}</PageTitle>
+              <Horizontal />
+            </>
+          }
+        />
+        <Route
+          path='vertical'
+          element={
+            <>
+              <PageTitle breadcrumbs={wizardsBreadCrumbs}>{intl.formatMessage({ id: 'WIZARDS.VERTICAL', defaultMessage: 'Vertical' })}</PageTitle>
+              <Vertical />
+            </>
+          }
+        />
+        <Route index element={<Navigate to='/crafted/pages/wizards/horizontal' />} />
+      </Route>
+    </Routes>
+  )
+}
 
 export default WizardsPage

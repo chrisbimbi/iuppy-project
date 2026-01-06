@@ -4,6 +4,7 @@ export enum AudienceMode {
   SPACE = 'SPACE',
   CHANNEL = 'CHANNEL',
   GROUPS = 'GROUPS',
+  LOGICAL = 'LOGICAL',
 }
 
 export interface NewsSettings {

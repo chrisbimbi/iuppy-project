@@ -1,4 +1,4 @@
-import React, {FC} from 'react'
+import React, { FC } from 'react'
 import {
   MixedWidget1,
   MixedWidget2,
@@ -14,8 +14,10 @@ import {
 } from '../../../..//partials/widgets'
 import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../..//layout/components/Content'
+import { useIntl } from 'react-intl'
 
 const Mixed: FC = () => {
+  const intl = useIntl()
   return (
     <>
       <Toolbar />
@@ -117,8 +119,8 @@ const Mixed: FC = () => {
               className='card-xl-stretch mb-xl-8'
               image='../media/svg/brand-logos/plurk.svg'
               color='danger'
-              title='Monthly Subscription'
-              date='Due: 27 Apr 2020'
+              title={intl.formatMessage({ id: 'WIDGETS.MIXED.MONTHLY_SUBSCRIPTION', defaultMessage: 'Monthly Subscription' })}
+              date={intl.formatMessage({ id: 'WIDGETS.MIXED.DUE_DATE', defaultMessage: 'Due: 27 Apr 2020' })}
               progress='75%'
             />
           </div>
@@ -130,8 +132,8 @@ const Mixed: FC = () => {
               className='card-xl-stretch mb-xl-8'
               image='../media/svg/brand-logos/vimeo.svg'
               color='primary'
-              title='Monthly Subscription'
-              date='Due: 27 Apr 2020'
+              title={intl.formatMessage({ id: 'WIDGETS.MIXED.MONTHLY_SUBSCRIPTION', defaultMessage: 'Monthly Subscription' })}
+              date={intl.formatMessage({ id: 'WIDGETS.MIXED.DUE_DATE', defaultMessage: 'Due: 27 Apr 2020' })}
               progress='75%'
             />
             {/*))?>*/}
@@ -144,8 +146,8 @@ const Mixed: FC = () => {
               className='card-xl-stretch mb-5 mb-xl-8'
               image='../media/svg/brand-logos/kickstarter.svg'
               color='success'
-              title='Monthly Subscription'
-              date='Due: 27 Apr 2020'
+              title={intl.formatMessage({ id: 'WIDGETS.MIXED.MONTHLY_SUBSCRIPTION', defaultMessage: 'Monthly Subscription' })}
+              date={intl.formatMessage({ id: 'WIDGETS.MIXED.DUE_DATE', defaultMessage: 'Due: 27 Apr 2020' })}
               progress='75%'
             />
           </div>
@@ -160,9 +162,9 @@ const Mixed: FC = () => {
             <MixedWidget5
               className='card-xl-stretch mb-xl-8'
               image='../media/svg/brand-logos/plurk.svg'
-              time='7 hours ago'
+              time={intl.formatMessage({ id: 'WIDGETS.MIXED.TIME.7_HOURS', defaultMessage: '7 hours ago' })}
               title='PitStop - Multiple Email Generator'
-              description='Pitstop creates quick email campaigns.<br/>We help to strengthen your brand<br/>for your every purpose.'
+              description={intl.formatMessage({ id: 'WIDGETS.MIXED.DESC.PITSTOP', defaultMessage: 'Pitstop creates quick email campaigns.<br/>We help to strengthen your brand<br/>for your every purpose.' })}
             />
           </div>
           {/* end::Col */}
@@ -172,9 +174,9 @@ const Mixed: FC = () => {
             <MixedWidget5
               className='card-xl-stretch mb-xl-8'
               image='../media/svg/brand-logos/telegram.svg'
-              time='10 days ago'
+              time={intl.formatMessage({ id: 'WIDGETS.MIXED.TIME.10_DAYS', defaultMessage: '10 days ago' })}
               title='ReactJS Admin Theme'
-              description='iuppy! uses the latest and greatest frameworks<br/>with ReactJS for complete modernization and<br/>future.'
+              description={intl.formatMessage({ id: 'WIDGETS.MIXED.DESC.REACT', defaultMessage: 'iuppy! uses the latest and greatest frameworks<br/>with ReactJS for complete modernization and<br/>future.' })}
             />
           </div>
           {/* end::Col */}
@@ -184,9 +186,9 @@ const Mixed: FC = () => {
             <MixedWidget5
               className='card-xl-stretch mb-5 mb-xl-8'
               image='../media/svg/brand-logos/vimeo.svg'
-              time='2 weeks ago'
+              time={intl.formatMessage({ id: 'WIDGETS.MIXED.TIME.2_WEEKS', defaultMessage: '2 weeks ago' })}
               title='KT.com - High Quality Templates'
-              description='Easy to use, incredibly flexible and secure<br/>with in-depth documentation that outlines<br/>everything for you'
+              description={intl.formatMessage({ id: 'WIDGETS.MIXED.DESC.KT', defaultMessage: 'Easy to use, incredibly flexible and secure<br/>with in-depth documentation that outlines<br/>everything for you' })}
             />
           </div>
           {/* end::Col */}
@@ -401,4 +403,4 @@ const Mixed: FC = () => {
   )
 }
 
-export {Mixed}
+export { Mixed }

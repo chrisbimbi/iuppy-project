@@ -27,10 +27,14 @@ export class FormsNotificationService implements FormsNotificationPort {
   // ==================================
   // 🔥 NOVO: HTML Builder (Enterprise Style)
   // ==================================
-  private generateHtml(formTitle: string, submissionId: string, formId: string): string {
+  private generateHtml(
+    formTitle: string,
+    submissionId: string,
+    formId: string,
+  ): string {
     // Ajuste para a URL real do seu ambiente de admin
-    const adminUrl = `https://admin.iuppy.com/forms/${formId}/submissions`; 
-    
+    const adminUrl = `https://admin.iuppy.com/forms/${formId}/submissions`;
+
     return `
     <!DOCTYPE html>
     <html>
@@ -80,7 +84,7 @@ export class FormsNotificationService implements FormsNotificationPort {
     submission: FormSubmissionEntity;
   }): Promise<void> {
     if (!params.to || !params.to.length) return;
-    
+
     // Pega o título em PT-BR ou fallback
     const title = (params.form.title as any)['pt-BR'] || 'Formulário';
 

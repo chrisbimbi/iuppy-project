@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useIntl } from 'react-intl'
 import { Modal } from 'bootstrap'
 import clsx from 'clsx'
 import { User } from '@shared/types'
@@ -15,6 +16,7 @@ interface Props {
 const UserPickerModal: React.FC<Props> = ({
     show, title, allUsers, selected, onClose, onConfirm
 }) => {
+    const intl = useIntl()
     const ref = useRef<HTMLDivElement>(null)
     const [modal, setModal] = useState<Modal | null>(null)
     const [filter, setFilter] = useState('')
@@ -55,7 +57,7 @@ const UserPickerModal: React.FC<Props> = ({
                         <input
                             type="text"
                             className="form-control mb-3"
-                            placeholder="Buscar usuários..."
+                            placeholder={intl.formatMessage({ id: 'GROUPS.USER_PICKER.PLACEHOLDER.SEARCH', defaultMessage: 'Search users...' })}
                             value={filter}
                             onChange={e => setFilter(e.target.value)}
                         />
@@ -89,14 +91,14 @@ const UserPickerModal: React.FC<Props> = ({
                     </div>
                     <div className="modal-footer">
                         <button className="btn btn-light" onClick={onClose}>
-                            Cancelar
+                            {intl.formatMessage({ id: 'GROUPS.USER_PICKER.BUTTON.CANCEL', defaultMessage: 'Cancel' })}
                         </button>
                         <button
                             className="btn btn-primary"
                             disabled={ids.length === 0}
                             onClick={() => onConfirm(ids)}
                         >
-                            Confirmar
+                            {intl.formatMessage({ id: 'GROUPS.USER_PICKER.BUTTON.CONFIRM', defaultMessage: 'Confirm' })}
                         </button>
                     </div>
                 </div>

@@ -51,7 +51,8 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD-DU-6Mj6dHw16M9zyjearMLKrVVyrz4s',
-    appId: '1:643342034012:android:e70c7c244b5058c8d9f299',
+    appId:
+        '1:643342034012:android:4b3d90142b2d2c91d9f299', // Updated to match com.iuppy.app.dev
     messagingSenderId: '643342034012',
     projectId: 'iuppy-app',
     storageBucket: 'iuppy-app.firebasestorage.app',
@@ -65,5 +66,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'iuppy-app.firebasestorage.app',
     iosBundleId: 'com.iuppy.app',
   );
-
 }

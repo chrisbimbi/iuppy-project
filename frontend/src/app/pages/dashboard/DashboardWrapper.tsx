@@ -11,6 +11,7 @@ import {
   ListsWidget9,
   FeedsWidget3,
 } from '../../..//partials/widgets'
+import { GamificationLeaderboard } from '../../modules/dashboard/widgets/GamificationLeaderboard'
 import { Toolbar } from '../../../layout/components/toolbar/Toolbar'
 import { Content } from '../../../layout/components/Content'
 import { PageTitle } from '../../../layout/core'
@@ -52,7 +53,7 @@ const DashboardPage: React.FC = () => {
             <TablesWidget10 className='card-xl-stretch mb-xl-8' data={data.contentEngagement} />
           </div>
           <div className='col-xl-4'>
-            <ChartsWidget8 className='card-xl-stretch mb-5 mb-xl-8' data={data.turnoverRate} />
+            <GamificationLeaderboard />
           </div>
         </div>
         <div className='row gy-5 g-xl-8'>

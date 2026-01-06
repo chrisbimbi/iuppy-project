@@ -19,4 +19,3 @@ export class AudienceProbeDto {
   @IsString({ each: true })
   groupIds?: string[];
 }
-

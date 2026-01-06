@@ -1,29 +1,43 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:flutter/foundation.dart';
 
 import 'push_service.dart';
 import 'app/router.dart';
 import 'core/providers.dart';
+// 🔥 Importe o novo helper
+import 'utils/deep_link_handler.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔐 CookieJar persistente no diretório do app
-  final dir = await getApplicationSupportDirectory();
-  final jarPath = p.join(dir.path, 'cookies');
-  final jar = PersistCookieJar(storage: FileStorage(jarPath));
+  final prefs = await SharedPreferences.getInstance();
 
-  // 🔥 Inicializa FCM/local notifications cedo (antes do runApp)
+  CookieJar jar;
+  if (kIsWeb) {
+    // Web: Usa CookieJar em memória (não persiste entre reloads, mas funciona)
+    jar = CookieJar();
+  } else {
+    // Mobile/Desktop: Usa FileStorage
+    final dir = await getApplicationSupportDirectory();
+    final jarPath = p.join(dir.path, 'cookies');
+    jar = PersistCookieJar(storage: FileStorage(jarPath));
+  }
+
+  // Inicializa Push antes do RunApp
   await PushService.instance.init();
 
   runApp(
     ProviderScope(
       overrides: [
-        // injeta a MESMA instância para todo o app (auth/login, refresh e dio principal)
         cookieJarProvider.overrideWithValue(jar),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: const IuppyApp(),
     ),
@@ -41,31 +55,31 @@ class _IuppyAppState extends ConsumerState<IuppyApp> {
   void initState() {
     super.initState();
 
-    // Deep links via push
+    // 1. Configura o Handler Global de Deep Link (Push)
     PushService.instance.setDeepLinkHandler((link) {
       if (link == null || link.isEmpty) return;
-      final uri = Uri.parse(link);
-      final segments = <String>[];
-      if (uri.host.isNotEmpty) segments.add(uri.host);
-      if (uri.pathSegments.isNotEmpty) segments.addAll(uri.pathSegments);
-      final path = '/${segments.join('/')}';
-      final query = uri.hasQuery ? '?${uri.query}' : '';
-      ref.read(appRouterProvider).go(path + query);
+      debugPrint('🔔 Deep Link Recebido no Main: $link');
+
+      // Usa o helper centralizado para limpar a rota e navegar
+      final router = ref.read(appRouterProvider);
+      DeepLinkHandler.handleNotificationClick({'link': link}, router);
     });
 
-    // Se o app foi aberto por uma notificação “morta”
-    PushService.instance.consumeInitialMessageIfAny();
+    // 2. Consome notificação inicial (Caso o app tenha sido aberto pelo push)
+    // Usa PostFrameCallback para garantir que o Router esteja pronto
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushService.instance.consumeInitialMessageIfAny();
+      // Inicia o listener de tokens e badges
+      ref.read(pushBootstrapProvider);
+    });
 
-    // Só para debug (mostra o token atual nos logs)
+    // Debug log
     PushService.instance.printDebugToken();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🔔 Ativa o bootstrap centralizado de push:
-    // - acompanha login/refresh e mantém o Bearer no PushService
-    // - quando /auth/me resolve (tem userId), pede permissão e registra o FCM
-    // - imprime o token para debug
+    // Mantém o provider de push ativo
     ref.watch(pushBootstrapProvider);
 
     final env = ref.watch(envProvider);

@@ -13,22 +13,36 @@ export class SearchV2Service {
         `INSERT INTO analytics_search_event
           ("companyId","userId","q","tookMs","results","filters","createdAt")
          VALUES ($1,$2,$3,$4,$5,$6,now())`,
-        [companyId, userId, dto.q, dto.tookMs ?? null, dto.results ?? null, dto.filters ?? null],
+        [
+          companyId,
+          userId,
+          dto.q,
+          dto.tookMs ?? null,
+          dto.results ?? null,
+          dto.filters ?? null,
+        ],
       );
       return { ok: true, stored: true };
     } catch {
       // fallback: não quebra o fluxo do app
-      return { ok: true, stored: false, note: 'table analytics_search_event missing (no-op)' };
+      return {
+        ok: true,
+        stored: false,
+        note: 'table analytics_search_event missing (no-op)',
+      };
     }
   }
 
   async overview(companyId: string, from?: string, to?: string) {
     try {
       const range =
-        from && to ? `AND e."createdAt" >= $2 AND e."createdAt" < $3`
-        : from ? `AND e."createdAt" >= $2`
-        : to ? `AND e."createdAt" < $2`
-        : '';
+        from && to
+          ? `AND e."createdAt" >= $2 AND e."createdAt" < $3`
+          : from
+            ? `AND e."createdAt" >= $2`
+            : to
+              ? `AND e."createdAt" < $2`
+              : '';
 
       const params: any[] = [companyId];
       if (from) params.push(from);

@@ -30,7 +30,9 @@ export class FormsRemindersCron {
       try {
         await this.reminders.runForCompany(companyId);
       } catch (e) {
-        this.log.warn(`[cron] error running reminders for company ${companyId}: ${String(e)}`);
+        this.log.warn(
+          `[cron] error running reminders for company ${companyId}: ${String(e)}`,
+        );
       }
     }
 

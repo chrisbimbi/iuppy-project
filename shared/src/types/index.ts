@@ -1,39 +1,38 @@
+export * from './Access';
+export * from './AccessControl';
+export * from './Channel';
+export * from './Company';
+export * from './CompanyModule';
+export * from './CompanyProvisioningDto';
+export * from './CompanySettings';
+export * from './ContentEngagement';
+export * from './CreateNewsDto';
+export * from './CreateSpaceDto';
+export * from './CreateSurveyDto';
+export * from './CreateSurveyQuestionDto';
+export * from './CreateSurveyResponseDto';
+export * from './EngagementMetrics';
+export * from './Locale';
+export * from './ModuleKey';
 export * from './News';
 export * from './NewsSettings';
+export * from './NewsStatus';
 export * from './NewsType';
-export * from './ContentEngagement';
-export * from './Company';
-export * from './CreateNewsDto';
-export * from './EngagementMetrics';
+export * from './QuestionStatisticsDto';
 export * from './ReactionsType';
 export * from './Role';
-export * from './UpdateNewsDto';
-export * from './User';
-export * from './UserEngagement';
-export * from './NewsStatus';
 export * from './Space';
-export * from './Channel';
-export * from './CreateSpaceDto';
-export * from './UpdateSpaceDto';
-export * from './UserGroup';
-
-export * from './CreateSurveyDto';
-export * from './UpdateSurveyDto';
-export * from './CreateSurveyQuestionDto';
-export * from './UpdateSurveyQuestionDto';
-export * from './CreateSurveyResponseDto';
 export * from './Survey';
 export * from './SurveyQuestion';
 export * from './SurveyResponse';
-export * from './QuestionStatisticsDto';
 export * from './SurveyStatisticsDto';
-
-export * from './Locale';
-export * from './CompanySettings';
-
-export * from './ModuleKey';
-export * from './CompanyModule';
-export * from './CompanyProvisioningDto';
-
-/** 🔽 ADIÇÃO: reexporta o enum para o backend continuar usando `@shared/types` */
-export { UserGroupType } from '../constants/UserGroupType';
+export * from './SocialPost'; // New export
+export * from './UpdateNewsDto';
+export * from './UpdateSpaceDto';
+export * from './UpdateSurveyDto';
+export * from './UpdateSurveyQuestionDto';
+export * from './User';
+export * from './UserEngagement';
+export * from './UserGroup';
+export * from './Vacations';
+export * from './Performance';

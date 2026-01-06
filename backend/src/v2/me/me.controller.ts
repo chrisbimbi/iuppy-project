@@ -1,6 +1,20 @@
-import { Controller, Get, Query, Req, Res, UseGuards, HttpStatus, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+  HttpStatus,
+  HttpException,
+} from '@nestjs/common';
 import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
-import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { MeService } from './me.service';
 import type { MeFeedResponseDTO } from './dto/me-feed.dto';
 
@@ -39,7 +53,11 @@ export class MeController {
     if (resp?.etag) {
       res.setHeader('ETag', resp.etag);
     }
-    if (ifNoneMatch && resp?.etag && String(ifNoneMatch) === String(resp.etag)) {
+    if (
+      ifNoneMatch &&
+      resp?.etag &&
+      String(ifNoneMatch) === String(resp.etag)
+    ) {
       // 304 Not Modified sem corpo
       throw new HttpException('', HttpStatus.NOT_MODIFIED);
     }

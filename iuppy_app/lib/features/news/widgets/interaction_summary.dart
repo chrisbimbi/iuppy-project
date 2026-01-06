@@ -100,7 +100,7 @@ class _TopReactionsIcons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const double size = 18;
-    final overlap = size * 0.45;
+    const overlap = size * 0.45;
     final total = kinds.length;
     final width = total <= 0 ? 0.0 : size + (total - 1) * (size - overlap);
 

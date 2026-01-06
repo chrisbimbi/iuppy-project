@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { newsApi, NewsStatistics as NewsStatisticsType } from '../services/newsApi';
+import { useIntl } from 'react-intl';
 
 interface NewsStatisticsProps {
   newsId: string;
 }
 
 export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
+  const intl = useIntl();
   const [statistics, setStatistics] = useState<NewsStatisticsType | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +43,11 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
   };
 
   if (loading) {
-    return <div className="text-center p-10">Carregando estatísticas...</div>;
+    return <div className="text-center p-10">{intl.formatMessage({ id: 'NEWS.STATS.LOADING', defaultMessage: 'Carregando estatísticas...' })}</div>;
   }
 
   if (!statistics) {
-    return <div className="text-center p-10">Nenhuma estatística disponível.</div>;
+    return <div className="text-center p-10">{intl.formatMessage({ id: 'NEWS.STATS.EMPTY', defaultMessage: 'Nenhuma estatística disponível.' })}</div>;
   }
 
   return (
@@ -61,7 +63,7 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
                 </span>
               </div>
               <div className="flex-grow-1">
-                <span className="text-gray-700 fw-bold d-block fs-6">Total de Usuários</span>
+                <span className="text-gray-700 fw-bold d-block fs-6">{intl.formatMessage({ id: 'NEWS.STATS.TOTAL_USERS', defaultMessage: 'Total de Usuários' })}</span>
                 <span className="text-gray-900 fw-bolder d-block fs-2">{statistics.audiencia.totalUsuarios}</span>
               </div>
             </div>
@@ -80,7 +82,7 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
                 </span>
               </div>
               <div className="flex-grow-1">
-                <span className="text-gray-700 fw-bold d-block fs-6">Com Token Ativo</span>
+                <span className="text-gray-700 fw-bold d-block fs-6">{intl.formatMessage({ id: 'NEWS.STATS.ACTIVE_TOKEN', defaultMessage: 'Com Token Ativo' })}</span>
                 <span className="text-gray-900 fw-bolder d-block fs-2">{statistics.audiencia.comTokenAtivo}</span>
               </div>
             </div>
@@ -99,9 +101,9 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
                 </span>
               </div>
               <div className="flex-grow-1">
-                <span className="text-gray-700 fw-bold d-block fs-6">Aberturas</span>
+                <span className="text-gray-700 fw-bold d-block fs-6">{intl.formatMessage({ id: 'NEWS.STATS.OPENS', defaultMessage: 'Aberturas' })}</span>
                 <span className="text-gray-900 fw-bolder d-block fs-2">{statistics.aberturas.total}</span>
-                <span className="text-gray-500 fs-7">({statistics.aberturas.unicas} únicas)</span>
+                <span className="text-gray-500 fs-7">({statistics.aberturas.unicas} {intl.formatMessage({ id: 'NEWS.STATS.UNIQUE', defaultMessage: 'únicas' })})</span>
               </div>
             </div>
           </div>
@@ -121,7 +123,7 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
               <div className="flex-grow-1">
                 <span className="text-gray-700 fw-bold d-block fs-6">ACKs</span>
                 <span className="text-gray-900 fw-bolder d-block fs-2">{statistics.acks.total}</span>
-                <span className="text-gray-500 fs-7">({statistics.acks.unicos} únicos)</span>
+                <span className="text-gray-500 fs-7">({statistics.acks.unicos} {intl.formatMessage({ id: 'NEWS.STATS.UNIQUE', defaultMessage: 'únicos' })})</span>
               </div>
             </div>
           </div>
@@ -133,14 +135,14 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
         <div className="card card-xl-stretch mb-5 mb-xl-8">
           <div className="card-header border-0 pt-5">
             <h3 className="card-title align-items-start flex-column">
-              <span className="card-label fw-bold fs-3 mb-1">Interações</span>
+              <span className="card-label fw-bold fs-3 mb-1">{intl.formatMessage({ id: 'NEWS.STATS.INTERACTIONS', defaultMessage: 'Interações' })}</span>
             </h3>
           </div>
           <div className="card-body py-3">
             <div className="row">
               <div className="col-md-4">
                 <div className="mb-5">
-                  <h4 className="fw-semibold text-gray-800 mb-2">Reações</h4>
+                  <h4 className="fw-semibold text-gray-800 mb-2">{intl.formatMessage({ id: 'NEWS.STATS.REACTIONS', defaultMessage: 'Reações' })}</h4>
                   {Object.entries(statistics.interacoes.reacoes).map(([type, count]) => (
                     <div key={type} className="d-flex align-items-center mb-2">
                       <span className="text-gray-700 fw-semibold me-2">{type}:</span>
@@ -151,13 +153,13 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
               </div>
               <div className="col-md-4">
                 <div className="mb-5">
-                  <h4 className="fw-semibold text-gray-800 mb-2">Comentários</h4>
+                  <h4 className="fw-semibold text-gray-800 mb-2">{intl.formatMessage({ id: 'NEWS.STATS.COMMENTS', defaultMessage: 'Comentários' })}</h4>
                   <span className="badge badge-light-success fs-3">{statistics.interacoes.comentarios}</span>
                 </div>
               </div>
               <div className="col-md-4">
                 <div className="mb-5">
-                  <h4 className="fw-semibold text-gray-800 mb-2">Compartilhamentos</h4>
+                  <h4 className="fw-semibold text-gray-800 mb-2">{intl.formatMessage({ id: 'NEWS.STATS.SHARES', defaultMessage: 'Compartilhamentos' })}</h4>
                   <span className="badge badge-light-info fs-3">{statistics.interacoes.compartilhamentos}</span>
                 </div>
               </div>
@@ -171,7 +173,7 @@ export const NewsStatistics: React.FC<NewsStatisticsProps> = ({ newsId }) => {
         <div className="card card-xl-stretch mb-5 mb-xl-8">
           <div className="card-body">
             <button className="btn btn-primary" onClick={handleExportUnopened}>
-              Exportar Usuários que Não Abriram (CSV)
+              {intl.formatMessage({ id: 'NEWS.STATS.BUTTON.EXPORT_UNOPENED', defaultMessage: 'Exportar Usuários que Não Abriram (CSV)' })}
             </button>
           </div>
         </div>

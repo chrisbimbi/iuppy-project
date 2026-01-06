@@ -77,4 +77,9 @@ export const ContentService = {
     const r = await api.get(`/v2/news/${newsId}/metrics`, { params: { from, to } })
     return r.data
   },
+
+  async getHashtags(q?: string): Promise<string[]> {
+    const r = await api.get<string[]>('/news/hashtags', { params: { q } })
+    return r.data
+  }
 }

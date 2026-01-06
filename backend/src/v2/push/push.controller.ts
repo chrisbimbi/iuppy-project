@@ -16,6 +16,11 @@ export class PushV2Controller {
   @ApiBody({ type: RemindDto })
   remind(@Req() req: any, @Param('id') newsId: string, @Body() dto: RemindDto) {
     const u = req.user;
-    return this.svc.enqueueRemind(u.companyId, newsId, String(u.sub), dto.onlyNotOpened ?? true);
+    return this.svc.enqueueRemind(
+      u.companyId,
+      newsId,
+      String(u.sub),
+      dto.onlyNotOpened ?? true,
+    );
   }
 }

@@ -6,7 +6,7 @@ export function getCompanyId(req: any): string {
     req?.headers?.['x-companyid'] ||
     req?.query?.companyId ||
     ''
-  )
+  );
 }
 
 export function getUserId(req: any): string {
@@ -16,5 +16,5 @@ export function getUserId(req: any): string {
     req?.headers?.['x-userid'] ||
     req?.query?.userId ||
     ''
-  )
+  );
 }

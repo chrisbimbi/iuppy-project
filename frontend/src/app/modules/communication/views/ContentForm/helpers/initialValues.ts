@@ -1,11 +1,11 @@
 // src/app/modules/news/components/initialNewValues.ts
-import { CreateNewsDto, NewsType } from '@shared/types'
+import { CreateNewsDto } from '@shared/types'
 
 export const initialNewValues: CreateNewsDto = {
   title: '',
   subtitle: '',
   content: '',
-  type: NewsType.ANNOUNCEMENT,
+  hashtags: [],
   authorId: '',
   channelId: '', // já existe, mas vai ser sobrescrito  attachments: [],
   highlightImages: [],

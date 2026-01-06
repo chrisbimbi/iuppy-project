@@ -1,36 +1,36 @@
 // backend/src/modules/access-control/module-access-grant.entity.ts
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('module_access_grants')
 @Index(['companyId', 'userId', 'moduleKey'], { unique: true })
 export class ModuleAccessGrantEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @Column()
-  companyId!: string
+  companyId!: string;
 
   @Column()
-  userId!: string
+  userId!: string;
 
   @Column()
-  moduleKey!: string
+  moduleKey!: string;
 
   @Column({ type: 'text', default: 'ALL_SPACES' })
-  scopeType!: 'ALL_SPACES' | 'SPACE_IDS'
+  scopeType!: 'ALL_SPACES' | 'SPACE_IDS';
 
   @Column('text', { array: true, default: '{}' })
-  spaceIds!: string[]
+  spaceIds!: string[];
 
   @Column({ type: 'boolean', default: false })
-  canView!: boolean
+  canView!: boolean;
 
   @Column({ type: 'boolean', default: false })
-  canEdit!: boolean
+  canEdit!: boolean;
 
   @Column({ type: 'boolean', default: false })
-  canManage!: boolean
+  canManage!: boolean;
 
   @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
-  updatedAt!: Date
+  updatedAt!: Date;
 }

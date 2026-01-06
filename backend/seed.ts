@@ -9,77 +9,12 @@ import { SpaceEntity } from './src/spaces/space.entity';
 import { Channel } from './src/channels/channel.entity';
 import { UserEntity } from './src/users/user.entity';
 import { NewsEntity } from './src/news/news.entity';
+import { CompanyEntity } from './src/companies/company.entity';
 import { Role } from '../shared/src/types/Role';
-
-//
-// Atenção: dentro do container, 'localhost:4000' NÃO funciona.
-// Usamos o hostname do serviço Docker Compose: 'api:3000'.
-//
+import { GroupEntity } from './src/groups/group.entity';
+import * as argon2 from 'argon2';
 
 const API = process.env.API_URL || 'http://api:3000';
-
-interface SpaceDto {
-    name: string;
-    slug?: string;
-    description?: string;
-    imageUrl?: string;
-    priority?: number;
-    active?: boolean;
-    companyId: string;
-}
-
-interface ChannelDto {
-    name: string;
-    description?: string;
-    companyId: string;
-    spaceIds?: string[];
-    groupIds?: string[];
-}
-
-interface CreateUserDto {
-    email: string;
-    name: string;
-    displayName: string;
-    password: string;
-    role: Role;
-    companyId: string;
-    spaceId?: string;
-    groups?: string[];
-    visibleGroups?: string[];
-}
-
-interface CreateNewsDto {
-    title: string;
-    subtitle?: string;
-    content: string;
-    channelId: string;
-    authorId: string;
-    companyId: string;
-    type: 'ANNOUNCEMENT' | 'UPDATE' | 'ALERT';
-    isPublished: boolean;
-    attachments: any[];
-    highlightImages: any[];
-    settings: {
-        visibility: 'public' | 'private' | 'specific_groups';
-        allowComments: boolean;
-        moderateComments: boolean;
-        allowReactions: boolean;
-        notifyUsers: boolean;
-        pushNotification: boolean;
-        emailNotification: boolean;
-        allowSharing: boolean;
-        showAuthor: boolean;
-        showPublishDate: boolean;
-        pinToTop: boolean;
-        schedulePublication: boolean;
-        expirePublication: boolean;
-        pushTitle: string;
-        pushContent: string;
-        targetAudience: string[];
-        expirationDate?: string;
-        schedulePublishDate?: string;
-    };
-}
 
 async function seed() {
     try {
@@ -87,156 +22,204 @@ async function seed() {
         await AppDataSource.initialize();
         console.log('🗄️ DataSource initialized');
 
-        const newsRepo = AppDataSource.getRepository(NewsEntity);
-        const userRepo = AppDataSource.getRepository(UserEntity);
-        const channelRepo = AppDataSource.getRepository(Channel);
+        // 2) Limpa tabelas (TRUNCATE CASCADE para limpar tudo respeitando FKs)
+        const entities = [
+            'news_metrics_daily',
+            'user_metrics_daily',
+            'news_interaction_event',
+            'news_reaction',
+            'news_comment',
+            'news_share',
+            'push_delivery',
+            'user_device',
+            'news_entity',
+            'channel',
+            'user_group_members',
+            'user_entity',
+            'user_group',
+            'space',
+            'companies',
+            'survey_response',
+            'survey_question',
+            'survey'
+        ];
+
+        console.log('🧹 Cleaning tables...');
+        for (const table of entities) {
+            try {
+                await AppDataSource.query(`TRUNCATE TABLE "${table}" CASCADE;`);
+            } catch (e) {
+                console.log(`⚠️ Could not truncate ${table}, trying delete...`);
+                await AppDataSource.query(`DELETE FROM "${table}";`);
+            }
+        }
+        console.log('✨ Tables cleaned.');
+
+        // 3) Cria Empresa
+        const companyRepo = AppDataSource.getRepository(CompanyEntity);
+        const company = companyRepo.create({
+            id: uuidv4(),
+            name: 'Iuppy Tech',
+            description: 'Empresa de Tecnologia',
+        });
+        await companyRepo.save(company);
+        const cid = company.id;
+        console.log(`🏢 Company created: ${company.name} (${cid})`);
+
+        // 4) Cria Grupos Básicos
+        const groupRepo = AppDataSource.getRepository(GroupEntity);
+        const groupAll = groupRepo.create({
+            name: 'Todos',
+            description: 'Todos os colaboradores',
+            companyId: cid,
+            isAutoCreated: true,
+        });
+        const groupDev = groupRepo.create({
+            name: 'Developers',
+            description: 'Time de Desenvolvimento',
+            companyId: cid,
+            isAutoCreated: false,
+        });
+        await groupRepo.save([groupAll, groupDev]);
+        console.log('👥 Groups created');
+
+        // 5) Cria Spaces
         const spaceRepo = AppDataSource.getRepository(SpaceEntity);
+        const spaceGeral = spaceRepo.create({
+            name: 'Geral',
+            slug: 'geral',
+            description: 'Espaço para comunicados gerais',
+            priority: 1,
+            active: true,
+            companyId: cid,
+            targetGroupIds: [groupAll.id], // Visível para todos
+        });
+        const spaceDev = spaceRepo.create({
+            name: 'Desenvolvimento',
+            slug: 'dev',
+            description: 'Espaço para time de tecnologia',
+            priority: 2,
+            active: true,
+            companyId: cid,
+            targetGroupIds: [groupDev.id], // Visível apenas para devs
+        });
+        await spaceRepo.save([spaceGeral, spaceDev]);
+        console.log('🪐 Spaces created');
 
-        // 2) Limpa tabelas na ordem correta
-        await newsRepo.clear(); console.log('Cleared news');
-        await userRepo.clear(); console.log('Cleared users');
-        await channelRepo.clear(); console.log('Cleared channels');
-        await spaceRepo.clear(); console.log('Cleared spaces');
+        // 6) Cria Channels
+        const channelRepo = AppDataSource.getRepository(Channel);
+        const channelComunicados = channelRepo.create({
+            name: 'Comunicados Oficiais',
+            description: 'Notícias oficiais da empresa',
+            companyId: cid,
+            spaceIds: [spaceGeral.id],
+            isPublished: true,
+        });
+        const channelTech = channelRepo.create({
+            name: 'Tech News',
+            description: 'Novidades de tecnologia',
+            companyId: cid,
+            spaceIds: [spaceDev.id], // Canal exclusivo do espaço Dev
+            isPublished: true,
+        });
+        await channelRepo.save([channelComunicados, channelTech]);
+        console.log('📺 Channels created');
 
-        // 3) Gera 2 companyIds
-        const companies = [uuidv4(), uuidv4()];
-        console.log('Company IDs:', companies);
+        // 7) Cria Usuários
+        const userRepo = AppDataSource.getRepository(UserEntity);
 
-        // 4) Cria 2 spaces por empresa
-        const spacesToCreate: SpaceDto[] = companies.flatMap(cid => [
-            { name: 'HQ', slug: 'hq', description: 'Headquarters', priority: 1, active: true, companyId: cid },
-            { name: 'Branch', slug: 'branch', description: 'Branch office', priority: 2, active: true, companyId: cid },
-        ]);
-        const spacesResponses = await Promise.all(
-            spacesToCreate.map(s => axios.post(`${API}/spaces`, s))
-        );
-        const spaces = spacesResponses.map(r => r.data as SpaceEntity);
-        console.log('Created Spaces:', spaces.map(s => s.id));
-        const spacesByCompany = companies.map((cid, i) => [
-            spaces[i * 2].id,     // HQ
-            spaces[i * 2 + 1].id  // Branch
-        ]);
-        // 5) Cria 2 channels por empresa
-        const channelsToCreate: ChannelDto[] = companies.flatMap((cid, i) => [
-            {
-                name: 'General',
-                description: 'General news',
-                companyId: cid,
-                spaceIds: spacesByCompany[i],      // <<< aqui
-            },
-            {
-                name: 'Team',
-                description: 'Team‑specific news',
-                companyId: cid,
-                spaceIds: spacesByCompany[i],      // <<< e aqui
-            },
-        ]);
-        const channelsResponses = await Promise.all(
-            channelsToCreate.map(c => axios.post(`${API}/channels`, c))
-        );
-        const channels = channelsResponses.map(r => r.data as Channel);
-        console.log('Created Channels:', channels.map(c => c.id));
+        // Admin
+        const admin = userRepo.create({
+            email: 'admin@iuppy.com.br',
+            name: 'Admin Iuppy',
+            displayName: 'Admin',
+            password: await argon2.hash('123'),
+            role: Role.CompanyAdmin,
+            companyId: cid,
+            groups: [groupAll.id, groupDev.id],
+            memberOf: [groupAll, groupDev],
+            isActive: true,
+        });
 
-        // 6) Cria 2 usuários por empresa
-        const usersToCreate: CreateUserDto[] = companies.flatMap((cid, i) => [
-            {
-                email: `admin${i}@example.com`,
-                name: `Admin ${i}`,
-                displayName: `Admin ${i}`,
-                password: 'P@ssw0rd!',
-                role: Role.HRAdmin,
-                companyId: cid,
-                spaceId: spaces[i * 2].id,
-            },
-            {
-                email: `user${i}@example.com`,
-                name: `User ${i}`,
-                displayName: `User ${i}`,
-                password: 'P@ssw0rd!',
-                role: Role.HRAdmin,
-                companyId: cid,
-                spaceId: spaces[i * 2 + 1].id,
-            },
-        ]);
-        const usersResponses = await Promise.all(
-            usersToCreate.map(u => axios.post(`${API}/users`, u))
-        );
-        const users = usersResponses.map(r => r.data as UserEntity);
-        console.log('Created Users:', users.map(u => u.id));
+        // Dev User (para teste de login CPF/Phone)
+        const devUser = userRepo.create({
+            email: 'dev@iuppy.com.br',
+            name: 'Developer Test',
+            displayName: 'Dev',
+            password: await argon2.hash('123'),
+            role: Role.User,
+            companyId: cid,
+            groups: [groupAll.id, groupDev.id], // Pertence aos dois grupos
+            memberOf: [groupAll, groupDev],
+            isActive: true,
+            syncKey: '12345678900', // CPF/Matrícula
+            phone: '+5511999999999', // Telefone validado
+        });
 
-        // 7) Cria 2 notícias por empresa em cada canal
-        const newsToCreate: CreateNewsDto[] = companies.flatMap((cid, i) => [
-            {
-                title: `Announcement for ${cid}-1`,
-                subtitle: 'Seed data',
-                content: 'This is a test announcement.',
-                channelId: channels[i * 2].id,
-                authorId: users[i * 2].id,
-                companyId: cid,
-                type: 'ANNOUNCEMENT',
-                isPublished: true,
-                attachments: [],
-                highlightImages: [],
-                settings: {
-                    visibility: 'public',
-                    allowComments: true,
-                    moderateComments: false,
-                    allowReactions: true,
-                    notifyUsers: false,
-                    pushNotification: false,
-                    emailNotification: false,
-                    allowSharing: true,
-                    showAuthor: true,
-                    showPublishDate: true,
-                    pinToTop: false,
-                    schedulePublication: false,
-                    expirePublication: false,
-                    pushTitle: '',
-                    pushContent: '',
-                    targetAudience: [spaces[i * 2].id],
-                },
-            },
-            {
-                title: `Update for ${cid}-2`,
-                subtitle: 'Seed data',
-                content: 'This is a test update.',
-                channelId: channels[i * 2 + 1].id,
-                authorId: users[i * 2 + 1].id,
-                companyId: cid,
-                type: 'UPDATE',
-                isPublished: false,
-                attachments: [],
-                highlightImages: [],
-                settings: {
-                    visibility: 'specific_groups',
-                    allowComments: true,
-                    moderateComments: true,
-                    allowReactions: false,
-                    notifyUsers: false,
-                    pushNotification: false,
-                    emailNotification: false,
-                    allowSharing: false,
-                    showAuthor: true,
-                    showPublishDate: true,
-                    pinToTop: false,
-                    schedulePublication: false,
-                    expirePublication: false,
-                    pushTitle: '',
-                    pushContent: '',
-                    targetAudience: [spaces[i * 2 + 1].id],
-                },
-            },
-        ]);
-        const newsResponses = await Promise.all(
-            newsToCreate.map(n => axios.post(`${API}/news`, n))
-        );
-        const news = newsResponses.map(r => r.data as NewsEntity);
-        console.log('Created News:', news.map(n => n.id));
+        await userRepo.save([admin, devUser]);
+        console.log('👤 Users created');
 
-        console.log('✅ Seeding completed successfully');
+        // 8) Cria Notícias
+        const newsRepo = AppDataSource.getRepository(NewsEntity);
+
+        const news1 = newsRepo.create({
+            title: 'Bem-vindo ao Iuppy!',
+            subtitle: 'Sua nova plataforma de comunicação',
+            content: '<p>Estamos muito felizes em ter você aqui.</p>',
+            channelId: channelComunicados.id,
+            authorId: admin.id,
+            companyId: cid,
+            type: 'ANNOUNCEMENT' as any,
+            isPublished: true,
+            publishedAt: new Date(),
+            attachments: [],
+            highlightImages: [],
+            settings: {
+                visibility: 'public',
+                allowComments: true,
+                allowReactions: true,
+                showAuthor: true,
+                showPublishDate: true,
+                audienceMode: 'COMPANY', // Para todos
+            } as any,
+        });
+
+        const news2 = newsRepo.create({
+            title: 'Deploy realizado com sucesso',
+            subtitle: 'Versão 2.0 está no ar',
+            content: '<p>A nova versão inclui correções de bugs e melhorias de performance.</p>',
+            channelId: channelTech.id,
+            authorId: admin.id,
+            companyId: cid,
+            type: 'UPDATE' as any,
+            isPublished: true,
+            publishedAt: new Date(),
+            attachments: [],
+            highlightImages: [],
+            settings: {
+                visibility: 'public',
+                allowComments: true,
+                allowReactions: true,
+                showAuthor: true,
+                showPublishDate: true,
+                audienceMode: 'SPACE',
+                audienceSpaceId: spaceDev.id, // Focado no espaço Dev
+            } as any,
+        });
+
+        await newsRepo.save([news1, news2]);
+        console.log('📰 News created');
+
+        console.log('✅ SEED COMPLETED SUCCESSFULLY!');
+        console.log('------------------------------------------------');
+        console.log('Company ID:', cid);
+        console.log('Admin:', admin.email);
+        console.log('Dev User:', devUser.email, '| CPF:', devUser.syncKey, '| Phone:', devUser.phone);
+        console.log('------------------------------------------------');
+
         await AppDataSource.destroy();
     } catch (err: any) {
-        console.error('❌ Seeding error:', err.response?.data || err.message);
+        console.error('❌ Seeding error:', err);
         process.exit(1);
     }
 }

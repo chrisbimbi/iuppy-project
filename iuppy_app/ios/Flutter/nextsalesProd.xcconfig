@@ -1,0 +1,9 @@
+#include "Generated.xcconfig"
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+
+FLUTTER_TARGET=lib/main.dart
+ASSET_PREFIX=nextsales
+BUNDLE_DISPLAY_NAME=Next Sales
+BUNDLE_SUFFIX=
+DEEP_LINK_SCHEME=nextsales
+PRODUCT_BUNDLE_IDENTIFIER=com.br.iuppy.nextsales

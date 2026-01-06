@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 class AppThemePair {
   final ThemeData light;
   final ThemeData dark;
+
+  var colors;
   AppThemePair(this.light, this.dark);
 }
 

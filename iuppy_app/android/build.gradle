@@ -26,56 +26,51 @@ subprojects { project ->
  *   - Corrige "Inconsistent JVM-target compatibility detected (... 11) vs (... 17)"
  * ✅ Patch do image_gallery_saver: remove package="..." do manifest (AGP 8+)
  */
-gradle.beforeProject { sub ->
-  // 1) Todas as compilações Java -> 11
-  sub.tasks.withType(JavaCompile).configureEach {
-    sourceCompatibility = JavaVersion.VERSION_11.toString()
-    targetCompatibility = JavaVersion.VERSION_11.toString()
-  }
+// 1) Force versions using logic that handles already-evaluated projects
+// 1) Force versions using cleaner plugins.withId hook
+// 1) Force versions using cleaner plugins.withId hook
+// 1) Force versions using cleaner plugins.withId hook
+// 1) Force versions using cleaner plugins.withId hook
+subprojects {
+    project.plugins.withId("com.android.library") {
+        def androidExt = project.extensions.findByType(com.android.build.gradle.LibraryExtension.class)
+        if (androidExt != null) {
+            
+            // Inject namespace if missing (Crucial for AGP 8+) - APPLY TO ALL
+            if (androidExt.namespace == null) {
+                def ns = "com.iuppy.generated.${project.name.replaceAll('-', '_')}"
+                println("⚙️ Injecting namespace '$ns' into ${project.name}")
+                androidExt.namespace = ns
+            }
 
-  // 2) Todas as compilações Kotlin -> 11
-  sub.plugins.withId("org.jetbrains.kotlin.android") {
-    sub.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-      kotlinOptions { jvmTarget = "11" }
+            // Special handling: flutter_app_badger is legacy and cannot handle Java 11 + SDK 35 forced
+            if (project.name != 'flutter_app_badger') {
+                // Force SDK 35
+                androidExt.compileSdkVersion 35
+                
+                // Standardize Java Version
+                androidExt.compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_11
+                    targetCompatibility = JavaVersion.VERSION_11
+                }
+            } else {
+                 println("⚠️ Skipping SDK/Java forcing for legacy plugin: ${project.name}")
+            }
+        }
     }
-  }
-  sub.plugins.withId("kotlin-android") {
-    sub.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-      kotlinOptions { jvmTarget = "11" }
+    
+    // Kotlin options (Skip for badger too if it had kotlin, simpler to just run for others)
+    if (project.name != 'flutter_app_badger') {
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions { jvmTarget = "11" }
+        }
     }
-  }
-
-  // 3) Em módulos Android, garante compileOptions 11
-  sub.plugins.withId("com.android.application") {
-    def androidExt = sub.extensions.findByName("android")
-    if (androidExt != null) {
-      androidExt.compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-      }
-    }
-  }
-  sub.plugins.withId("com.android.library") {
-    def androidExt = sub.extensions.findByName("android")
-    if (androidExt != null) {
-      androidExt.compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-      }
-
-      // Se faltar namespace (plugins antigos), cria um sintético
-      def hasNs = androidExt.hasProperty("namespace") && androidExt.namespace != null
-      if (!hasNs) {
-        androidExt.namespace = "fix" + sub.path.replace(":", ".").replace("-", "_")
-      }
-    }
-  }
 }
 
 // 4) PATCH: remove package="..." do manifest do image_gallery_saver (AGP 8+)
 gradle.projectsEvaluated {
   subprojects { sub ->
-    if (sub.name == "image_gallery_saver") {
+    if (sub.name == "image_gallery_saver" || sub.name == "flutter_app_badger") {
       sub.plugins.withId("com.android.library") {
         def mf = sub.file("src/main/AndroidManifest.xml")
         if (mf.exists()) {

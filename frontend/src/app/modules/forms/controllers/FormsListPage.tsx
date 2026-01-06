@@ -4,117 +4,115 @@ import { useNavigate } from 'react-router-dom';
 import { FormsApi, TranslatableString } from '../services/api';
 import { api } from 'src/app/api';
 import { Spinner, Button, Alert } from 'react-bootstrap';
+import { useIntl } from 'react-intl';
 
-type Row = {
-  formId: string;
-  title: TranslatableString | string;
-  status: 'draft' | 'published' | 'expired' | 'archived';
-  submissions: number;
-  onTime: number;
-  onTimeRate: number;
-  pushSent: number;
-};
+import { Dropdown } from 'react-bootstrap';
+import { useAuth } from '../../auth/core/Auth';
 
-const toLocalDateInput = (date: Date) => {
-  const y = date.getFullYear();
-  const m = (date.getMonth() + 1).toString().padStart(2, '0');
-  const d = date.getDate().toString().padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
-function Kebab({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="dropdown" style={{ position: 'relative' }}>
-      <button
-        className="btn btn-sm btn-light btn-icon"
-        onClick={() => setOpen((o) => !o)}
-        type="button"
-      >
-        <i className="bi bi-three-dots-vertical" />
-      </button>
-      {open && (
-        <div
-          className="dropdown-menu show"
-          style={{ position: 'absolute', right: 0, zIndex: 100 }}
-          onMouseLeave={() => setOpen(false)}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
+const Kebab: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Dropdown>
+    <Dropdown.Toggle variant="light" size="sm" className="btn-active-light-primary no-caret">
+      <i className="bi bi-three-dots-vertical"></i>
+    </Dropdown.Toggle>
+    <Dropdown.Menu align="end">{children}</Dropdown.Menu>
+  </Dropdown>
+);
 
 export default function FormsListPage() {
   const nav = useNavigate();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [sel, setSel] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const intl = useIntl();
+  const { currentUser } = useAuth();
 
+  // 🔥 FIX: Prioritize localStorage (Context Switcher) over User Token
+  const getEffectiveCompanyId = () => {
+    if (typeof window !== 'undefined') {
+      const fromLs = window.localStorage.getItem('companyId');
+      if (fromLs) return fromLs;
+    }
+    return currentUser?.companyId;
+  };
+  const companyId = getEffectiveCompanyId();
+
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<any[]>([]);
+  const [err, setErr] = useState<string | null>(null);
   const [aggLoading, setAggLoading] = useState(false);
   const [aggErr, setAggErr] = useState<string | null>(null);
+  const [sel, setSel] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    ; (async () => {
-      try {
-        const meRes = await api.get('/auth/me');
-        const data = meRes.data || {};
-        const cid =
-          data.companyId ||
-          data.company?.id ||
-          (typeof window !== 'undefined'
-            ? window.localStorage.getItem('companyId')
-            : null);
-        if (cid) {
-          setCompanyId(cid);
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem('companyId', cid);
-          }
-        } else {
-          setCompanyId('');
-        }
-      } catch (e: any) {
-        setCompanyId('');
-      }
-    })();
-  }, []);
+  const selectedIds = useMemo(() => Object.keys(sel).filter((k) => sel[k]), [sel]);
 
-  const load = async (cid: string) => {
+  const load = async (cId: string) => {
     setLoading(true);
     setErr(null);
-    setAggErr(null);
     try {
-      const data = await FormsApi.analyticsList({});
-      const items: Row[] = (data.items ?? []).map((f: any) => ({
-        formId: f.formId,
-        title: f.title,
-        status: f.status,
-        submissions: Number(f.submissions || 0),
-        onTime: Number(f.onTime || 0),
-        onTimeRate: Number(f.onTimeRate || 0),
-        pushSent: Number(f.pushSent || 0),
-      }));
-      setRows(items);
+      const data = await FormsApi.list({ companyId: cId, visibility: 'all' });
+      setRows(data as any[]);
     } catch (e: any) {
-      setErr(String(e?.message || e));
+      setErr(e.message || intl.formatMessage({ id: 'FORMS.LIST.ERROR.LOAD_FAILED' }));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (companyId === null) return;
-    if (!companyId) {
-      setErr('companyId not found for this user');
-      setLoading(false);
-      return;
-    }
-    load(companyId);
+    if (companyId) load(companyId);
   }, [companyId]);
 
+  const getTitle = (title: TranslatableString, id: string) => {
+    return title?.[intl.locale] || title?.['pt-BR'] || title?.['en'] || id;
+  };
+
+  const toLocalDateInput = (date: Date) => date.toISOString().split('T')[0];
+
+  const bulkDuplicate = async () => {
+    if (!companyId) return;
+    if (!confirm(intl.formatMessage({ id: 'FORMS.LIST.CONFIRM.DUPLICATE' }))) return;
+    try {
+      await Promise.all(selectedIds.map(id => FormsApi.duplicate(id)));
+      await load(companyId);
+      setSel({});
+    } catch (e) {
+      alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.DUPLICATE_FAILED' }));
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!companyId) return;
+    if (!confirm(intl.formatMessage({ id: 'FORMS.LIST.CONFIRM.DELETE' }))) return;
+    try {
+      await FormsApi.removeMany(selectedIds);
+      await load(companyId);
+      setSel({});
+    } catch (e) {
+      alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.DELETE_FAILED' }));
+    }
+  };
+
+  const bulkPublish = async () => {
+    if (!companyId) return;
+    try {
+      await Promise.all(selectedIds.map(id => FormsApi.publish(id)));
+      await load(companyId);
+      setSel({});
+    } catch (e) {
+      alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.PUBLISH_FAILED' }));
+    }
+  };
+
+  const bulkUnpublish = async () => {
+    if (!companyId) return;
+    try {
+      await Promise.all(selectedIds.map(id => FormsApi.unpublish(id)));
+      await load(companyId);
+      setSel({});
+    } catch (e) {
+      alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.UNPUBLISH_FAILED' }));
+    }
+  };
+
+  const allDraft = rows.filter(r => selectedIds.includes(r.id || r.formId)).every(r => r.status === 'draft');
+  const allPublished = rows.filter(r => selectedIds.includes(r.id || r.formId)).every(r => r.status === 'published');
   const handleRunAggregation = async () => {
     if (!companyId) return;
     setAggLoading(true);
@@ -124,79 +122,25 @@ export default function FormsListPage() {
       await FormsApi.analyticsRunAggregation(todayStr);
       await load(companyId);
     } catch (e: any) {
-      setAggErr('Falha ao atualizar dados: ' + (e as any).message);
+      setAggErr(intl.formatMessage({ id: 'FORMS.LIST.ERROR.UPDATE_FAILED' }) + (e as any).message);
     } finally {
       setAggLoading(false);
     }
   };
 
-  const selectedIds = useMemo(
-    () => Object.keys(sel).filter((id) => sel[id]),
-    [sel],
-  );
-
-  const allDraft =
-    selectedIds.length > 0 &&
-    selectedIds.every((id) => rows.find((r) => r.formId === id)?.status === 'draft');
-  const allPublished =
-    selectedIds.length > 0 &&
-    selectedIds.every(
-      (id) => rows.find((r) => r.formId === id)?.status === 'published',
-    );
-
-  const bulkDelete = async () => {
-    if (!selectedIds.length || !companyId) return;
-    await FormsApi.removeMany(selectedIds);
-    setSel({});
-    await load(companyId);
-  };
-
-  const bulkDuplicate = async () => {
-    if (!companyId) return;
-    for (const id of selectedIds) {
-      await FormsApi.duplicate(id);
-    }
-    setSel({});
-    await load(companyId);
-  };
-
-  const bulkPublish = async () => {
-    if (!companyId) return;
-    for (const id of selectedIds) {
-      await FormsApi.publish(id);
-    }
-    setSel({});
-    await load(companyId);
-  };
-
-  const bulkUnpublish = async () => {
-    if (!companyId) return;
-    for (const id of selectedIds) {
-      await FormsApi.unpublish(id);
-    }
-    setSel({});
-    await load(companyId);
-  };
-
-  const getTitle = (title: TranslatableString | string, fallbackId: string) => {
-    if (typeof title === 'string') return title;
-    if (typeof title === 'object' && title !== null) {
-      return title['pt-BR'] ?? title[Object.keys(title)[0]] ?? fallbackId;
-    }
-    return fallbackId;
-  };
+  // ... bulk actions
 
   const content = useMemo(() => {
     if (loading)
       return (
         <div className="p-6 d-flex align-items-center gap-2">
-          <Spinner animation="border" size="sm" /> Carregando...
+          <Spinner animation="border" size="sm" /> {intl.formatMessage({ id: 'FORMS.LIST.LOADING' })}
         </div>
       );
     if (err) return <div className="alert alert-danger m-6">{err}</div>;
 
     if (!rows.length && !loading) {
-      return <div className="p-6">Nenhum formulário ainda.</div>;
+      return <div className="p-6">{intl.formatMessage({ id: 'FORMS.LIST.EMPTY' })}</div>;
     }
 
     return (
@@ -211,31 +155,32 @@ export default function FormsListPage() {
                   checked={rows.length > 0 && selectedIds.length === rows.length}
                   onChange={(e) => {
                     const all: Record<string, boolean> = {};
-                    if (e.target.checked) rows.forEach((r) => (all[r.formId] = true));
+                    if (e.target.checked) rows.forEach((r) => (all[r.id || r.formId] = true));
                     setSel(all);
                   }}
                 />
               </th>
-              <th>Título</th>
-              <th>Status</th>
-              <th>Envios</th>
-              <th>No Prazo (%)</th>
-              <th>Push Enviado</th>
-              <th className="text-end">Ações</th>
+              <th>{intl.formatMessage({ id: 'FORMS.LIST.HEADER.TITLE' })}</th>
+              <th>{intl.formatMessage({ id: 'FORMS.LIST.HEADER.STATUS' })}</th>
+              <th>{intl.formatMessage({ id: 'FORMS.LIST.HEADER.SUBMISSIONS' })}</th>
+              <th>{intl.formatMessage({ id: 'FORMS.LIST.HEADER.ON_TIME' })}</th>
+              <th>{intl.formatMessage({ id: 'FORMS.LIST.HEADER.PUSH_SENT' })}</th>
+              <th className="text-end">{intl.formatMessage({ id: 'FORMS.LIST.HEADER.ACTIONS' })}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
-              const titleStr = getTitle(r.title, r.formId);
+              const id = r.id || r.formId;
+              const titleStr = getTitle(r.title, id);
 
               return (
-                <tr key={r.formId}>
+                <tr key={id}>
                   <td>
                     <input
                       type="checkbox"
-                      checked={!!sel[r.formId]}
+                      checked={!!sel[id]}
                       onChange={(e) =>
-                        setSel((s) => ({ ...s, [r.formId]: e.target.checked }))
+                        setSel((s) => ({ ...s, [id]: e.target.checked }))
                       }
                     />
                   </td>
@@ -243,51 +188,52 @@ export default function FormsListPage() {
                   <td>
                     <span className="badge badge-light-primary">{r.status}</span>
                   </td>
-                  <td>{r.submissions}</td>
-                  <td>{`${(r.onTimeRate * 100).toFixed(0)}%`}</td>
-                  <td>{r.pushSent > 0 ? r.pushSent : '-'}</td>
+                  <td>{r.submissionsCount || r.submissions || 0}</td>
+                  <td>{r.onTimeRate ? `${(r.onTimeRate * 100).toFixed(0)}%` : '-'}</td>
+                  <td>{r.pushSent !== undefined ? r.pushSent : '-'}</td>
                   <td className="text-end">
                     <Kebab>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => nav(`/forms/${r.formId}/submissions`)}
+                      <Dropdown.Item
+                        as="button"
+                        onClick={() => nav(`/forms/${id}/submissions`)}
                       >
-                        Ver envios
-                      </button>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => nav(`/forms/${r.formId}/stats`)}
+                        {intl.formatMessage({ id: 'FORMS.LIST.ACTION.VIEW_SUBMISSIONS' })}
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        as="button"
+                        onClick={() => nav(`/forms/${id}/stats`)}
                       >
-                        Estatísticas
-                      </button>
+                        {intl.formatMessage({ id: 'FORMS.LIST.ACTION.STATS' })}
+                      </Dropdown.Item>
                       <div className="dropdown-divider"></div>
-                      <button
-                        className="dropdown-item"
-                        onClick={() => nav(`/forms/${r.formId}/edit`)}
+                      <Dropdown.Item
+                        as="button"
+                        onClick={() => nav(`/forms/${id}/edit`)}
                       >
-                        Editar
-                      </button>
-                      <button
-                        className="dropdown-item"
+                        {intl.formatMessage({ id: 'FORMS.LIST.ACTION.EDIT' })}
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        as="button"
                         onClick={() =>
-                          FormsApi.duplicate(r.formId).then(() => {
+                          FormsApi.duplicate(id).then(() => {
                             if (companyId) return load(companyId);
                           })
                         }
                       >
-                        Duplicar
-                      </button>
+                        {intl.formatMessage({ id: 'FORMS.LIST.ACTION.DUPLICATE' })}
+                      </Dropdown.Item>
                       <div className="dropdown-divider"></div>
-                      <button
-                        className="dropdown-item text-danger"
+                      <Dropdown.Item
+                        as="button"
+                        className="text-danger"
                         onClick={() =>
-                          FormsApi.removeMany([r.formId]).then(() => {
+                          FormsApi.removeMany([id]).then(() => {
                             if (companyId) return load(companyId);
                           })
                         }
                       >
-                        Apagar
-                      </button>
+                        {intl.formatMessage({ id: 'FORMS.LIST.ACTION.DELETE' })}
+                      </Dropdown.Item>
                     </Kebab>
                   </td>
                 </tr>
@@ -297,13 +243,13 @@ export default function FormsListPage() {
         </table>
       </div>
     );
-  }, [rows, loading, err, sel, selectedIds, nav, companyId]);
+  }, [rows, loading, err, sel, selectedIds, nav, companyId, intl]);
 
   return (
     <div className="container-xxl">
       <div className="card">
         <div className="card-header align-items-center gap-3 flex-wrap">
-          <h3 className="card-title">Formulários</h3>
+          <h3 className="card-title">{intl.formatMessage({ id: 'FORMS.LIST.TITLE' })}</h3>
           <div className="card-toolbar d-flex gap-2">
             <Button
               variant="light"
@@ -311,33 +257,33 @@ export default function FormsListPage() {
               disabled={aggLoading || loading}
               title="Atualizar dados de hoje"
             >
-              {aggLoading ? <Spinner animation="border" size="sm" /> : 'Atualizar Agora'}
+              {aggLoading ? <Spinner animation="border" size="sm" /> : intl.formatMessage({ id: 'FORMS.LIST.BUTTON.UPDATE_NOW' })}
             </Button>
 
             <Button variant="info" onClick={() => nav('/forms/dashboard')}>
-              <i className="bi bi-bar-chart-fill me-1"></i> Dashboard Geral
+              <i className="bi bi-bar-chart-fill me-1"></i> {intl.formatMessage({ id: 'FORMS.LIST.BUTTON.DASHBOARD' })}
             </Button>
 
             <button className="btn btn-primary" onClick={() => nav('/forms/new')}>
-              + Criar formulário
+              {intl.formatMessage({ id: 'FORMS.LIST.BUTTON.CREATE' })}
             </button>
             {selectedIds.length > 0 && (
               <>
                 <button className="btn btn-light" onClick={bulkDuplicate}>
-                  Duplicar
+                  {intl.formatMessage({ id: 'FORMS.LIST.ACTION.DUPLICATE' })}
                 </button>
                 {allDraft && (
                   <button className="btn btn-light" onClick={bulkPublish}>
-                    Publicar
+                    {intl.formatMessage({ id: 'FORMS.LIST.BUTTON.PUBLISH' })}
                   </button>
                 )}
                 {allPublished && (
                   <button className="btn btn-light" onClick={bulkUnpublish}>
-                    Despublicar
+                    {intl.formatMessage({ id: 'FORMS.LIST.BUTTON.UNPUBLISH' })}
                   </button>
                 )}
                 <button className="btn btn-danger" onClick={bulkDelete}>
-                  Apagar
+                  {intl.formatMessage({ id: 'FORMS.LIST.ACTION.DELETE' })}
                 </button>
               </>
             )}
@@ -348,7 +294,7 @@ export default function FormsListPage() {
           <div className="px-6 pt-6">
             <Alert variant="info" className="d-flex justify-content-between align-items-center mb-0">
               <div>
-                As estatísticas são agregadas diariamente (às 2:00). Para dados em tempo real, use o botão "Atualizar Agora".
+                {intl.formatMessage({ id: 'FORMS.LIST.INFO.STATS_AGGREGATION' })}
                 {aggErr && <div className="text-danger small mt-1">{aggErr}</div>}
               </div>
             </Alert>

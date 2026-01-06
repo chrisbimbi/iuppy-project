@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:iuppy_app/core/providers.dart'; // apiClientProvider, envProvider, localNewsStoreProvider
 import '../controllers/news_detail_controller.dart';
@@ -17,13 +16,15 @@ final newsOnOpenForIdProvider =
   };
 });
 
-final newsDetailControllerProvider =
-    ChangeNotifierProvider.family<NewsDetailController, String>((ref, id) {
+final newsDetailControllerProvider = ChangeNotifierProvider.autoDispose
+    .family<NewsDetailController, String>((ref, id) {
   final api = ref.read(apiClientProvider);
   final env = ref.read(envProvider);
+  final repo = ref.read(newsRepoProvider); // ⬅ Injeta Repo
   final ctrl = NewsDetailController(
     () => ref.read(newsOnOpenForIdProvider(id))(),
     api: api,
+    repo: repo, // ⬅ Passa Repo
     env: env,
     newsId: id,
   );

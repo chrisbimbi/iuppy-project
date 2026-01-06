@@ -33,6 +33,7 @@ export interface CreateFormDto {
   requiresApproval?: boolean;
   allowTranslations?: boolean;
   defaultLocale?: string | null;
+  visibility?: 'public' | 'private' | 'specific_groups' | 'journey_only';
 
   fields: CreateFormFieldDto[];
 }

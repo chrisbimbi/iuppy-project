@@ -8,7 +8,10 @@ function cookieExtractor(req: Request) {
 }
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),

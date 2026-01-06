@@ -1,6 +1,8 @@
 // frontend/src/app/modules/communication/views/ContentForm/steps/Step1.tsx
 import React from 'react'
-import { NewsType, CreateNewsDto } from '@shared/types'
+import { CreateNewsDto } from '@shared/types'
+import AsyncCreatableSelect from 'react-select/async-creatable'
+import { ContentService } from '../../../../services/content.service'
 import { ErrorMessage, FormikErrors, FormikTouched } from 'formik'
 import { useIntl } from 'react-intl'
 import { KTSVG } from '../../../../../../../helpers'
@@ -109,31 +111,20 @@ export const Step1: React.FC<StepProps> = ({
     setFieldValue('highlightImages', imgs, true)
   }
 
-  function traduzirTipoNew(type: NewsType) {
-    switch (type) {
-      case NewsType.ANNOUNCEMENT:
-        return intl.formatMessage({ id: 'ANNOUNCEMENT', defaultMessage: 'Notificação' })
-      case NewsType.ALERT:
-        return intl.formatMessage({ id: 'COMUNICADO_TYPE_ALERT', defaultMessage: 'Alerta' })
-      case NewsType.UPDATE:
-        return intl.formatMessage({ id: 'COMUNICADO_TYPE_UPDATE', defaultMessage: 'Lembrete' })
-      default:
-        return intl.formatMessage({ id: 'COMUNICADO_TYPE_UNKNOWN', defaultMessage: 'Desconhecido' })
-    }
-  }
+
 
   return (
     <div className="w-100">
       <div className="pb-10 pb-lg-15">
         <h2 className="fw-bolder text-dark d-flex align-items-center">
-          Dados do post
-          <i className="fas fa-exclamation-circle ms-2 fs-7" data-bs-toggle="tooltip" title="Preencha os detalhes do post" />
+          {intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.TITLE' })}
+          <i className="fas fa-exclamation-circle ms-2 fs-7" data-bs-toggle="tooltip" title={intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.SUBTITLE' })} />
         </h2>
-        <div className="text-gray-400 fw-bold fs-6">Preencha os detalhes do post</div>
+        <div className="text-gray-400 fw-bold fs-6">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.SUBTITLE' })}</div>
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label required">Imagens de Destaque</label>
+        <label className="form-label required">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.HIGHLIGHT_IMAGES' })}</label>
         <CustomDropzone
           onFilesAdded={handleHighlightImagesAdded}
           accept={imageAccept}
@@ -143,7 +134,7 @@ export const Step1: React.FC<StepProps> = ({
           multiple
         />
         <ErrorMessage name="highlightImages" component="div" className="text-danger" />
-        <span className="form-text text-muted">Máximo 10 imagens, até 10MB cada.</span>
+        <span className="form-text text-muted">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.HINT.IMAGES' })}</span>
 
         {data.highlightImages && data.highlightImages.length > 0 && (
           <DragDropContext onDragEnd={onDragEnd}>
@@ -187,12 +178,12 @@ export const Step1: React.FC<StepProps> = ({
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label required">Título</label>
+        <label className="form-label required">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.TITLE' })}</label>
         <input
           type="text"
           name="title"
           className={`form-control form-control-lg form-control-solid ${touched.title && errors.title ? 'is-invalid' : ''}`}
-          placeholder="Título do post"
+          placeholder={intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.PLACEHOLDER.TITLE' })}
           value={data.title}
           onChange={(e) => setFieldValue('title', e.target.value, true)}
         />
@@ -200,12 +191,12 @@ export const Step1: React.FC<StepProps> = ({
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label">Subtítulo</label>
+        <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.SUBTITLE' })}</label>
         <input
           type="text"
           name="subtitle"
           className={`form-control form-control-lg form-control-solid ${touched.subtitle && errors.subtitle ? 'is-invalid' : ''}`}
-          placeholder="Subtítulo opcional"
+          placeholder={intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.PLACEHOLDER.SUBTITLE' })}
           value={data.subtitle || ''}
           onChange={(e) => setFieldValue('subtitle', e.target.value, true)}
         />
@@ -213,31 +204,35 @@ export const Step1: React.FC<StepProps> = ({
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label required">Tipo</label>
-        <select
-          name="type"
-          className={`form-select form-select-lg form-select-solid ${touched.type && errors.type ? 'is-invalid' : ''}`}
-          value={data.type}
-          onChange={(e) => setFieldValue('type', e.target.value as NewsType, true)}
-        >
-          <option value="">Selecione o tipo</option>
-          {Object.values(NewsType).map((t) => (
-            <option key={t} value={t}>
-              {traduzirTipoNew(t)}
-            </option>
-          ))}
-        </select>
-        <ErrorMessage name="type" component="div" className="invalid-feedback" />
+        <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.HASHTAGS', defaultMessage: 'Hashtags' })}</label>
+        <AsyncCreatableSelect
+          isMulti
+          cacheOptions
+          defaultOptions
+          loadOptions={(inputValue) => ContentService.getHashtags(inputValue).then(tags => tags.map(t => ({ label: t, value: t })))}
+          onChange={(newValue) => setFieldValue('hashtags', newValue.map(v => v.value))}
+          value={data.hashtags?.map(t => ({ label: t, value: t })) || []}
+          placeholder={intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.PLACEHOLDER.HASHTAGS', defaultMessage: 'Digite ou selecione hashtags...' })}
+          formatCreateLabel={(inputValue) => intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.CREATE_HASHTAG', defaultMessage: 'Criar "{tag}"' }, { tag: inputValue })}
+          className="react-select-container"
+          classNamePrefix="react-select"
+        />
+        <ErrorMessage name="hashtags" component="div" className="text-danger mt-2" />
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label required">Conteúdo</label>
-        <QuillWrapper value={data.content} onChange={(c) => setFieldValue('content', c, true)} height="300px" />
+        <label className="form-label required">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.CONTENT' })}</label>
+        <QuillWrapper
+          value={data.content}
+          onChange={(c) => setFieldValue('content', c, true)}
+          height="300px"
+          companyId={data.companyId}
+        />
         {touched.content && errors.content && <div className="invalid-feedback d-block">{errors.content}</div>}
       </div>
 
       <div className="fv-row mb-10">
-        <label className="form-label">Anexos</label>
+        <label className="form-label">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.LABEL.ATTACHMENTS' })}</label>
         <CustomDropzone
           onFilesAdded={handleAttachmentsAdded}
           accept={attachmentAccept}
@@ -247,7 +242,7 @@ export const Step1: React.FC<StepProps> = ({
           multiple
         />
         <ErrorMessage name="attachments" component="div" className="text-danger" />
-        <span className="form-text text-muted">Máximo 10 arquivos, até 10MB cada.</span>
+        <span className="form-text text-muted">{intl.formatMessage({ id: 'COMMUNICATION.FORM.STEP1.HINT.ATTACHMENTS' })}</span>
 
         {data.attachments && data.attachments.length > 0 && (
           <ul className="list-group mt-3">
@@ -262,6 +257,6 @@ export const Step1: React.FC<StepProps> = ({
           </ul>
         )}
       </div>
-    </div>
+    </div >
   )
 }

@@ -1,24 +1,16 @@
-import {useMemo} from 'react'
-import {useReactTable, Row, getCoreRowModel} from '@tanstack/react-table'
-import {CustomHeaderColumn} from './columns/CustomHeaderColumn'
-import {CustomRow} from './columns/CustomRow'
-import {useQueryResponseData, useQueryResponseLoading} from '../core/QueryResponseProvider'
-import {usersColumns} from './columns/_columns'
-import {User} from '../core/_models'
-import {UsersListLoading} from '../components/loading/UsersListLoading'
-import {UsersListPagination} from '../components/pagination/UsersListPagination'
-import {KTCardBody} from '../../../../../..//helpers'
+import { Row } from '@tanstack/react-table'
+import { CustomHeaderColumn } from './columns/CustomHeaderColumn'
+import { CustomRow } from './columns/CustomRow'
+import { User } from '../core/_models'
+import { UsersListLoading } from '../components/loading/UsersListLoading'
+import { UsersListPagination } from '../components/pagination/UsersListPagination'
+import { KTCardBody } from '../../../../../..//helpers'
+import { useUsersTable } from './useUsersTable'
+import { useIntl } from 'react-intl'
 
 const UsersTable = () => {
-  const users = useQueryResponseData()
-  const isLoading = useQueryResponseLoading()
-  const data = useMemo(() => users, [users])
-  const columns = useMemo(() => usersColumns, [])
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
+  const intl = useIntl()
+  const { table, isLoading } = useUsersTable()
 
   return (
     <KTCardBody className='py-4'>
@@ -28,13 +20,13 @@ const UsersTable = () => {
           className='table align-middle table-row-dashed fs-6 gy-5 dataTable no-footer'
         >
           <thead>
-          {table.getHeaderGroups().map((columnGroup) => (
-            <tr key={columnGroup.id} className='text-start text-muted fw-bolder fs-7 text-uppercase gs-0'>
-              {columnGroup.headers.map((header) => (
+            {table.getHeaderGroups().map((columnGroup) => (
+              <tr key={columnGroup.id} className='text-start text-muted fw-bolder fs-7 text-uppercase gs-0'>
+                {columnGroup.headers.map((header) => (
                   <CustomHeaderColumn key={header.id} header={header} />
-              ))}
-            </tr>)
-          )}
+                ))}
+              </tr>)
+            )}
           </thead>
           <tbody className='text-gray-600 fw-bold'>
             {table.getRowModel().rows.length > 0 ? (
@@ -45,7 +37,7 @@ const UsersTable = () => {
               <tr>
                 <td colSpan={7}>
                   <div className='d-flex text-center w-100 align-content-center justify-content-center'>
-                    No matching records found
+                    {intl.formatMessage({ id: 'USER_MANAGEMENT.TABLE.NO_RECORDS' })}
                   </div>
                 </td>
               </tr>
@@ -59,4 +51,4 @@ const UsersTable = () => {
   )
 }
 
-export {UsersTable}
+export { UsersTable }

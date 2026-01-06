@@ -21,6 +21,12 @@ export class GroupEntity {
   @Column({ length: 100 })
   name: string;
 
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
+  @Column({ type: 'boolean', default: false })
+  isAutoCreated: boolean;
+
   @Column({ length: 100, unique: true, nullable: true })
   identifier?: string;
 
@@ -34,10 +40,13 @@ export class GroupEntity {
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
   conditions: string[];
 
+  @Column({ default: false })
+  isChatEnabled: boolean;
+
   @Column('text', { array: true, default: () => 'ARRAY[]::text[]' })
   adminIds: string[];
 
-  @ManyToMany(() => UserEntity, user => user.memberOf, { cascade: false })
+  @ManyToMany(() => UserEntity, (user) => user.memberOf, { cascade: false })
   @JoinTable({
     name: 'user_group_members',
     joinColumn: { name: 'group_id', referencedColumnName: 'id' },

@@ -4,38 +4,38 @@ import {
   Column,
   Index,
   CreateDateColumn,
-} from 'typeorm'
+} from 'typeorm';
 
 @Entity('form_attachment')
 @Index(['companyId', 'submissionId'])
 export class FormAttachmentEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  submissionId: string
+  submissionId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('text')
-  storagePath: string
+  storagePath: string;
 
   @Column('text', { nullable: true })
-  mimeType: string | null
+  mimeType: string | null;
 
   @Column('bigint', { nullable: true })
-  bytes: string | null
+  bytes: string | null;
 
   @Column('text', { default: 'ok' })
-  status: 'ok' | 'failed'
+  status: 'ok' | 'failed';
 
   @Column('text', { nullable: true })
-  error: string | null
+  error: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  uploadedAt: Date
+  uploadedAt: Date;
 }

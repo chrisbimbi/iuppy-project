@@ -1,5 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { Channel as ChannelInterface, ChannelType } from '@shared/types/Channel';
+import {
+  Channel as ChannelInterface,
+  ChannelType,
+} from '@shared/types/Channel';
 
 @Entity('channel')
 export class Channel implements ChannelInterface {
@@ -23,7 +26,7 @@ export class Channel implements ChannelInterface {
 
   @Column('uuid', { array: true, nullable: true, name: 'space_ids' })
   spaceIds?: string[];
-  
+
   @Column('text', { array: true, nullable: true, name: 'group_ids' })
   groupIds?: string[];
 

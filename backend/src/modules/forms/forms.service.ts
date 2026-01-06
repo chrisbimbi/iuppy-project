@@ -88,7 +88,9 @@ export class FormsService {
         }),
       );
     } catch (e) {
-      this.log.warn(`[AuditLog] Falha ao registrar ação "${action}": ${String(e)}`);
+      this.log.warn(
+        `[AuditLog] Falha ao registrar ação "${action}": ${String(e)}`,
+      );
     }
   }
 
@@ -106,7 +108,10 @@ export class FormsService {
     spaceIds: string[] | null,
     groupIds: string[] | null,
   ): Promise<string[]> {
-    if ((!spaceIds || spaceIds.length === 0) && (!groupIds || groupIds.length === 0)) {
+    if (
+      (!spaceIds || spaceIds.length === 0) &&
+      (!groupIds || groupIds.length === 0)
+    ) {
       const allUsers = await this.ds.query(
         `SELECT id FROM "user_entity" WHERE "companyId" = $1`,
         [companyId],
@@ -146,17 +151,19 @@ export class FormsService {
     try {
       const groups = await this.ds.query(
         `SELECT group_id FROM user_group_members WHERE user_id = $1::uuid`,
-        [userId]
+        [userId],
       );
       groupIds = groups.map((g: any) => g.group_id);
 
       const spaces = await this.ds.query(
         `SELECT id FROM space WHERE "companyId" = (SELECT "companyId" FROM user_entity WHERE id = $1::uuid) AND COALESCE(active,true)=true`,
-        [userId]
+        [userId],
       );
       spaceIds = spaces.map((s: any) => s.id);
     } catch (e) {
-      this.log.warn(`Erro ao recuperar grupos/spaces do usuário ${userId}: ${e}`);
+      this.log.warn(
+        `Erro ao recuperar grupos/spaces do usuário ${userId}: ${e}`,
+      );
     }
 
     return { groupIds, spaceIds };
@@ -199,7 +206,14 @@ export class FormsService {
         entityId: form.id,
       });
 
-      await this.logAudit(form.companyId, actorUserId, 'form_push_sent', form.id, null, { count: userIds.length });
+      await this.logAudit(
+        form.companyId,
+        actorUserId,
+        'form_push_sent',
+        form.id,
+        null,
+        { count: userIds.length },
+      );
     } catch (e) {
       this.log.error(`[PushOnPublish] Falha: ${String(e)}`);
     }
@@ -261,16 +275,90 @@ export class FormsService {
   }
 
   async getForm(companyId: string, formId: string) {
-    const form = await this.formRepo.findOne({ where: { id: formId, companyId } });
+    const form = await this.formRepo.findOne({
+      where: { id: formId, companyId },
+    });
     if (!form) throw new NotFoundException('form not found');
-    const fields = await this.fieldRepo.find({ where: { companyId, formId, version: form.version || 1 }, order: { order: 'ASC' as any } });
-    return { ...form, fields, audienceAllCompany: (form.audienceSpaceIds?.length ?? 0) === 0 && (form.audienceGroupIds?.length ?? 0) === 0 };
+    const fields = await this.fieldRepo.find({
+      where: { companyId, formId, version: form.version || 1 },
+      order: { order: 'ASC' as any },
+    });
+    return {
+      ...form,
+      fields,
+      audienceAllCompany:
+        (form.audienceSpaceIds?.length ?? 0) === 0 &&
+        (form.audienceGroupIds?.length ?? 0) === 0,
+    };
   }
 
-  async listForms(companyId: string, status?: string) {
+  async listForms(
+    companyId: string,
+    status?: string,
+    visibility?: string,
+    allowedSpaceIds?: string[],
+    userId?: string,
+    template?: string,
+  ) {
     const params: any[] = [companyId];
-    const statusWhere = status ? 'AND f.status = $2' : '';
+    let statusWhere = status ? 'AND f.status = $2' : '';
     if (status) params.push(status);
+
+    // Filter visibility
+    let visibilityWhere = '';
+    if (visibility === 'all') {
+      // No filter
+    } else if (visibility) {
+      params.push(visibility);
+      visibilityWhere = `AND f.visibility = $${params.length}`;
+    } else {
+      // Default: exclude journey_only
+      visibilityWhere = `AND f.visibility != 'journey_only'`;
+    }
+
+    let aclWhere = '';
+
+    // 1. Admin Scoping (allowedSpaceIds)
+    if (allowedSpaceIds && allowedSpaceIds.length > 0) {
+      params.push(allowedSpaceIds);
+      aclWhere += ` AND (f."audienceSpaceIds" && $${params.length})`;
+    }
+
+    // Filter template
+    if (template) {
+      params.push(template);
+      if (template.endsWith('%')) {
+        aclWhere += ` AND f.template LIKE $${params.length}`;
+      } else {
+        aclWhere += ` AND f.template = $${params.length}`;
+      }
+    }
+
+    // 2. App Segmentation (userId)
+    if (userId) {
+      const { spaceIds, groupIds } = await this.getUserGroupsAndSpaces(userId);
+
+      // We need to handle the case where user has no spaces or groups
+      // Postgres && with empty array works (returns false), but we need to pass empty array if null
+      const safeSpaceIds = spaceIds || [];
+      const safeGroupIds = groupIds || [];
+
+      params.push(safeSpaceIds);
+      const pSpace = params.length;
+
+      params.push(safeGroupIds);
+      const pGroup = params.length;
+
+      aclWhere += ` AND (
+        f.visibility = 'public' OR 
+        (
+          f.visibility = 'specific_groups' AND (
+            (f."audienceSpaceIds" IS NOT NULL AND f."audienceSpaceIds" && $${pSpace}) OR
+            (f."audienceGroupIds" IS NOT NULL AND f."audienceGroupIds" && $${pGroup})
+          )
+        )
+      )`;
+    }
 
     const sql = `
       SELECT 
@@ -288,88 +376,137 @@ export class FormsService {
         f."attachmentsAllowed",
         f."audienceSpaceIds",
         f."audienceGroupIds",
+        f.visibility,
         (SELECT COUNT(*) FROM form_field ff WHERE ff."companyId"=f."companyId" AND ff."formId"=f.id AND ff."version"=f.version)::int AS "questionsCount", 
         (SELECT COUNT(*) FROM form_submission s WHERE s."companyId"=f."companyId" AND s."formId"=f.id)::int AS "submissionsCount" 
       FROM form f 
-      WHERE f."companyId"=$1 ${statusWhere} 
+      WHERE f."companyId"=$1 ${statusWhere} ${visibilityWhere} ${aclWhere}
       ORDER BY f."createdAt" DESC
     `;
     return this.ds.query(sql, params);
   }
 
   async segments(companyId: string) {
-    const spaces = await this.ds.query(`SELECT id, name FROM space WHERE "companyId"=$1 AND COALESCE(active,true)=true ORDER BY name ASC`, [companyId]).catch(() => []);
-    const groups = await this.ds.query(`SELECT id, name FROM user_group WHERE "companyId"=$1 ORDER BY name ASC`, [companyId]).catch(() => []);
+    const spaces = await this.ds
+      .query(
+        `SELECT id, name FROM space WHERE "companyId"=$1 AND COALESCE(active,true)=true ORDER BY name ASC`,
+        [companyId],
+      )
+      .catch(() => []);
+    const groups = await this.ds
+      .query(
+        `SELECT id, name FROM user_group WHERE "companyId"=$1 ORDER BY name ASC`,
+        [companyId],
+      )
+      .catch(() => []);
     return { spaces, groups };
   }
 
   // =========================================================
   // SUBMIT
   // =========================================================
-  async submit(companyId: string, formId: string, userId: string | null, dto: CreateSubmissionDto) {
+  async submit(
+    companyId: string,
+    formId: string,
+    userId: string | null,
+    dto: CreateSubmissionDto,
+  ) {
     if (!companyId) throw new BadRequestException('companyId is required');
 
-    const form = await this.formRepo.findOne({ where: { id: formId, companyId } });
+    const form = await this.formRepo.findOne({
+      where: { id: formId, companyId },
+    });
     if (!form) throw new NotFoundException('form not found');
 
-    const { submission, submissionId, submittedAt, isOnTime } = await this.ds.transaction(async (manager) => {
-      const submittedAt = new Date();
-      const isOnTime = form.deadlineAt ? submittedAt.getTime() <= new Date(form.deadlineAt).getTime() : null;
-      const storedUserId = dto.external || form.anonymous ? null : userId;
+    const { submission, submissionId, submittedAt, isOnTime } =
+      await this.ds.transaction(async (manager) => {
+        const submittedAt = new Date();
+        const isOnTime = form.deadlineAt
+          ? submittedAt.getTime() <= new Date(form.deadlineAt).getTime()
+          : null;
+        const storedUserId = dto.external || form.anonymous ? null : userId;
 
-      if (!dto.external && !form.anonymous && !storedUserId) {
-        throw new BadRequestException('userId is required for internal submissions');
-      }
-
-      let finalGroupIds = dto.groupIds || [];
-      let finalSpaceIds = dto.spaceIds || [];
-
-      if (storedUserId) {
-        if (finalGroupIds.length === 0 || finalSpaceIds.length === 0) {
-          const enriched = await this.getUserGroupsAndSpaces(storedUserId);
-          if (finalGroupIds.length === 0) finalGroupIds = enriched.groupIds;
-          if (finalSpaceIds.length === 0) finalSpaceIds = enriched.spaceIds;
+        if (!dto.external && !form.anonymous && !storedUserId) {
+          throw new BadRequestException(
+            'userId is required for internal submissions',
+          );
         }
-      }
 
-      const subRepo = manager.getRepository(FormSubmissionEntity);
-      const ansRepo = manager.getRepository(FormAnswerEntity);
-      const attRepo = manager.getRepository(FormAttachmentEntity);
+        let finalGroupIds = dto.groupIds || [];
+        let finalSpaceIds = dto.spaceIds || [];
 
-      const initialStatus = form.requiresApproval ? 'pending' : 'submitted';
+        if (storedUserId) {
+          if (finalGroupIds.length === 0 || finalSpaceIds.length === 0) {
+            const enriched = await this.getUserGroupsAndSpaces(storedUserId);
+            if (finalGroupIds.length === 0) finalGroupIds = enriched.groupIds;
+            if (finalSpaceIds.length === 0) finalSpaceIds = enriched.spaceIds;
+          }
+        }
 
-      const sub = subRepo.create({
-        companyId,
-        formId,
-        formVersion: form.version,
-        submittedAt,
-        userId: storedUserId,
-        external: !!dto.external,
-        externalEmail: dto.externalEmail || null,
-        spaceIds: finalSpaceIds,
-        groupIds: finalGroupIds,
-        isOnTime,
-        status: initialStatus,
-        replyCount: 0,
-        fileCount: dto.attachments?.length || 0,
-        meta: dto.meta || null,
-        chatStatus: 'open',
-        userUnreadChatCount: 0,
+        const subRepo = manager.getRepository(FormSubmissionEntity);
+        const ansRepo = manager.getRepository(FormAnswerEntity);
+        const attRepo = manager.getRepository(FormAttachmentEntity);
+
+        const initialStatus = form.requiresApproval ? 'pending' : 'submitted';
+
+        const sub = subRepo.create({
+          companyId,
+          formId,
+          formVersion: form.version,
+          submittedAt,
+          userId: storedUserId,
+          external: !!dto.external,
+          externalEmail: dto.externalEmail || null,
+          spaceIds: finalSpaceIds,
+          groupIds: finalGroupIds,
+          isOnTime,
+          status: initialStatus,
+          replyCount: 0,
+          fileCount: dto.attachments?.length || 0,
+          meta: dto.meta || null,
+          chatStatus: 'open',
+          userUnreadChatCount: 0,
+        });
+        await subRepo.save(sub);
+
+        for (const a of dto.answers || []) {
+          await ansRepo.save(
+            ansRepo.create({
+              companyId,
+              submissionId: sub.id,
+              formId,
+              fieldId: a.fieldId,
+              type: a.type,
+              value: a.value,
+            }),
+          );
+        }
+
+        for (const at of dto.attachments || []) {
+          await attRepo.save(
+            attRepo.create({
+              companyId,
+              submissionId: sub.id,
+              formId,
+              storagePath: at.storagePath,
+              mimeType: at.mimeType,
+              bytes: at.bytes ? String(at.bytes) : null,
+              uploadedAt: new Date(),
+              status: 'ok',
+              error: null,
+            }),
+          );
+        }
+
+        return { submissionId: sub.id, submittedAt, isOnTime, submission: sub };
       });
-      await subRepo.save(sub);
 
-      for (const a of dto.answers || []) {
-        await ansRepo.save(ansRepo.create({ companyId, submissionId: sub.id, formId, fieldId: a.fieldId, type: a.type, value: a.value }));
-      }
-
-      for (const at of dto.attachments || []) {
-        await attRepo.save(attRepo.create({ companyId, submissionId: sub.id, formId, storagePath: at.storagePath, mimeType: at.mimeType, bytes: at.bytes ? String(at.bytes) : null, uploadedAt: new Date(), status: 'ok', error: null }));
-      }
-
-      return { submissionId: sub.id, submittedAt, isOnTime, submission: sub };
-    });
-
-    this.postSubmitSideEffects(companyId, form, submission, dto.spaceIds || []).catch((err) => {
+    this.postSubmitSideEffects(
+      companyId,
+      form,
+      submission,
+      dto.spaceIds || [],
+    ).catch((err) => {
       this.log.warn(`postSubmitSideEffects error: ${String(err)}`);
     });
 
@@ -379,13 +516,25 @@ export class FormsService {
   async submitPublic(formId: string, dto: CreateSubmissionDto) {
     const form = await this.formRepo.findOne({ where: { id: formId } });
     if (!form) throw new NotFoundException('form not found');
-    if (!form.allowExternal) throw new BadRequestException('external submissions not allowed');
-    return this.submit(form.companyId, formId, null, { ...dto, external: true });
+    if (!form.allowExternal)
+      throw new BadRequestException('external submissions not allowed');
+    return this.submit(form.companyId, formId, null, {
+      ...dto,
+      external: true,
+    });
   }
 
-  private async postSubmitSideEffects(companyId: string, form: FormEntity, sub: FormSubmissionEntity, submissionSpaces: string[]) {
+  private async postSubmitSideEffects(
+    companyId: string,
+    form: FormEntity,
+    sub: FormSubmissionEntity,
+    submissionSpaces: string[],
+  ) {
     try {
-      await this.ds.query(`UPDATE form_badge_state SET "newCount" = COALESCE("newCount",0) + 1 WHERE "companyId" = $1 AND "formId" = $2`, [companyId, form.id]);
+      await this.ds.query(
+        `UPDATE form_badge_state SET "newCount" = COALESCE("newCount",0) + 1 WHERE "companyId" = $1 AND "formId" = $2`,
+        [companyId, form.id],
+      );
     } catch (e) { }
     try {
       await this.notifySubmission(companyId, form, sub, submissionSpaces);
@@ -394,10 +543,16 @@ export class FormsService {
 
   private sanitizeEmailList(raw: any): string[] {
     const arr = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
-    return arr.map(i => String(i).trim()).filter(e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+    return arr
+      .map((i) => String(i).trim())
+      .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
   }
 
-  private generateEnterpriseHtml(formTitle: string, submissionId: string, formId: string): string {
+  private generateEnterpriseHtml(
+    formTitle: string,
+    submissionId: string,
+    formId: string,
+  ): string {
     const adminUrl = `https://admin.iuppy.com/forms/${formId}/submissions`;
 
     return `
@@ -443,9 +598,20 @@ export class FormsService {
     `;
   }
 
-  private async notifySubmission(companyId: string, form: FormEntity, sub: FormSubmissionEntity, submissionSpaces: string[]) {
-    const settings = await this.notifRepo.find({ where: { companyId, formId: form.id }, order: { spaceId: 'ASC' as any } });
-    const targetSpaces = (form.audienceSpaceIds && form.audienceSpaceIds.length ? form.audienceSpaceIds : submissionSpaces) || [];
+  private async notifySubmission(
+    companyId: string,
+    form: FormEntity,
+    sub: FormSubmissionEntity,
+    submissionSpaces: string[],
+  ) {
+    const settings = await this.notifRepo.find({
+      where: { companyId, formId: form.id },
+      order: { spaceId: 'ASC' as any },
+    });
+    const targetSpaces =
+      (form.audienceSpaceIds && form.audienceSpaceIds.length
+        ? form.audienceSpaceIds
+        : submissionSpaces) || [];
     const emails = new Set<string>();
 
     if (!settings.length) return;
@@ -459,7 +625,8 @@ export class FormsService {
 
     if (!emails.size) return;
 
-    const title = (form.title as TranslatableString)['pt-BR'] ?? 'Novo Formulário';
+    const title =
+      (form.title as TranslatableString)['pt-BR'] ?? 'Novo Formulário';
     const htmlContent = this.generateEnterpriseHtml(title, sub.id, form.id);
 
     await this.comms.sendEmail({
@@ -471,15 +638,25 @@ export class FormsService {
     });
   }
 
-  async listSubmissions(companyId: string, formId: string, userId: string | null, page = 1, pageSize = 50) {
-    const qb = this.subRepo.createQueryBuilder('s').where('s.companyId = :companyId', { companyId });
+  async listSubmissions(
+    companyId: string,
+    formId: string,
+    userId: string | null,
+    page = 1,
+    pageSize = 50,
+  ) {
+    const qb = this.subRepo
+      .createQueryBuilder('s')
+      .where('s.companyId = :companyId', { companyId });
     if (formId === 'my' || formId === 'mine') {
       if (!userId) throw new BadRequestException('userId required');
       qb.andWhere('s.userId = :userId', { userId });
     } else {
       qb.andWhere('s.formId = :formId', { formId });
     }
-    qb.orderBy('s.submittedAt', 'DESC').skip((page - 1) * pageSize).take(pageSize);
+    qb.orderBy('s.submittedAt', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize);
     const [items, total] = await qb.getManyAndCount();
     return { total, page, pageSize, items };
   }
@@ -518,7 +695,12 @@ export class FormsService {
       LIMIT $3 OFFSET $4
     `;
 
-    const rows = await this.ds.query(sql, [companyId, userId, pageSize, offset]);
+    const rows = await this.ds.query(sql, [
+      companyId,
+      userId,
+      pageSize,
+      offset,
+    ]);
     const totalRow = await this.ds.query(
       `SELECT COUNT(*)::int AS cnt FROM form_submission s WHERE s."companyId" = $1 AND s."userId" = $2`,
       [companyId, userId],
@@ -529,44 +711,99 @@ export class FormsService {
   }
 
   async createForm(companyId: string, createdBy: string, dto: CreateFormDto) {
-    if (companyId !== dto.companyId) throw new ForbiddenException('companyId mismatch');
-    const form = this.formRepo.create({ ...dto, createdBy, version: 1, publishedAt: dto.status === 'published' ? new Date() : null, defaultLocale: dto.defaultLocale ?? 'pt-BR' });
+    // Fixed: Do not check dto.companyId vs companyId strict equality (frontend sends 'current')
+    // Instead, simply force the use of the authenticated companyId
+    const form = this.formRepo.create({
+      ...dto,
+      companyId,
+      createdBy,
+      version: 1,
+      publishedAt: dto.status === 'published' ? new Date() : null,
+      defaultLocale: dto.defaultLocale ?? 'pt-BR',
+      visibility: dto.visibility ?? 'public',
+    });
     await this.formRepo.save(form);
-    let order = 0;
-    for (const f of dto.fields || []) {
-      await this.fieldRepo.save(this.fieldRepo.create({ companyId, formId: form.id, version: 1, type: f.type, label: f.label, required: !!f.required, options: f.options, order: f.order ?? order++ }));
+
+    if (dto.fields && dto.fields.length > 0) {
+      let order = 0;
+      const fieldsToSave = dto.fields.map((f) =>
+        this.fieldRepo.create({
+          companyId,
+          formId: form.id,
+          version: 1,
+          type: f.type,
+          label: f.label,
+          required: !!f.required,
+          options: f.options,
+          order: f.order ?? order++,
+        }),
+      );
+      await this.fieldRepo.save(fieldsToSave);
     }
+
     await this.logAudit(companyId, createdBy, 'form_created', form.id);
 
     if (form.status === 'published') {
       const config = form.notificationsConfig as any;
-      if (config?.push && (config?.pushPayload?.title || config?.pushOnPublish?.title)) {
+      if (
+        config?.push &&
+        (config?.pushPayload?.title || config?.pushOnPublish?.title)
+      ) {
         await this.sendPublicationPush(form, createdBy);
       }
     }
     return this.getForm(companyId, form.id);
   }
 
-  async updateForm(companyId: string, formId: string, actorUserId: string, dto: UpdateFormDto) {
-    const form = await this.formRepo.findOne({ where: { id: formId, companyId } });
+  async updateForm(
+    companyId: string,
+    formId: string,
+    actorUserId: string,
+    dto: UpdateFormDto,
+  ) {
+    const form = await this.formRepo.findOne({
+      where: { id: formId, companyId },
+    });
     if (!form) throw new NotFoundException('form not found');
     const oldStatus = form.status;
     const oldConfig = form.notificationsConfig as any;
 
     Object.assign(form, dto);
-    if (dto.status === 'published' && !form.publishedAt) form.publishedAt = new Date();
+    if (dto.status === 'published' && !form.publishedAt)
+      form.publishedAt = new Date();
     await this.formRepo.save(form);
+
     if (Array.isArray(dto.fields)) {
-      await this.fieldRepo.delete({ companyId, formId, version: form.version || 1 });
+      await this.fieldRepo.delete({
+        companyId,
+        formId,
+        version: form.version || 1,
+      });
       let order = 0;
-      for (const f of dto.fields) await this.fieldRepo.save(this.fieldRepo.create({ companyId, formId, version: form.version || 1, type: f.type, label: f.label, required: !!f.required, options: f.options, order: f.order ?? order++ }));
+      const fieldsToSave = dto.fields.map((f) =>
+        this.fieldRepo.create({
+          companyId,
+          formId,
+          version: form.version || 1,
+          type: f.type,
+          label: f.label,
+          required: !!f.required,
+          options: f.options,
+          order: f.order ?? order++,
+        }),
+      );
+      if (fieldsToSave.length > 0) {
+        await this.fieldRepo.save(fieldsToSave);
+      }
     }
     await this.logAudit(companyId, actorUserId, 'form_updated', formId);
 
     const newConfig = form.notificationsConfig as any;
 
-    const justPublished = form.status === 'published' && oldStatus !== 'published';
-    const pushActivatedNow = form.status === 'published' && (!oldConfig?.push && newConfig?.push);
+    const justPublished =
+      form.status === 'published' && oldStatus !== 'published';
+    const pushActivatedNow =
+      form.status === 'published' && !oldConfig?.push && newConfig?.push;
 
     if (justPublished || pushActivatedNow) {
       await this.sendPublicationPush(form, actorUserId);
@@ -574,15 +811,30 @@ export class FormsService {
     return this.getForm(companyId, formId);
   }
 
-  async updateStatus(companyId: string, formId: string, actorUserId: string, status: FormStatus) {
-    const form = await this.formRepo.findOne({ where: { id: formId, companyId } });
+  async updateStatus(
+    companyId: string,
+    formId: string,
+    actorUserId: string,
+    status: FormStatus,
+  ) {
+    const form = await this.formRepo.findOne({
+      where: { id: formId, companyId },
+    });
     if (!form) throw new NotFoundException('form not found');
     const oldStatus = form.status;
     form.status = status;
-    if (oldStatus === 'draft' && status === 'published') form.publishedAt = new Date();
+    if (oldStatus === 'draft' && status === 'published')
+      form.publishedAt = new Date();
 
     await this.formRepo.save(form);
-    await this.logAudit(companyId, actorUserId, 'form_status_changed', formId, null, { from: oldStatus, to: status });
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      'form_status_changed',
+      formId,
+      null,
+      { from: oldStatus, to: status },
+    );
 
     if (status === 'published' && oldStatus !== 'published') {
       await this.sendPublicationPush(form, actorUserId);
@@ -594,34 +846,83 @@ export class FormsService {
     const original = await this.getForm(companyId, formId);
     if (!original) throw new NotFoundException('form not found');
     const newFormId = await this.ds.transaction(async (manager) => {
-      const newForm = manager.getRepository(FormEntity).create({ ...original, id: undefined, status: 'draft', publishedAt: null, version: 1, createdBy: actorUserId, title: { 'pt-BR': (original.title as any)['pt-BR'] + ' (Cópia)' } });
+      const newForm = manager.getRepository(FormEntity).create({
+        ...original,
+        id: undefined,
+        status: 'draft',
+        publishedAt: null,
+        version: 1,
+        createdBy: actorUserId,
+        title: { 'pt-BR': (original.title as any)['pt-BR'] + ' (Cópia)' },
+      });
       await manager.getRepository(FormEntity).save(newForm);
-      for (const f of original.fields) await manager.getRepository(FormFieldEntity).save(manager.getRepository(FormFieldEntity).create({ ...f, id: undefined, formId: newForm.id }));
+
+      if (original.fields && original.fields.length > 0) {
+        const fieldsToSave = original.fields.map((f) =>
+          manager.getRepository(FormFieldEntity).create({
+            ...f,
+            id: undefined,
+            formId: newForm.id,
+          }),
+        );
+        await manager.getRepository(FormFieldEntity).save(fieldsToSave);
+      }
       return newForm.id;
     });
-    await this.logAudit(companyId, actorUserId, 'form_duplicated', newFormId, null, { fromFormId: formId });
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      'form_duplicated',
+      newFormId,
+      null,
+      { fromFormId: formId },
+    );
     return this.getForm(companyId, newFormId);
   }
 
   async removeMany(companyId: string, actorUserId: string, ids: string[]) {
     if (!ids.length) return { ok: true, count: 0 };
     await this.formRepo.delete({ companyId, id: In(ids) });
-    for (const id of ids) await this.logAudit(companyId, actorUserId, 'form_deleted', id);
+    await Promise.all(
+      ids.map((id) =>
+        this.logAudit(companyId, actorUserId, 'form_deleted', id),
+      ),
+    );
     return { ok: true, count: ids.length };
   }
 
-  async getSubmissionDetail(companyId: string, formId: string, submissionId: string, locale: string = 'pt-BR') {
-    const sub = await this.subRepo.findOne({ where: { id: submissionId, formId, companyId } });
+  async getSubmissionDetail(
+    companyId: string,
+    formId: string,
+    submissionId: string,
+    locale: string = 'pt-BR',
+  ) {
+    const sub = await this.subRepo.findOne({
+      where: { id: submissionId, formId, companyId },
+    });
     if (!sub) throw new NotFoundException('submission not found');
-    const answers = await this.ds.query(`SELECT a."fieldId", a.type, a.value, a."createdAt", f.label->>'pt-BR' as label, f.options FROM form_answer a LEFT JOIN form_field f ON f.id=a."fieldId" WHERE a."submissionId"=$1`, [submissionId]);
+    const answers = await this.ds.query(
+      `SELECT a."fieldId", a.type, a.value, a."createdAt", f.label->>'pt-BR' as label, f.options FROM form_answer a LEFT JOIN form_field f ON f.id=a."fieldId" WHERE a."submissionId"=$1`,
+      [submissionId],
+    );
     const attachments = await this.attRepo.find({ where: { submissionId } });
     return { ...sub, answers, attachments };
   }
 
   // 🔥 ATUALIZADO: Mesma query UNION do getMyInteractions para consistência
-  async getChatHistory(companyId: string, formId: string, submissionId: string, actorUserId: string, actor: FormChatActor) {
+  async getChatHistory(
+    companyId: string,
+    formId: string,
+    submissionId: string,
+    actorUserId: string,
+    actor: FormChatActor,
+  ) {
     const sub = await this.subRepo.findOne({ where: { id: submissionId } });
-    if (actor === 'user' && sub?.userId === actorUserId) await this.subRepo.update({ id: submissionId }, { userUnreadChatCount: 0 });
+    if (actor === 'user' && sub?.userId === actorUserId)
+      await this.subRepo.update(
+        { id: submissionId },
+        { userUnreadChatCount: 0 },
+      );
 
     const sql = `
        SELECT * FROM (
@@ -650,51 +951,125 @@ export class FormsService {
         id: m.id,
         actor: m.actor,
         message: m.message,
-        createdAt: m.createdAt
-      }))
+        createdAt: m.createdAt,
+      })),
     };
   }
 
-  async closeChat(companyId: string, formId: string, submissionId: string, actorUserId: string) {
+  async closeChat(
+    companyId: string,
+    formId: string,
+    submissionId: string,
+    actorUserId: string,
+  ) {
     await this.subRepo.update({ id: submissionId }, { chatStatus: 'closed' });
-    await this.chatRepo.save(this.chatRepo.create({ companyId, submissionId, actor: 'rh', userId: actorUserId, message: '(Encerrado pelo RH)' }));
-    await this.logAudit(companyId, actorUserId, 'submission_chat_closed', formId, submissionId);
+    await this.chatRepo.save(
+      this.chatRepo.create({
+        companyId,
+        submissionId,
+        actor: 'rh',
+        userId: actorUserId,
+        message: '(Encerrado pelo RH)',
+      }),
+    );
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      'submission_chat_closed',
+      formId,
+      submissionId,
+    );
     return { ok: true };
   }
 
-  async saveFormNotificationSettings(companyId: string, formId: string, actorUserId: string, items: any[]) {
+  async saveFormNotificationSettings(
+    companyId: string,
+    formId: string,
+    actorUserId: string,
+    items: any[],
+  ) {
     await this.notifRepo.delete({ companyId, formId });
-    for (const it of items) await this.notifRepo.save(this.notifRepo.create({ companyId, formId, spaceId: it.spaceId, emails: it.emails }));
-    await this.logAudit(companyId, actorUserId, 'notification_settings_updated', formId);
+    if (items && items.length > 0) {
+      const settingsToSave = items.map((it) =>
+        this.notifRepo.create({
+          companyId,
+          formId,
+          spaceId: it.spaceId,
+          emails: it.emails,
+        }),
+      );
+      await this.notifRepo.save(settingsToSave);
+    }
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      'notification_settings_updated',
+      formId,
+    );
     return { ok: true };
   }
 
   async getFormNotificationSettings(companyId: string, formId: string) {
     const rows = await this.notifRepo.find({ where: { companyId, formId } });
-    return { items: rows.map(r => ({ spaceId: r.spaceId, emails: r.emails })) };
+    return {
+      items: rows.map((r) => ({ spaceId: r.spaceId, emails: r.emails })),
+    };
   }
 
-  async postChatMessage(companyId: string, formId: string, submissionId: string, actorUserId: string, dto: ChatMessageDto) {
-    const sub = await this.subRepo.findOne({ where: { id: submissionId, formId, companyId } });
+  async postChatMessage(
+    companyId: string,
+    formId: string,
+    submissionId: string,
+    actorUserId: string,
+    dto: ChatMessageDto,
+  ) {
+    const sub = await this.subRepo.findOne({
+      where: { id: submissionId, formId, companyId },
+    });
     if (!sub) throw new NotFoundException('Submissão não encontrada');
-    if (dto.actor === 'user' && sub.chatStatus === 'closed') throw new ForbiddenException('Chat fechado');
+    if (dto.actor === 'user' && sub.chatStatus === 'closed')
+      throw new ForbiddenException('Chat fechado');
 
-    const message = this.chatRepo.create({ companyId, submissionId, actor: dto.actor, userId: actorUserId, message: dto.message });
+    const message = this.chatRepo.create({
+      companyId,
+      submissionId,
+      actor: dto.actor,
+      userId: actorUserId,
+      message: dto.message,
+    });
     await this.chatRepo.save(message);
 
-    await this.logAudit(companyId, actorUserId, 'submission_chat_sent', formId, submissionId, { actor: dto.actor });
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      'submission_chat_sent',
+      formId,
+      submissionId,
+      { actor: dto.actor },
+    );
 
     if (dto.actor === 'user') {
       await this.ds.query(
         `UPDATE form_badge_state SET "newCount" = COALESCE("newCount",0) + 1 WHERE "companyId" = $1 AND "formId" = $2`,
-        [companyId, formId]
+        [companyId, formId],
       );
     }
 
     if (dto.actor === 'rh') {
-      const existingAction = await this.rhRepo.count({ where: { companyId, submissionId } });
+      const existingAction = await this.rhRepo.count({
+        where: { companyId, submissionId },
+      });
       if (existingAction === 0) {
-        await this.rhRepo.save(this.rhRepo.create({ companyId, formId, submissionId, actorUserId, type: 'reply', message: '(Via Chat)' }));
+        await this.rhRepo.save(
+          this.rhRepo.create({
+            companyId,
+            formId,
+            submissionId,
+            actorUserId,
+            type: 'reply',
+            message: '(Via Chat)',
+          }),
+        );
       }
 
       if (sub.status === 'submitted' || sub.status === 'pending') {
@@ -705,24 +1080,46 @@ export class FormsService {
     }
 
     if (dto.actor === 'rh' && sub.userId && !sub.external) {
-      if (sub.chatStatus === 'closed') await this.subRepo.update({ id: submissionId }, { chatStatus: 'open' });
+      if (sub.chatStatus === 'closed')
+        await this.subRepo.update({ id: submissionId }, { chatStatus: 'open' });
       // Badge App
-      await this.subRepo.increment({ id: submissionId }, 'userUnreadChatCount', 1);
+      await this.subRepo.increment(
+        { id: submissionId },
+        'userUnreadChatCount',
+        1,
+      );
 
-      const form = await this.formRepo.findOne({ where: { id: formId }, select: ['title', 'defaultLocale'] });
-      const title = (form?.title as TranslatableString)?.['pt-BR'] ?? 'Formulário';
+      const form = await this.formRepo.findOne({
+        where: { id: formId },
+        select: ['title', 'defaultLocale'],
+      });
+      const title =
+        (form?.title as TranslatableString)?.['pt-BR'] ?? 'Formulário';
       try {
         await this.comms.sendPush({
-          companyId, userIds: [sub.userId], title: `Nova mensagem: ${title}`, body: dto.message,
-          deepLinkMobile: `iuppy://forms/${formId}/submissions/${submissionId}`, kind: 'FORM_CHAT', data: { formId, submissionId }
+          companyId,
+          userIds: [sub.userId],
+          title: `Nova mensagem: ${title}`,
+          body: dto.message,
+          deepLinkMobile: `iuppy://forms/${formId}/submissions/${submissionId}`,
+          kind: 'FORM_CHAT',
+          data: { formId, submissionId },
         });
       } catch (e) { }
     }
     return message;
   }
 
-  async respond(companyId: string, formId: string, submissionId: string, actorUserId: string, dto: RespondDto) {
-    const sub = await this.subRepo.findOne({ where: { id: submissionId, formId, companyId } });
+  async respond(
+    companyId: string,
+    formId: string,
+    submissionId: string,
+    actorUserId: string,
+    dto: RespondDto,
+  ) {
+    const sub = await this.subRepo.findOne({
+      where: { id: submissionId, formId, companyId },
+    });
     if (!sub) throw new NotFoundException('submission not found');
 
     await this.rhRepo.save(
@@ -736,7 +1133,12 @@ export class FormsService {
       }),
     );
 
-    const newStatus = dto.type === 'reply' ? 'replied' : dto.type === 'approve' ? 'approved' : 'rejected';
+    const newStatus =
+      dto.type === 'reply'
+        ? 'replied'
+        : dto.type === 'approve'
+          ? 'approved'
+          : 'rejected';
 
     // 🔥 CORREÇÃO: Incrementa userUnreadChatCount e replyCount
     await this.subRepo
@@ -745,18 +1147,32 @@ export class FormsService {
       .set({
         status: newStatus,
         replyCount: () => '"replyCount" + 1',
-        userUnreadChatCount: () => '"userUnreadChatCount" + 1'
+        userUnreadChatCount: () => '"userUnreadChatCount" + 1',
       })
-      .where("id = :id", { id: submissionId })
+      .where('id = :id', { id: submissionId })
       .execute();
 
-    await this.logAudit(companyId, actorUserId, `submission_${newStatus}` as any, formId, submissionId);
+    await this.logAudit(
+      companyId,
+      actorUserId,
+      `submission_${newStatus}` as any,
+      formId,
+      submissionId,
+    );
 
     // 🔥 CORREÇÃO: Push de resposta direciona para detalhes (?action=details)
     if (sub.userId && !sub.external) {
-      const form = await this.formRepo.findOne({ where: { id: formId }, select: ['title'] });
+      const form = await this.formRepo.findOne({
+        where: { id: formId },
+        select: ['title'],
+      });
       const title = (form?.title as any)?.['pt-BR'] ?? 'Formulário';
-      const msgBody = dto.type === 'approve' ? 'Sua solicitação foi aprovada.' : dto.type === 'reject' ? 'Sua solicitação foi rejeitada.' : 'O RH respondeu sua solicitação.';
+      const msgBody =
+        dto.type === 'approve'
+          ? 'Sua solicitação foi aprovada.'
+          : dto.type === 'reject'
+            ? 'Sua solicitação foi rejeitada.'
+            : 'O RH respondeu sua solicitação.';
 
       try {
         await this.comms.sendPush({
@@ -767,7 +1183,7 @@ export class FormsService {
           // Adicionado ?action=details
           deepLinkMobile: `iuppy://forms/${formId}/submissions/${submissionId}?action=details`,
           kind: 'FORM_RESPONSE',
-          entityId: submissionId
+          entityId: submissionId,
         });
       } catch (e) { }
     }

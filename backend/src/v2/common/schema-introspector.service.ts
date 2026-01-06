@@ -7,7 +7,9 @@ export class SchemaIntrospectorV2 {
   constructor(private readonly ds: DataSource) {}
 
   async hasTable(table: string): Promise<boolean> {
-    const r = await this.ds.query(`SELECT to_regclass($1) AS t`, [`public.${table}`]);
+    const r = await this.ds.query(`SELECT to_regclass($1) AS t`, [
+      `public.${table}`,
+    ]);
     return !!(r && r[0] && r[0].t);
   }
 
@@ -20,7 +22,11 @@ export class SchemaIntrospectorV2 {
   }
 
   async detectInteractionEvent(): Promise<{
-    table: string; typeCol: string; newsRef: string; userIdCol: string; createdAtCol: string;
+    table: string;
+    typeCol: string;
+    newsRef: string;
+    userIdCol: string;
+    createdAtCol: string;
   } | null> {
     const r = await this.ds.query(
       `SELECT to_regclass('public.news_interaction_event') AS nie, to_regclass('public.interaction_event') AS ie`,
@@ -36,8 +42,16 @@ export class SchemaIntrospectorV2 {
       [table],
     );
     const names: string[] = (cols || []).map((c: any) => c.column_name);
-    const typeCol = names.includes('type') ? 'type' : names.includes('event') ? 'event' : null;
-    const newsRef = names.includes('newsId') ? 'newsId' : names.includes('objectId') ? 'objectId' : null;
+    const typeCol = names.includes('type')
+      ? 'type'
+      : names.includes('event')
+        ? 'event'
+        : null;
+    const newsRef = names.includes('newsId')
+      ? 'newsId'
+      : names.includes('objectId')
+        ? 'objectId'
+        : null;
     const userIdCol = names.includes('userId') ? 'userId' : null;
     const createdAtCol = names.includes('createdAt') ? 'createdAt' : null;
     if (!typeCol || !newsRef || !userIdCol || !createdAtCol) return null;

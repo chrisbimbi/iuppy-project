@@ -1,29 +1,37 @@
 // backend/src/modules/access-control/dto/upsert-access-grant.dto.ts
-import { IsArray, IsBoolean, IsIn, IsOptional, IsString, IsUUID, ArrayUnique } from 'class-validator'
-import { ModuleKey } from '@shared/types'
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ArrayUnique,
+} from 'class-validator';
+import { ModuleKey } from '@shared/types';
 
 export class UpsertAccessGrantDto {
   @IsUUID()
-  userId!: string
+  userId!: string;
 
   @IsString()
-  moduleKey!: ModuleKey
+  moduleKey!: ModuleKey;
 
   @IsIn(['ALL_SPACES', 'SPACE_IDS'])
-  scopeType!: 'ALL_SPACES' | 'SPACE_IDS'
+  scopeType!: 'ALL_SPACES' | 'SPACE_IDS';
 
   @IsOptional()
   @IsArray()
   @ArrayUnique()
   @IsUUID('4', { each: true })
-  spaceIds?: string[]
+  spaceIds?: string[];
 
   @IsBoolean()
-  canView!: boolean
+  canView!: boolean;
 
   @IsBoolean()
-  canEdit!: boolean
+  canEdit!: boolean;
 
   @IsBoolean()
-  canManage!: boolean
+  canManage!: boolean;
 }

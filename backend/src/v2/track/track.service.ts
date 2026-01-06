@@ -6,7 +6,7 @@ import { UserMetricsDailyEntity } from 'src/v2/interactions/entities/user-metric
 interface BatchEvent {
   type: 'app_open' | 'module_open';
   at: string; // ISO
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -18,7 +18,9 @@ export class TrackV2Service {
 
   private toDate(atISO: string): string {
     const d = new Date(atISO);
-    return isNaN(d.getTime()) ? new Date().toISOString().slice(0,10) : d.toISOString().slice(0,10);
+    return isNaN(d.getTime())
+      ? new Date().toISOString().slice(0, 10)
+      : d.toISOString().slice(0, 10);
   }
 
   async batch(companyId: string, userId: string, events: BatchEvent[]) {
@@ -39,7 +41,9 @@ export class TrackV2Service {
         .insert()
         .into(UserMetricsDailyEntity)
         .values({ userId, date, appOpens: count })
-        .orUpdate(['appOpens'], ['userId', 'date'], { skipUpdateIfNoValuesChanged: false })
+        .orUpdate(['appOpens'], ['userId', 'date'], {
+          skipUpdateIfNoValuesChanged: false,
+        })
         .execute();
 
       // increment appOpens (se já existir, somar)

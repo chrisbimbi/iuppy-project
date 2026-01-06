@@ -1,0 +1,88 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Iuppy Dev (iOS Simulator)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "DD07E0A4-4DEC-4CD2-BD80-CAEBFD4C6897",
+            "program": "lib/main.dart",
+            "args": [
+                "--flavor",
+                "iuppyDev",
+                "--dart-define",
+                "API_BASE_URL=http://localhost:4000",
+                "--dart-define",
+                "APP_SCHEME=iuppydev",
+                "--dart-define",
+                "COMPANY_ID=2af4557f-9259-4eed-818d-1d0ffe0b8982",
+                "--dart-define",
+                "COMPANY_KEY=contateste",
+                "--dart-define",
+                "APP_NAME=Iuppy Dev"
+            ]
+        },
+        {
+            "name": "Next Sales Dev (iOS Simulator)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--flavor",
+                "nextsalesDev",
+                "--dart-define",
+                "API_BASE_URL=http://localhost:4000",
+                "--dart-define",
+                "APP_SCHEME=nextsalesdev",
+                "--dart-define",
+                "COMPANY_ID=2af4557f-9259-4eed-818d-1d0ffe0b8982",
+                "--dart-define",
+                "COMPANY_KEY=contateste",
+                "--dart-define",
+                "APP_NAME=Next Sales DEV"
+            ]
+        },
+        {
+            "name": "Iuppy Dev (Android Emulator)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "emulator-5554",
+            "program": "lib/main.dart",
+            "args": [
+                "--flavor",
+                "iuppyDev",
+                "--dart-define",
+                "API_BASE_URL=http://10.0.2.2:4000",
+                "--dart-define",
+                "APP_SCHEME=iuppydev",
+                "--dart-define",
+                "COMPANY_ID=2af4557f-9259-4eed-818d-1d0ffe0b8982",
+                "--dart-define",
+                "COMPANY_KEY=contateste",
+                "--dart-define",
+                "APP_NAME=Iuppy Dev"
+            ]
+        },
+        {
+            "name": "Iuppy Prod (Release)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
+            "args": [
+                "--flavor",
+                "iuppyProd",
+                "--dart-define",
+                "API_BASE_URL=https://api.iuppy.com.br",
+                "--dart-define",
+                "APP_SCHEME=iuppy",
+                "--dart-define",
+                "COMPANY_ID=2af4557f-9259-4eed-818d-1d0ffe0b8982",
+                "--dart-define",
+                "COMPANY_KEY=contateste",
+                "--dart-define",
+                "APP_NAME=Iuppy"
+            ]
+        }
+    ]
+}

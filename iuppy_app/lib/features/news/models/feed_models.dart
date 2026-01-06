@@ -22,6 +22,7 @@ class FeedItemCounts {
   final int reactionsTotal;
   final int commentsTotal;
   final int sharesTotal;
+  final int favoritesTotal;
 
   FeedItemCounts({
     required this.uniqueOpens,
@@ -29,6 +30,7 @@ class FeedItemCounts {
     required this.reactionsTotal,
     required this.commentsTotal,
     required this.sharesTotal,
+    required this.favoritesTotal,
   });
 
   factory FeedItemCounts.fromJson(Map<String, dynamic> j) => FeedItemCounts(
@@ -37,6 +39,7 @@ class FeedItemCounts {
         reactionsTotal: j['reactionsTotal'] ?? 0,
         commentsTotal: j['commentsTotal'] ?? 0,
         sharesTotal: j['sharesTotal'] ?? 0,
+        favoritesTotal: j['favoritesTotal'] ?? j['favorites'] ?? 0,
       );
 }
 
@@ -68,17 +71,20 @@ class FeedUserState {
   final bool isRead;
   final String? readAt;
   final String? myReaction;
+  final bool isFavorited;
 
   FeedUserState({
     required this.isRead,
     this.readAt,
     this.myReaction,
+    required this.isFavorited,
   });
 
   factory FeedUserState.fromJson(Map<String, dynamic> j) => FeedUserState(
         isRead: j['isRead'] ?? false,
         readAt: j['readAt'],
         myReaction: j['myReaction'],
+        isFavorited: j['isFavorited'] ?? false,
       );
 }
 
@@ -114,6 +120,7 @@ class FeedItem {
   final FeedItemSettings settings;
   final FeedUserState userState;
   final FeedItemCounts counts;
+  final List<String> hashtags;
 
   FeedItem({
     required this.id,
@@ -131,6 +138,7 @@ class FeedItem {
     required this.settings,
     required this.userState,
     required this.counts,
+    this.hashtags = const [],
   });
 
   factory FeedItem.fromJson(Map<String, dynamic> j) => FeedItem(
@@ -152,6 +160,7 @@ class FeedItem {
         settings: FeedItemSettings.fromJson(j['settings'] ?? const {}),
         userState: FeedUserState.fromJson(j['userState'] ?? const {}),
         counts: FeedItemCounts.fromJson(j['counts'] ?? const {}),
+        hashtags: (j['hashtags'] as List<dynamic>? ?? []).cast<String>(),
       );
 }
 

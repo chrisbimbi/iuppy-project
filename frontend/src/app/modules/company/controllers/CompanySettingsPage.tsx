@@ -1,5 +1,6 @@
 // (arquivo completo, só com as mudanças principais marcadas nos comentários)
 import React, { useEffect, useMemo, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { AsideDefault } from 'src/layout/components/aside/AsideDefault'
 import { Content } from 'src/layout/components/Content'
 import { PageTitle } from 'src/layout/core'
@@ -33,23 +34,48 @@ const MODULE_LABELS: Record<ModuleKey, string> = {
     vacations: 'Férias',
     podcasts: 'Podcasts',
     analytics: 'Analytics',
+    social: 'Social Wall',
     chat: 'Chat',
+    journeys: 'Jornadas',
 }
 
 type TabKey = 'branding' | 'users' | 'entities' | 'modules'
-const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
-    { key: 'branding', label: 'Identidade Visual', icon: 'bi-palette' },
-    { key: 'users', label: 'Usuários', icon: 'bi-people' },
-    { key: 'entities', label: 'Entidades', icon: 'bi-diagram-2' },
-    { key: 'modules', label: 'Módulos', icon: 'bi-grid' },
-]
+// TABS movido para dentro do componente ou usando useMemo com intl
 
 const defaultBrandingColor = (v?: string, fallback = '#ffffff') => v || fallback
 
 const CompanySettingsPage: React.FC = () => {
     const { currentUser } = useAuth()
     const navigate = useNavigate()
+    const intl = useIntl()
     const companyId = currentUser?.companyId as string
+
+    const MODULE_LABELS: Record<ModuleKey, string> = {
+        news: intl.formatMessage({ id: 'COMPANY.MODULES.NEWS', defaultMessage: 'Notícias' }),
+        channels: intl.formatMessage({ id: 'COMPANY.MODULES.CHANNELS', defaultMessage: 'Canais' }),
+        groups: intl.formatMessage({ id: 'COMPANY.MODULES.GROUPS', defaultMessage: 'Grupos' }),
+        surveys: intl.formatMessage({ id: 'COMPANY.MODULES.SURVEYS', defaultMessage: 'Enquetes' }),
+        forms: intl.formatMessage({ id: 'COMPANY.MODULES.FORMS', defaultMessage: 'Formulários' }),
+        onboarding: intl.formatMessage({ id: 'COMPANY.MODULES.ONBOARDING', defaultMessage: 'Onboarding' }),
+        training: intl.formatMessage({ id: 'COMPANY.MODULES.TRAINING', defaultMessage: 'Treinamentos' }),
+        jobs: intl.formatMessage({ id: 'COMPANY.MODULES.JOBS', defaultMessage: 'Vagas' }),
+        birthdays: intl.formatMessage({ id: 'COMPANY.MODULES.BIRTHDAYS', defaultMessage: 'Aniversários' }),
+        recognition: intl.formatMessage({ id: 'COMPANY.MODULES.RECOGNITION', defaultMessage: 'Reconhecimentos' }),
+        quicklinks: intl.formatMessage({ id: 'COMPANY.MODULES.QUICKLINKS', defaultMessage: 'Links Rápidos' }),
+        benefits: intl.formatMessage({ id: 'COMPANY.MODULES.BENEFITS', defaultMessage: 'Benefícios' }),
+        vacations: intl.formatMessage({ id: 'COMPANY.MODULES.VACATIONS', defaultMessage: 'Férias' }),
+        podcasts: intl.formatMessage({ id: 'COMPANY.MODULES.PODCASTS', defaultMessage: 'Podcasts' }),
+        analytics: intl.formatMessage({ id: 'COMPANY.MODULES.ANALYTICS', defaultMessage: 'Analytics' }),
+        social: intl.formatMessage({ id: 'COMPANY.MODULES.SOCIAL', defaultMessage: 'Mural Social' }),
+        chat: intl.formatMessage({ id: 'COMPANY.MODULES.CHAT', defaultMessage: 'Chat' }),
+        journeys: intl.formatMessage({ id: 'COMPANY.MODULES.JOURNEYS', defaultMessage: 'Jornadas' }),
+    }
+
+    const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
+        { key: 'branding', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.BRANDING', defaultMessage: 'Identidade Visual' }), icon: 'bi-palette' },
+        { key: 'entities', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.ENTITIES', defaultMessage: 'Entidades' }), icon: 'bi-diagram-2' },
+        { key: 'modules', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.MODULES', defaultMessage: 'Módulos' }), icon: 'bi-grid' },
+    ]
 
     const [active, setActive] = useState<TabKey>('branding')
 
@@ -131,7 +157,7 @@ const CompanySettingsPage: React.FC = () => {
             setSavedSettings(true)
             setTimeout(() => setSavedSettings(false), 4000)
         } catch (e: any) {
-            setSaveError('Não foi possível salvar as alterações.')
+            setSaveError(intl.formatMessage({ id: 'COMPANY.SETTINGS.ALERT.ERROR', defaultMessage: 'Não foi possível salvar as alterações.' }))
         } finally {
             setSavingSettings(false)
         }
@@ -162,7 +188,7 @@ const CompanySettingsPage: React.FC = () => {
             <div className="app-page" id="kt_app_page">
                 <AsideDefault />
                 <Content>
-                    <PageTitle breadcrumbs={[]}>Configurações da Empresa</PageTitle>
+                    <PageTitle breadcrumbs={[]}>{intl.formatMessage({ id: 'COMPANY.SETTINGS.TITLE', defaultMessage: 'Configurações da Empresa' })}</PageTitle>
 
                     <div className="card">
                         <div className="card-header card-header-stretch">
@@ -192,7 +218,7 @@ const CompanySettingsPage: React.FC = () => {
                                         {savedSettings && (
                                             <div className="alert alert-success d-flex align-items-center p-3 mb-6">
                                                 <i className="bi bi-check2-circle fs-2 me-3"></i>
-                                                <div><strong>Pronto!</strong> Identidade visual salva com sucesso.</div>
+                                                <div><strong>{intl.formatMessage({ id: 'COMPANY.SETTINGS.ALERT.SUCCESS', defaultMessage: 'Pronto! Identidade visual salva com sucesso.' })}</strong></div>
                                             </div>
                                         )}
                                         {saveError && (
@@ -201,22 +227,22 @@ const CompanySettingsPage: React.FC = () => {
                                             </div>
                                         )}
 
-                                        <div className="fs-5 fw-bold mb-4">Identidade Visual</div>
+                                        <div className="fs-5 fw-bold mb-4">{intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.BRANDING', defaultMessage: 'Identidade Visual' })}</div>
                                         <div className="text-muted mb-6">
-                                            Esta personalização afeta apenas o <strong>app mobile</strong>. À direita, você vê um preview.
+                                            {intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.DESCRIPTION', defaultMessage: 'Esta personalização afeta apenas o app mobile. À direita, você vê um preview.' })}
                                         </div>
 
                                         {/* ✅ Trava de edição para quem não é org admin */}
                                         <fieldset disabled={!canEditCompanySettings}>
                                             <div className="row g-6">
                                                 <div className="col-12">
-                                                    <label className="form-label mb-2">Logo da empresa</label>
+                                                    <label className="form-label mb-2">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.LOGO', defaultMessage: 'Logo da empresa' })}</label>
                                                     <LogoUploader
                                                         value={settings.branding?.logoUrl}
                                                         onUploaded={(url) => handleBrandingChange({ logoUrl: url })}
                                                     />
                                                     <div className="form-text mt-2">
-                                                        Dica: você também pode informar uma URL manualmente se preferir.
+                                                        {intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.HINT.LOGO', defaultMessage: 'Dica: você também pode informar uma URL manualmente se preferir.' })}
                                                     </div>
                                                     <input
                                                         className="form-control mt-3"
@@ -227,26 +253,26 @@ const CompanySettingsPage: React.FC = () => {
                                                 </div>
 
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Título no App</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.APP_TITLE', defaultMessage: 'Título no App' })}</label>
                                                     <input
                                                         className="form-control"
-                                                        placeholder="ex.: Portal Iuppy"
+                                                        placeholder={intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.PLACEHOLDER.APP_TITLE', defaultMessage: 'ex.: Portal Iuppy' })}
                                                         value={(settings.branding as any)?.appTitle ?? ''}
                                                         onChange={e => handleBrandingChange({ ...(settings.branding || {}), appTitle: e.target.value } as any)}
                                                     />
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Subtítulo</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.SUBTITLE', defaultMessage: 'Subtítulo' })}</label>
                                                     <input
                                                         className="form-control"
-                                                        placeholder="ex.: Comunicação interna"
+                                                        placeholder={intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.PLACEHOLDER.SUBTITLE', defaultMessage: 'ex.: Comunicação interna' })}
                                                         value={(settings.branding as any)?.appSubtitle ?? ''}
                                                         onChange={e => handleBrandingChange({ ...(settings.branding || {}), appSubtitle: e.target.value } as any)}
                                                     />
                                                 </div>
 
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Cor Primária</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.PRIMARY_COLOR', defaultMessage: 'Cor Primária' })}</label>
                                                     <input
                                                         type="color"
                                                         className="form-control form-control-color w-100"
@@ -255,7 +281,7 @@ const CompanySettingsPage: React.FC = () => {
                                                     />
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Fundo (App)</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.BACKGROUND', defaultMessage: 'Fundo (App)' })}</label>
                                                     <input
                                                         type="color"
                                                         className="form-control form-control-color w-100"
@@ -264,7 +290,7 @@ const CompanySettingsPage: React.FC = () => {
                                                     />
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Texto no Fundo</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.TEXT_ON_BACKGROUND', defaultMessage: 'Texto no Fundo' })}</label>
                                                     <input
                                                         type="color"
                                                         className="form-control form-control-color w-100"
@@ -286,7 +312,7 @@ const CompanySettingsPage: React.FC = () => {
                                                 ))}
 
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Idioma padrão</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.DEFAULT_LOCALE', defaultMessage: 'Idioma padrão' })}</label>
                                                     <select
                                                         className="form-select"
                                                         value={settings.defaultLocale}
@@ -301,7 +327,7 @@ const CompanySettingsPage: React.FC = () => {
                                                     </select>
                                                 </div>
                                                 <div className="col-md-6">
-                                                    <label className="form-label">Idiomas suportados</label>
+                                                    <label className="form-label">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.LABEL.SUPPORTED_LOCALES', defaultMessage: 'Idiomas suportados' })}</label>
                                                     <select
                                                         className="form-select"
                                                         multiple
@@ -317,17 +343,17 @@ const CompanySettingsPage: React.FC = () => {
                                                             <option key={l} value={l}>{l.toUpperCase()}</option>
                                                         ))}
                                                     </select>
-                                                    <div className="form-text">Ctrl/Cmd para multisseleção.</div>
+                                                    <div className="form-text">{intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.HINT.SUPPORTED_LOCALES', defaultMessage: 'Ctrl/Cmd para multisseleção.' })}</div>
                                                 </div>
                                             </div>
                                         </fieldset>
 
                                         <div className="col-12 d-flex justify-content-end mt-6">
                                             <button className="btn btn-light me-2" onClick={() => window.location.reload()}>
-                                                Cancelar
+                                                {intl.formatMessage({ id: 'COMPANY.SETTINGS.BUTTON.CANCEL', defaultMessage: 'Cancelar' })}
                                             </button>
                                             <button className="btn btn-primary" onClick={saveBranding} disabled={savingSettings || !canEditCompanySettings}>
-                                                {savingSettings ? 'Salvando…' : 'Salvar alterações'}
+                                                {savingSettings ? intl.formatMessage({ id: 'COMPANY.SETTINGS.BUTTON.SAVING', defaultMessage: 'Salvando…' }) : intl.formatMessage({ id: 'COMPANY.SETTINGS.BUTTON.SAVE', defaultMessage: 'Salvar alterações' })}
                                             </button>
                                         </div>
                                     </div>
@@ -341,34 +367,34 @@ const CompanySettingsPage: React.FC = () => {
                                                     className="screen-header"
                                                     style={{ background: (settings.branding?.primary || '#0665d0'), color: '#fff' }}
                                                 >
-                                                    <div className="small text-uppercase fw-bold opacity-75">Iuppy App</div>
+                                                    <div className="small text-uppercase fw-bold opacity-75">{intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.APP_NAME', defaultMessage: 'Iuppy App' })}</div>
                                                 </div>
                                                 <div className="screen-body">
                                                     {settings.branding?.logoUrl ? (
                                                         <img className="logo" src={settings.branding.logoUrl} alt="logo" />
                                                     ) : (
                                                         <div className="logo d-flex align-items-center justify-content-center" style={{ background: '#fff', border: '1px dashed rgba(0,0,0,.15)' }}>
-                                                            <span className="text-muted">Logo</span>
+                                                            <span className="text-muted">{intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.LOGO', defaultMessage: 'Logo' })}</span>
                                                         </div>
                                                     )}
 
                                                     <div className="title" style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d', fontSize: 22 }}>
-                                                        {(settings.branding as any)?.appTitle || 'Portal da Empresa'}
+                                                        {(settings.branding as any)?.appTitle || intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.DEFAULT_TITLE', defaultMessage: 'Portal da Empresa' })}
                                                     </div>
                                                     <div className="subtitle mb-4" style={{ color: (settings.branding as any)?.textOnBackground || '#1e1e2d' }}>
-                                                        {(settings.branding as any)?.appSubtitle || 'Comunicação interna e novidades'}
+                                                        {(settings.branding as any)?.appSubtitle || intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.DEFAULT_SUBTITLE', defaultMessage: 'Comunicação interna e novidades' })}
                                                     </div>
 
                                                     <div className="d-grid gap-2">
                                                         <button className="btn" style={{ background: (settings.branding?.primary || '#0665d0'), borderColor: 'transparent', color: '#fff' }}>
-                                                            Botão Primário
+                                                            {intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.BUTTON_PRIMARY', defaultMessage: 'Botão Primário' })}
                                                         </button>
                                                         <div className="card card-bordered p-3" style={{ borderColor: 'rgba(0,0,0,.08)' }}>
                                                             <div className="fw-bold" style={{ color: settings.branding?.gray900 || '#1e1e2d' }}>
-                                                                Últimas notícias
+                                                                {intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.CARD_TITLE', defaultMessage: 'Últimas notícias' })}
                                                             </div>
                                                             <div className="text-muted" style={{ color: settings.branding?.gray600 || '#7e8299' }}>
-                                                                Aqui aparece um resumo do conteúdo…
+                                                                {intl.formatMessage({ id: 'COMPANY.SETTINGS.PREVIEW.CARD_CONTENT', defaultMessage: 'Aqui aparece um resumo do conteúdo…' })}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -380,71 +406,7 @@ const CompanySettingsPage: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* TAB: Users */}
-                            {active === 'users' && (
-                                <div className="row g-9">
-                                    <div className="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                                        <div>
-                                            <div className="fs-5 fw-bold">Usuários ({users.length})</div>
-                                            <div className="text-muted">Gerencie a equipe e suas permissões por módulo.</div>
-                                        </div>
 
-                                        <div className="d-flex align-items-center gap-2">
-                                            <div className="btn-group" role="group" aria-label="Filtro de usuários">
-                                                <button className={`btn btn-sm ${userFilter === 'all' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('all')}>Todos</button>
-                                                <button className={`btn btn-sm ${userFilter === 'admins' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('admins')}>Admins</button>
-                                                <button className={`btn btn-sm ${userFilter === 'collab' ? 'btn-primary' : 'btn-light-primary'}`} onClick={() => setUserFilter('collab')}>Colaboradores</button>
-                                            </div>
-
-                                            <button className="btn btn-light-primary" onClick={() => navigate('/groups')}>
-                                                <i className="bi bi-people me-2" /> Gerenciar grupos
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="col-12">
-                                        <div className="table-responsive">
-                                            <table className="table align-middle table-row-dashed">
-                                                <thead>
-                                                    <tr className="text-muted fw-bold">
-                                                        <th>Nome</th>
-                                                        <th>E-mail</th>
-                                                        <th>Perfil</th>
-                                                        <th className="text-end">Ações</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filteredUsers.map(u => (
-                                                        <tr key={u.id}>
-                                                            <td className="fw-semibold">{u.name || u.displayName || '-'}</td>
-                                                            <td>{u.email}</td>
-                                                            <td>
-                                                                {adminRoles.has(u.role)
-                                                                    ? <span className="badge badge-light-primary text-uppercase">{u.role}</span>
-                                                                    : <span className="badge badge-light text-uppercase">{u.role}</span>}
-                                                            </td>
-                                                            <td className="text-end">
-                                                                <button
-                                                                    className="btn btn-sm btn-light-primary"
-                                                                    onClick={() => setPermUser(u)}
-                                                                    disabled={!enabledModules.length}
-                                                                    title={enabledModules.length ? 'Permissões por módulo' : 'Ative ao menos um módulo'}
-                                                                >
-                                                                    <i className="bi bi-shield-check me-2"></i>
-                                                                    Permissões
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                    {!filteredUsers.length && (
-                                                        <tr><td colSpan={4} className="text-center text-muted py-8">Nenhum usuário.</td></tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* TAB: Entities */}
                             {active === 'entities' && (
@@ -452,10 +414,10 @@ const CompanySettingsPage: React.FC = () => {
                                     <div className="col-md-4">
                                         <div className="card card-flush h-100">
                                             <div className="card-header">
-                                                <div className="card-title">Spaces</div>
+                                                <div className="card-title">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.SPACES.TITLE', defaultMessage: 'Spaces' })}</div>
                                                 <div className="card-toolbar">
                                                     <button className="btn btn-sm btn-light" onClick={() => navigate('/modules/surveys')}>
-                                                        Abrir enc. & conteúdos
+                                                        {intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.SPACES.BUTTON', defaultMessage: 'Abrir enc. & conteúdos' })}
                                                     </button>
                                                 </div>
                                             </div>
@@ -465,7 +427,7 @@ const CompanySettingsPage: React.FC = () => {
                                                         <div className="fw-semibold">{s.name}</div>
                                                     </div>
                                                 ))}
-                                                {!spaces.length && <div className="text-muted">Nenhum espaço.</div>}
+                                                {!spaces.length && <div className="text-muted">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.SPACES.EMPTY', defaultMessage: 'Nenhum espaço.' })}</div>}
                                             </div>
                                         </div>
                                     </div>
@@ -473,10 +435,10 @@ const CompanySettingsPage: React.FC = () => {
                                     <div className="col-md-4">
                                         <div className="card card-flush h-100">
                                             <div className="card-header">
-                                                <div className="card-title">Grupos</div>
+                                                <div className="card-title">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.GROUPS.TITLE', defaultMessage: 'Grupos' })}</div>
                                                 <div className="card-toolbar">
                                                     <button className="btn btn-sm btn-light" onClick={() => navigate('/groups')}>
-                                                        Gerenciar
+                                                        {intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.GROUPS.BUTTON', defaultMessage: 'Gerenciar' })}
                                                     </button>
                                                 </div>
                                             </div>
@@ -487,7 +449,7 @@ const CompanySettingsPage: React.FC = () => {
                                                         <span className="badge badge-light">#{g.id.slice(0, 6)}</span>
                                                     </div>
                                                 ))}
-                                                {!groups.length && <div className="text-muted">Nenhum grupo.</div>}
+                                                {!groups.length && <div className="text-muted">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.GROUPS.EMPTY', defaultMessage: 'Nenhum grupo.' })}</div>}
                                             </div>
                                         </div>
                                     </div>
@@ -495,16 +457,16 @@ const CompanySettingsPage: React.FC = () => {
                                     <div className="col-md-4">
                                         <div className="card card-flush h-100">
                                             <div className="card-header">
-                                                <div className="card-title">Canais</div>
+                                                <div className="card-title">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.CHANNELS.TITLE', defaultMessage: 'Canais' })}</div>
                                                 <div className="card-toolbar">
                                                     <button className="btn btn-sm btn-light" onClick={() => navigate('/channels')}>
-                                                        Abrir canais
+                                                        {intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.CHANNELS.BUTTON', defaultMessage: 'Abrir canais' })}
                                                     </button>
                                                 </div>
                                             </div>
                                             <div className="card-body">
                                                 <div className="fs-2 fw-bold">{channelsCount}</div>
-                                                <div className="text-muted">Total de canais cadastrados</div>
+                                                <div className="text-muted">{intl.formatMessage({ id: 'COMPANY.SETTINGS.ENTITIES.CHANNELS.TOTAL', defaultMessage: 'Total de canais cadastrados' })}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -515,10 +477,10 @@ const CompanySettingsPage: React.FC = () => {
                             {active === 'modules' && (
                                 <div className="row g-6">
                                     <div className="col-12 d-flex justify-content-between align-items-center mb-4">
-                                        <div className="fs-5 fw-bold">Módulos</div>
+                                        <div className="fs-5 fw-bold">{intl.formatMessage({ id: 'COMPANY.SETTINGS.MODULES.TITLE', defaultMessage: 'Módulos' })}</div>
                                         {!canToggleModules && (
                                             <span className="badge badge-light-warning">
-                                                Alterações permitidas para SuperAdmin/CompanyAdmin
+                                                {intl.formatMessage({ id: 'COMPANY.SETTINGS.MODULES.WARNING', defaultMessage: 'Alterações permitidas para SuperAdmin/CompanyAdmin' })}
                                             </span>
                                         )}
                                     </div>
@@ -550,7 +512,7 @@ const CompanySettingsPage: React.FC = () => {
                                                 ))}
                                             {!modules.length && (
                                                 <div className="col-12">
-                                                    <div className="alert alert-warning">Nenhum registro de módulo encontrado para esta empresa.</div>
+                                                    <div className="alert alert-warning">{intl.formatMessage({ id: 'COMPANY.SETTINGS.MODULES.EMPTY', defaultMessage: 'Nenhum registro de módulo encontrado para esta empresa.' })}</div>
                                                 </div>
                                             )}
                                         </div>

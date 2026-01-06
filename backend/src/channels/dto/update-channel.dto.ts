@@ -7,12 +7,10 @@ import {
   IsUUID,
   IsArray,
   IsEnum,
-  IsBoolean
+  IsBoolean,
 } from 'class-validator';
 
-
 export class UpdateChannelDto {
-
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsObject, IsOptional, IsPositive, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class TrackSearchDto {
   @ApiProperty({ description: 'Consulta digitada', maxLength: 256 })

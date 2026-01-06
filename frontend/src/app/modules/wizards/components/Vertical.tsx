@@ -1,19 +1,21 @@
-import {useEffect, useRef, useState} from 'react'
-import {KTIcon} from '../../../..//helpers'
-import {Step1} from './steps/Step1'
-import {Step2} from './steps/Step2'
-import {Step3} from './steps/Step3'
-import {Step4} from './steps/Step4'
-import {Step5} from './steps/Step5'
-import {StepperComponent} from '../../../..//assets/ts/components'
-import {Form, Formik, FormikValues} from 'formik'
-import {createAccountSchemas, CreateAccount, inits} from './CreateAccountWizardHelper'
+import { useEffect, useRef, useState } from 'react'
+import { KTIcon } from '../../../..//helpers'
+import { Step1 } from './steps/Step1'
+import { Step2 } from './steps/Step2'
+import { Step3 } from './steps/Step3'
+import { Step4 } from './steps/Step4'
+import { Step5 } from './steps/Step5'
+import { StepperComponent } from '../../../..//assets/ts/components'
+import { Form, Formik, FormikValues } from 'formik'
+import { createAccountSchemas, CreateAccount, inits } from './CreateAccountWizardHelper'
 import { Toolbar } from '../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../..//layout/components/Content'
+import { useIntl } from 'react-intl'
 
 const Vertical = () => {
+  const intl = useIntl()
   const stepperRef = useRef<HTMLDivElement | null>(null)
-  const [ stepper, setStepper ] = useState<StepperComponent | null>(null)
+  const [stepper, setStepper] = useState<StepperComponent | null>(null)
   const [currentSchema, setCurrentSchema] = useState(createAccountSchemas[0])
   const [initValues] = useState<CreateAccount>(inits)
 
@@ -84,9 +86,9 @@ const Vertical = () => {
 
                     {/* begin::Label*/}
                     <div className='stepper-label'>
-                      <h3 className='stepper-title'>Account Type</h3>
+                      <h3 className='stepper-title'>{intl.formatMessage({ id: 'WIZARDS.STEP.ACCOUNT_TYPE', defaultMessage: 'Account Type' })}</h3>
 
-                      <div className='stepper-desc fw-semibold'>Setup Your Account Details</div>
+                      <div className='stepper-desc fw-semibold'>{intl.formatMessage({ id: 'WIZARDS.DESC.ACCOUNT_DETAILS', defaultMessage: 'Setup Your Account Details' })}</div>
                     </div>
                     {/* end::Label*/}
                   </div>
@@ -111,8 +113,8 @@ const Vertical = () => {
 
                     {/* begin::Label*/}
                     <div className='stepper-label'>
-                      <h3 className='stepper-title'>Account Settings</h3>
-                      <div className='stepper-desc fw-semibold'>Setup Your Account Settings</div>
+                      <h3 className='stepper-title'>{intl.formatMessage({ id: 'WIZARDS.STEP.ACCOUNT_SETTINGS', defaultMessage: 'Account Settings' })}</h3>
+                      <div className='stepper-desc fw-semibold'>{intl.formatMessage({ id: 'WIZARDS.DESC.ACCOUNT_SETTINGS', defaultMessage: 'Setup Your Account Settings' })}</div>
                     </div>
                     {/* end::Label*/}
                   </div>
@@ -137,8 +139,8 @@ const Vertical = () => {
 
                     {/* begin::Label*/}
                     <div className='stepper-label'>
-                      <h3 className='stepper-title'>Business Info</h3>
-                      <div className='stepper-desc fw-semibold'>Your Business Related Info</div>
+                      <h3 className='stepper-title'>{intl.formatMessage({ id: 'WIZARDS.STEP.BUSINESS_INFO', defaultMessage: 'Business Info' })}</h3>
+                      <div className='stepper-desc fw-semibold'>{intl.formatMessage({ id: 'WIZARDS.DESC.BUSINESS_INFO', defaultMessage: 'Your Business Related Info' })}</div>
                     </div>
                     {/* end::Label*/}
                   </div>
@@ -163,8 +165,8 @@ const Vertical = () => {
 
                     {/* begin::Label*/}
                     <div className='stepper-label'>
-                      <h3 className='stepper-title'>Billing Details</h3>
-                      <div className='stepper-desc fw-semibold'>Set Your Payment Methods</div>
+                      <h3 className='stepper-title'>{intl.formatMessage({ id: 'WIZARDS.STEP.BILLING_DETAILS', defaultMessage: 'Billing Details' })}</h3>
+                      <div className='stepper-desc fw-semibold'>{intl.formatMessage({ id: 'WIZARDS.DESC.PAYMENT_METHODS', defaultMessage: 'Set Your Payment Methods' })}</div>
                     </div>
                     {/* end::Label*/}
                   </div>
@@ -189,8 +191,8 @@ const Vertical = () => {
 
                     {/* begin::Label*/}
                     <div className='stepper-label'>
-                      <h3 className='stepper-title'>Completed</h3>
-                      <div className='stepper-desc fw-semibold'>Woah, we are here</div>
+                      <h3 className='stepper-title'>{intl.formatMessage({ id: 'WIZARDS.STEP.COMPLETED', defaultMessage: 'Completed' })}</h3>
+                      <div className='stepper-desc fw-semibold'>{intl.formatMessage({ id: 'WIZARDS.DESC.WOAH', defaultMessage: 'Woah, we are here' })}</div>
                     </div>
                     {/* end::Label*/}
                   </div>
@@ -237,15 +239,15 @@ const Vertical = () => {
                         data-kt-stepper-action='previous'
                       >
                         <KTIcon iconName='arrow-left' className='fs-4 me-1' />
-                        Back
+                        {intl.formatMessage({ id: 'WIZARDS.BUTTON.BACK', defaultMessage: 'Back' })}
                       </button>
                     </div>
 
                     <div>
                       <button type='submit' className='btn btn-lg btn-primary me-3'>
                         <span className='indicator-label'>
-                          {stepper?.currentStepIndex !== ((stepper?.totalStepsNumber || 2) - 1) && 'Continue'}
-                          {stepper?.currentStepIndex === ((stepper?.totalStepsNumber || 2) - 1) && 'Submit'}
+                          {stepper?.currentStepIndex !== ((stepper?.totalStepsNumber || 2) - 1) && intl.formatMessage({ id: 'WIZARDS.BUTTON.CONTINUE', defaultMessage: 'Continue' })}
+                          {stepper?.currentStepIndex === ((stepper?.totalStepsNumber || 2) - 1) && intl.formatMessage({ id: 'WIZARDS.BUTTON.SUBMIT', defaultMessage: 'Submit' })}
                           <KTIcon iconName='arrow-right' className='fs-3 ms-2 me-0' />
                         </span>
                       </button>
@@ -261,4 +263,4 @@ const Vertical = () => {
   )
 }
 
-export {Vertical}
+export { Vertical }

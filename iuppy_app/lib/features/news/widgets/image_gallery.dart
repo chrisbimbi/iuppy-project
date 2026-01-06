@@ -14,7 +14,7 @@ Future<void> openImageGalleryDialog(
   final pageCtrl = PageController(initialPage: initialIndex);
   int index = initialIndex;
 
-  bool _isSaveOk(dynamic result) {
+  bool isSaveOk(dynamic result) {
     // A lib retorna um Map com 'isSuccess' e/ou 'success' dependendo da plataforma
     if (result is Map) {
       final v = result['isSuccess'] ?? result['success'];
@@ -24,7 +24,7 @@ Future<void> openImageGalleryDialog(
     return false;
   }
 
-  Future<void> _download(String url) async {
+  Future<void> download(String url) async {
     try {
       final resp = await Dio().get<List<int>>(
         url,
@@ -38,7 +38,7 @@ Future<void> openImageGalleryDialog(
         quality: 100,
       );
 
-      final ok = _isSaveOk(saveRes);
+      final ok = isSaveOk(saveRes);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -74,7 +74,7 @@ Future<void> openImageGalleryDialog(
             IconButton(
               tooltip: 'Baixar',
               icon: const Icon(Icons.download_rounded),
-              onPressed: () => _download(urls[index]),
+              onPressed: () => download(urls[index]),
             ),
           ],
         ),

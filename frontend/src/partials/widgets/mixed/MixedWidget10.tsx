@@ -1,44 +1,30 @@
-
-import {useEffect, useRef, FC} from 'react'
-import ApexCharts, {ApexOptions} from 'apexcharts'
-import {getCSSVariableValue} from '../../../assets/ts/_utils'
-import {useThemeMode} from '../../layout/theme-mode/ThemeModeProvider'
+import { FC } from 'react'
+import { ApexOptions } from 'apexcharts'
+import { BaseChart } from '../../../app/components/charts/BaseChart'
+import { getCSSVariableValue } from '../../../assets/ts/_utils'
+import { useThemeMode } from '../../layout/theme-mode/ThemeModeProvider'
 
 type Props = {
   className: string
   chartColor: string
   chartHeight: string
+  data?: {
+    series: { name: string; data: number[] }[]
+    categories: string[]
+  }
 }
 
-const MixedWidget10: FC<Props> = ({className, chartColor, chartHeight}) => {
-  const chartRef = useRef<HTMLDivElement | null>(null)
-  const {mode} = useThemeMode()
-  const refreshChart = () => {
-    if (!chartRef.current) {
-      return
-    }
+const MixedWidget10: FC<Props> = ({ className, chartColor, chartHeight, data }) => {
+  const { mode } = useThemeMode()
 
-    const chart = new ApexCharts(chartRef.current, chartOptions(chartColor, chartHeight))
-    if (chart) {
-      chart.render()
-    }
-
-    return chart
+  // Default data if not provided
+  const chartData = data || {
+    series: [{ name: 'Net Profit', data: [15, 25, 15, 40, 20, 50] }],
+    categories: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
   }
 
-  useEffect(() => {
-    const chart = refreshChart()
-
-    return () => {
-      if (chart) {
-        chart.destroy()
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartRef, mode])
-
   return (
-    <div className={`card ${className}`}>
+    <div className={`card ${className} `}>
       {/* begin::Body */}
       <div className='card-body d-flex flex-column p-0'>
         {/* begin::Stats */}
@@ -58,7 +44,7 @@ const MixedWidget10: FC<Props> = ({className, chartColor, chartHeight}) => {
         {/* end::Stats */}
 
         {/* begin::Chart */}
-        <div ref={chartRef} className='mixed-widget-7-chart card-rounded-bottom'></div>
+        <BaseChart className='mixed-widget-7-chart card-rounded-bottom' options={chartOptions(chartColor, chartHeight, chartData)} height={chartHeight} />
         {/* end::Chart */}
       </div>
       {/* end::Body */}
@@ -66,19 +52,14 @@ const MixedWidget10: FC<Props> = ({className, chartColor, chartHeight}) => {
   )
 }
 
-const chartOptions = (chartColor: string, chartHeight: string): ApexOptions => {
+const chartOptions = (chartColor: string, chartHeight: string, data: { series: any[]; categories: string[] }): ApexOptions => {
   const labelColor = getCSSVariableValue('--bs-gray-800')
   const strokeColor = getCSSVariableValue('--bs-gray-300')
   const baseColor = getCSSVariableValue('--bs-' + chartColor)
   const lightColor = getCSSVariableValue('--bs-' + chartColor + '-light')
 
   return {
-    series: [
-      {
-        name: 'Net Profit',
-        data: [15, 25, 15, 40, 20, 50],
-      },
-    ],
+    series: data.series,
     chart: {
       fontFamily: 'inherit',
       type: 'area',
@@ -111,7 +92,7 @@ const chartOptions = (chartColor: string, chartHeight: string): ApexOptions => {
       colors: [baseColor],
     },
     xaxis: {
-      categories: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+      categories: data.categories,
       axisBorder: {
         show: false,
       },
@@ -153,20 +134,17 @@ const chartOptions = (chartColor: string, chartHeight: string): ApexOptions => {
       normal: {
         filter: {
           type: 'none',
-          value: 0,
         },
       },
       hover: {
         filter: {
           type: 'none',
-          value: 0,
         },
       },
       active: {
         allowMultipleDataPointsSelection: false,
         filter: {
           type: 'none',
-          value: 0,
         },
       },
     },
@@ -189,4 +167,4 @@ const chartOptions = (chartColor: string, chartHeight: string): ApexOptions => {
   }
 }
 
-export {MixedWidget10}
+export { MixedWidget10 }

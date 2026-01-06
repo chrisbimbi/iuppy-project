@@ -30,4 +30,7 @@ export class UserMetricsDailyEntity {
 
   @Column('integer', { default: 0 })
   surveyResponses!: number;
+
+  @Column('integer', { default: 0 })
+  favorites!: number;
 }

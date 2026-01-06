@@ -28,7 +28,11 @@ export class FormsRemindersService {
     return process.env.DEFAULT_TZ || 'UTC';
   }
 
-  private computeReminderDatetime(deadline: Date, offsetDays: number, _tz: string): Date {
+  private computeReminderDatetime(
+    deadline: Date,
+    offsetDays: number,
+    _tz: string,
+  ): Date {
     const base = new Date(deadline);
     base.setUTCDate(base.getUTCDate() + offsetDays);
     base.setUTCHours(21, 0, 0, 0); // 21:00 no “dia do lembrete”
@@ -98,7 +102,9 @@ export class FormsRemindersService {
 
         await this.sendReminderEmails(companyId, f.id, f.title, deadline);
 
-        this.log.log(`forms: reminder sent for form ${f.id} at ${reminderAt.toISOString()} (company=${companyId})`);
+        this.log.log(
+          `forms: reminder sent for form ${f.id} at ${reminderAt.toISOString()} (company=${companyId})`,
+        );
       }
     }
 

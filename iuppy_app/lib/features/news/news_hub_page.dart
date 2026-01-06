@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/widgets/brutalist_box.dart';
 
 class NewsHubPage extends ConsumerWidget {
   const NewsHubPage({super.key});
@@ -15,13 +16,26 @@ class NewsHubPage extends ConsumerWidget {
         if (snap.connectionState != ConnectionState.done) {
           return Scaffold(
             appBar: AppBar(title: const Text('Notícias')),
-            body: const Center(child: CircularProgressIndicator()),
           );
         }
-
         final bySpace = snap.data ?? const {};
+        final theme = ref.watch(appThemeProvider).colors;
+
         return Scaffold(
-          appBar: AppBar(title: const Text('Notícias')),
+          backgroundColor: theme.background,
+          appBar: AppBar(
+            backgroundColor: theme.background,
+            title: Text(
+              'NOTÍCIAS',
+              style: TextStyle(
+                fontFamily: 'Space Mono',
+                fontWeight: FontWeight.bold,
+                color: theme.textPrimary,
+                letterSpacing: 1.5,
+              ),
+            ),
+            iconTheme: IconThemeData(color: theme.textPrimary),
+          ),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: bySpace.entries.map((entry) {
@@ -30,29 +44,49 @@ class NewsHubPage extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Card(
-                  elevation: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(spaceName,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: channels.map((c) {
-                            final name = (c['name'] ?? 'Canal').toString();
-                            return ActionChip(
-                              label: Text(name),
-                              onPressed: () =>
-                                  context.push('/news/channel/${c['id']}'),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        spaceName.toUpperCase(),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontFamily: 'Space Mono',
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textPrimary,
+                                ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: channels.map((c) {
+                          final name = (c['name'] ?? 'Canal').toString();
+                          return GestureDetector(
+                            onTap: () =>
+                                context.push('/news/channel/${c['id']}'),
+                            child: BrutalistBox(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              backgroundColor:
+                                  theme.neonAccent.withOpacity(0.1),
+                              borderColor: theme.neonAccent,
+                              borderWidth: 1,
+                              shadowOffset: 2,
+                              child: Text(
+                                name.toUpperCase(),
+                                style: TextStyle(
+                                  fontFamily: 'Space Mono',
+                                  fontSize: 12,
+                                  color: theme.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ),
                 ),
               );

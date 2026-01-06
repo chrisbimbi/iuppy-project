@@ -15,8 +15,13 @@ export interface User {
   recoveryToken?: string;
   recoveryTokenExpiration?: Date;
   phone?: string;
-  avatarUrl?: string;   // ← novo campo opcional
+  avatarUrl?: string;
   locale?: string;
+  department?: string;
+  jobTitle?: string;
+  isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  firstLoginAt?: Date;
+  lastLoginAt?: Date;
 }

@@ -7,4 +7,5 @@ export enum Role {
   Manager = 'manager',            // líderes com acesso a relatórios do seu time
   Editor = 'editor',              // edita rascunhos sob aprovação
   Viewer = 'viewer',              // somente leitura no CMS
+  User = 'user',                  // usuário final (app)
 }

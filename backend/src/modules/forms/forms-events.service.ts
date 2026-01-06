@@ -1,6 +1,6 @@
 // src/modules/forms/forms-events.service.ts
-import { Injectable } from '@nestjs/common'
-import { DataSource } from 'typeorm'
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 
 export type FormEventType =
   | 'form_impression'
@@ -10,22 +10,22 @@ export type FormEventType =
   | 'form_submit_fail'
   | 'form_view_submission'
   | 'attachment_upload_success'
-  | 'attachment_upload_fail'
+  | 'attachment_upload_fail';
 
 @Injectable()
 export class FormsEventsService {
   constructor(private readonly ds: DataSource) {}
 
   async insertEvent(params: {
-    companyId: string
-    formId: string
-    type: FormEventType
-    userId?: string | null
-    external?: boolean
-    externalEmail?: string | null
-    fieldId?: string | null
-    meta?: any
-    ts?: Date
+    companyId: string;
+    formId: string;
+    type: FormEventType;
+    userId?: string | null;
+    external?: boolean;
+    externalEmail?: string | null;
+    fieldId?: string | null;
+    meta?: any;
+    ts?: Date;
   }) {
     const {
       companyId,
@@ -37,7 +37,7 @@ export class FormsEventsService {
       fieldId = null,
       meta = null,
       ts = new Date(),
-    } = params
+    } = params;
 
     await this.ds.query(
       `INSERT INTO form_event
@@ -54,6 +54,6 @@ export class FormsEventsService {
         meta,
         ts,
       ],
-    )
+    );
   }
 }

@@ -1,11 +1,14 @@
 
-import {FC} from 'react'
-import {KTIcon, toAbsoluteUrl} from '../../../../..//helpers'
-import {ChatInner, Dropdown1} from '../../../../..//partials'
+import { FC } from 'react'
+import { KTIcon, toAbsoluteUrl } from '../../../../..//helpers'
+import { ChatInner, Dropdown1 } from '../../../../..//partials'
 import { Toolbar } from '../../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../../..//layout/components/Content'
 
+import { useIntl } from 'react-intl'
+
 const Group: FC = () => {
+  const intl = useIntl()
   return (
     <>
       <Toolbar />
@@ -24,7 +27,7 @@ const Group: FC = () => {
                     type='text'
                     className='form-control form-control-solid px-15'
                     name='search'
-                    placeholder='Search by username or email...'
+                    placeholder={intl.formatMessage({ id: 'APPS.CHAT.SEARCH.PLACEHOLDER' })}
                   />
                 </form>
               </div>
@@ -265,74 +268,74 @@ const Group: FC = () => {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className='flex-lg-row-fluid ms-lg-7 ms-xl-10'>
-            <div className='card' id='kt_chat_messenger'>
-              <div className='card-header' id='kt_chat_messenger_header'>
-                <div className='card-title'>
-                  <div className='symbol-group symbol-hover'>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-5.jpg')} />
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-25.jpg')} />
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <span className='symbol-label bg-light-warning text-warning 40px'>M</span>
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-9.jpg')} />
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <span className='symbol-label bg-light-danger text-danger 40px'>O</span>
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <span className='symbol-label bg-light-primary text-primary 40px'>N</span>
-                    </div>
-                    <div className='symbol symbol-35px symbol-circle'>
-                      <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-23.jpg')} />
-                    </div>
-                    <a
-                      href='#'
-                      className='symbol symbol-35px symbol-circle'
+            <div className='flex-lg-row-fluid ms-lg-7 ms-xl-10'>
+              <div className='card' id='kt_chat_messenger'>
+                <div className='card-header' id='kt_chat_messenger_header'>
+                  <div className='card-title'>
+                    <div className='symbol-group symbol-hover'>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-5.jpg')} />
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-25.jpg')} />
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <span className='symbol-label bg-light-warning text-warning 40px'>M</span>
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-9.jpg')} />
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <span className='symbol-label bg-light-danger text-danger 40px'>O</span>
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <span className='symbol-label bg-light-primary text-primary 40px'>N</span>
+                      </div>
+                      <div className='symbol symbol-35px symbol-circle'>
+                        <img alt='Pic' src={toAbsoluteUrl('../media/avatars/300-23.jpg')} />
+                      </div>
+                      <a
+                        href='#'
+                        className='symbol symbol-35px symbol-circle'
                       // data-bs-toggle='modal'
                       // data-bs-target='#kt_modal_view_users'
-                    >
-                      <span
-                        className='symbol-label fs-8 fw-bolder'
-                        data-bs-toggle='tooltip'
-                        data-bs-trigger='hover'
-                        title='View more users'
                       >
-                        +42
-                      </span>
-                    </a>
+                        <span
+                          className='symbol-label fs-8 fw-bolder'
+                          data-bs-toggle='tooltip'
+                          data-bs-trigger='hover'
+                          title={intl.formatMessage({ id: 'APPS.CHAT.VIEW_MORE_USERS' })}
+                        >
+                          +42
+                        </span>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className='card-toolbar'>
+                    <div className='me-n3'>
+                      <button
+                        className='btn btn-sm btn-icon btn-active-light-primary'
+                        data-kt-menu-trigger='click'
+                        data-kt-menu-placement='bottom-end'
+                        data-kt-menu-flip='top-end'
+                      >
+                        <i className='bi bi-three-dots fs-2'></i>
+                      </button>
+                      <Dropdown1 />
+                    </div>
                   </div>
                 </div>
 
-                <div className='card-toolbar'>
-                  <div className='me-n3'>
-                    <button
-                      className='btn btn-sm btn-icon btn-active-light-primary'
-                      data-kt-menu-trigger='click'
-                      data-kt-menu-placement='bottom-end'
-                      data-kt-menu-flip='top-end'
-                    >
-                      <i className='bi bi-three-dots fs-2'></i>
-                    </button>
-                    <Dropdown1 />
-                  </div>
-                </div>
+                <ChatInner />
               </div>
-
-              <ChatInner />
             </div>
           </div>
         </div>
-      </Content>
+      </Content >
     </>
   )
 }
 
-export {Group}
+export { Group }

@@ -43,7 +43,10 @@ function safeJson<T = any>(v: any, fallback: T): T {
 
 function stripHtml(html?: string | null): string {
   if (!html) return '';
-  return String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(html)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function buildExcerpt(n: any): string | undefined {
@@ -54,7 +57,9 @@ function buildExcerpt(n: any): string | undefined {
   return excerpt || undefined;
 }
 
-function parseCursor(c?: string | null): { createdAt: string; id: string } | null {
+function parseCursor(
+  c?: string | null,
+): { createdAt: string; id: string } | null {
   if (!c) return null;
   const [ts, id] = String(c).split('|');
   if (!ts || !id) return null;
@@ -66,20 +71,29 @@ function parseCursor(c?: string | null): { createdAt: string; id: string } | nul
 @Injectable()
 export class FeedV2Service {
   constructor(
-    @InjectRepository(NewsEntity) private readonly newsRepo: Repository<NewsEntity>,
-    @InjectRepository(SpaceEntity) private readonly spaceRepo: Repository<SpaceEntity>,
-    @InjectRepository(Channel) private readonly channelRepo: Repository<Channel>,
+    @InjectRepository(NewsEntity)
+    private readonly newsRepo: Repository<NewsEntity>,
+    @InjectRepository(SpaceEntity)
+    private readonly spaceRepo: Repository<SpaceEntity>,
+    @InjectRepository(Channel)
+    private readonly channelRepo: Repository<Channel>,
 
-    @InjectRepository(NewsAudienceEntity) private readonly audienceRepo: Repository<NewsAudienceEntity>,
-    @InjectRepository(NewsReactionEntity) private readonly reactionRepo: Repository<NewsReactionEntity>,
-    @InjectRepository(NewsCommentEntity) private readonly commentRepo: Repository<NewsCommentEntity>,
-    @InjectRepository(NewsShareEntity) private readonly shareRepo: Repository<NewsShareEntity>,
-  ) { }
+    @InjectRepository(NewsAudienceEntity)
+    private readonly audienceRepo: Repository<NewsAudienceEntity>,
+    @InjectRepository(NewsReactionEntity)
+    private readonly reactionRepo: Repository<NewsReactionEntity>,
+    @InjectRepository(NewsCommentEntity)
+    private readonly commentRepo: Repository<NewsCommentEntity>,
+    @InjectRepository(NewsShareEntity)
+    private readonly shareRepo: Repository<NewsShareEntity>,
+  ) {}
 
   // ---------- infra helpers
 
   private async hasTable(table: string): Promise<boolean> {
-    const r = await this.newsRepo.query(`SELECT to_regclass($1) AS t`, [`public.${table}`]);
+    const r = await this.newsRepo.query(`SELECT to_regclass($1) AS t`, [
+      `public.${table}`,
+    ]);
     return !!(r && r[0] && r[0].t);
   }
 
@@ -99,8 +113,16 @@ export class FeedV2Service {
       [table],
     );
     const names: string[] = (cols || []).map((c: any) => c.column_name);
-    const typeCol = names.includes('type') ? 'type' : names.includes('event') ? 'event' : null;
-    const newsRef = names.includes('newsId') ? 'newsId' : names.includes('objectId') ? 'objectId' : null;
+    const typeCol = names.includes('type')
+      ? 'type'
+      : names.includes('event')
+        ? 'event'
+        : null;
+    const newsRef = names.includes('newsId')
+      ? 'newsId'
+      : names.includes('objectId')
+        ? 'objectId'
+        : null;
     const userIdCol = names.includes('userId') ? 'userId' : null;
     const createdAtCol = names.includes('createdAt') ? 'createdAt' : null;
 
@@ -136,8 +158,7 @@ export class FeedV2Service {
 
     // 1) Base de visibilidade: news_audience (aplica segmentação)
     const baseParams: any[] = [companyId, userId];
-    let sqlBase =
-      `SELECT n.id, n."createdAt", n."updatedAt",
+    let sqlBase = `SELECT n.id, n."createdAt", n."updatedAt",
               n.title, n.subtitle, n."contentHtml", n.excerpt,
               n."highlightImages", n.attachments,
               n."spaceId", n."channelId",
@@ -173,8 +194,12 @@ export class FeedV2Service {
       : null;
 
     const newsIds: string[] = slice.map((r: any) => r.id);
-    const uniqueSpaceIds = Array.from(new Set(slice.map((r: any) => r.spaceId).filter(Boolean)));
-    const uniqueChannelIds = Array.from(new Set(slice.map((r: any) => r.channelId).filter(Boolean)));
+    const uniqueSpaceIds = Array.from(
+      new Set(slice.map((r: any) => r.spaceId).filter(Boolean)),
+    );
+    const uniqueChannelIds = Array.from(
+      new Set(slice.map((r: any) => r.channelId).filter(Boolean)),
+    );
 
     // 2) nomes de space/channel (lookup em lote) — evitar union types
     let spaces: SpaceEntity[] = [];
@@ -183,7 +208,9 @@ export class FeedV2Service {
       spaces = await this.spaceRepo.find({ where: { id: In(uniqueSpaceIds) } });
     }
     if (uniqueChannelIds.length) {
-      channels = await this.channelRepo.find({ where: { id: In(uniqueChannelIds) } });
+      channels = await this.channelRepo.find({
+        where: { id: In(uniqueChannelIds) },
+      });
     }
 
     const spaceNameById = new Map<string, string | null>();
@@ -202,12 +229,14 @@ export class FeedV2Service {
 
     // 3) userState (lido/ack) e minha reação
     const eventMeta = await this.detectEventMeta();
-    let readMap = new Map<string, { isRead: boolean; readAt?: string | null }>();
+    let readMap = new Map<
+      string,
+      { isRead: boolean; readAt?: string | null }
+    >();
     if (eventMeta && newsIds.length) {
       const { table, typeCol, newsRef, userIdCol, createdAtCol } = eventMeta;
       const p: any[] = [companyId, userId];
-      let sql =
-        `SELECT "${newsRef}" AS nid, MAX("${createdAtCol}") AS ra
+      let sql = `SELECT "${newsRef}" AS nid, MAX("${createdAtCol}") AS ra
          FROM ${table}
          WHERE "companyId"=$1 AND "${userIdCol}"=$2
            AND (${typeCol} IN ('OPEN','open','ACK','ack'))
@@ -217,7 +246,12 @@ export class FeedV2Service {
       p.push(...newsIds);
 
       const rr = await this.newsRepo.query(sql, p);
-      readMap = new Map(rr.map((r: any) => [String(r.nid), { isRead: true, readAt: r.ra ? new Date(r.ra).toISOString() : null }]));
+      readMap = new Map(
+        rr.map((r: any) => [
+          String(r.nid),
+          { isRead: true, readAt: r.ra ? new Date(r.ra).toISOString() : null },
+        ]),
+      );
     }
 
     let myReactionByNews = new Map<string, ReactionKind | null>();
@@ -228,7 +262,9 @@ export class FeedV2Service {
          WHERE "companyId"=$1 AND "userId"=$2 AND "newsId" IN (${newsIds.map((_, i) => `$${i + 3}`).join(',')})`,
         [companyId, userId, ...newsIds],
       );
-      myReactionByNews = new Map(r.map((x: any) => [String(x.nid), String(x.reaction) as ReactionKind]));
+      myReactionByNews = new Map(
+        r.map((x: any) => [String(x.nid), String(x.reaction) as ReactionKind]),
+      );
     }
 
     // 4) contagens por notícia
@@ -241,8 +277,7 @@ export class FeedV2Service {
       // unique opens
       {
         const p: any[] = [companyId];
-        let sql =
-          `SELECT "${newsRef}" AS nid, COUNT(DISTINCT "${userIdCol}")::int AS c
+        let sql = `SELECT "${newsRef}" AS nid, COUNT(DISTINCT "${userIdCol}")::int AS c
            FROM ${table}
            WHERE "companyId"=$1 AND (${typeCol} IN ('OPEN','open'))
              AND "${newsRef}" IN (`;
@@ -251,13 +286,14 @@ export class FeedV2Service {
         p.push(...newsIds);
 
         const rowsU = await this.newsRepo.query(sql, p);
-        uniqueOpensByNews = new Map(rowsU.map((r: any) => [String(r.nid), toInt(r.c)]));
+        uniqueOpensByNews = new Map(
+          rowsU.map((r: any) => [String(r.nid), toInt(r.c)]),
+        );
       }
       // acks (distinct users)
       {
         const p: any[] = [companyId];
-        let sql =
-          `SELECT "${newsRef}" AS nid, COUNT(DISTINCT "${userIdCol}")::int AS c
+        let sql = `SELECT "${newsRef}" AS nid, COUNT(DISTINCT "${userIdCol}")::int AS c
            FROM ${table}
            WHERE "companyId"=$1 AND (${typeCol} IN ('ACK','ack'))
              AND "${newsRef}" IN (`;
@@ -266,7 +302,9 @@ export class FeedV2Service {
         p.push(...newsIds);
 
         const rowsA = await this.newsRepo.query(sql, p);
-        acksByNews = new Map(rowsA.map((r: any) => [String(r.nid), toInt(r.c)]));
+        acksByNews = new Map(
+          rowsA.map((r: any) => [String(r.nid), toInt(r.c)]),
+        );
       }
     }
 
@@ -279,7 +317,9 @@ export class FeedV2Service {
          GROUP BY "newsId"`,
         [companyId, ...newsIds],
       );
-      reactionsTotalByNews = new Map(r.map((x: any) => [String(x.nid), toInt(x.c)]));
+      reactionsTotalByNews = new Map(
+        r.map((x: any) => [String(x.nid), toInt(x.c)]),
+      );
     }
 
     let commentsTotalByNews = new Map<string, number>();
@@ -291,7 +331,9 @@ export class FeedV2Service {
          GROUP BY "newsId"`,
         [companyId, ...newsIds],
       );
-      commentsTotalByNews = new Map(r.map((x: any) => [String(x.nid), toInt(x.c)]));
+      commentsTotalByNews = new Map(
+        r.map((x: any) => [String(x.nid), toInt(x.c)]),
+      );
     }
 
     let sharesTotalByNews = new Map<string, number>();
@@ -303,7 +345,9 @@ export class FeedV2Service {
          GROUP BY "newsId"`,
         [companyId, ...newsIds],
       );
-      sharesTotalByNews = new Map(r.map((x: any) => [String(x.nid), toInt(x.c)]));
+      sharesTotalByNews = new Map(
+        r.map((x: any) => [String(x.nid), toInt(x.c)]),
+      );
     }
 
     // 5) montar items
@@ -311,11 +355,15 @@ export class FeedV2Service {
       const settingsRaw = safeJson<any>(n.settings, {});
       const settings = {
         acknowledgementRequired:
-          (settingsRaw?.acknowledgementRequired ?? settingsRaw?.ackRequired ?? false) === true,
+          (settingsRaw?.acknowledgementRequired ??
+            settingsRaw?.ackRequired ??
+            false) === true,
         allowReactions: (settingsRaw?.allowReactions ?? true) === true,
         allowComments: (settingsRaw?.allowComments ?? false) === true,
         commentsRequireModeration:
-          (settingsRaw?.commentsRequireModeration ?? settingsRaw?.moderateComments ?? false) === true,
+          (settingsRaw?.commentsRequireModeration ??
+            settingsRaw?.moderateComments ??
+            false) === true,
         shareEnabled: (settingsRaw?.shareEnabled ?? true) === true,
       };
 
@@ -329,10 +377,12 @@ export class FeedV2Service {
       };
 
       const hi = safeJson<string[]>(n.highlightImages, []);
-      const atts = safeJson<any[]>(n.attachments, []).map((a) => ({
-        name: a?.name ?? null,
-        url: a?.url ?? a ?? '',
-      })).filter((x) => x.url);
+      const atts = safeJson<any[]>(n.attachments, [])
+        .map((a) => ({
+          name: a?.name ?? null,
+          url: a?.url ?? a ?? '',
+        }))
+        .filter((x) => x.url);
 
       return {
         id: String(n.id),
@@ -349,13 +399,15 @@ export class FeedV2Service {
         spaceId: n.spaceId ?? null,
         spaceName: (n.spaceId && spaceNameById.get(String(n.spaceId))) || null,
         channelId: n.channelId ?? null,
-        channelName: (n.channelId && channelNameById.get(String(n.channelId))) || null,
+        channelName:
+          (n.channelId && channelNameById.get(String(n.channelId))) || null,
 
         settings,
         userState: {
           isRead: !!isReadInfo.isRead,
           readAt: isReadInfo.readAt ?? null,
-          myReaction: (myReactionByNews.get(n.id) ?? null) as ReactionKind | null,
+          myReaction: (myReactionByNews.get(n.id) ??
+            null) as ReactionKind | null,
         },
         counts,
       };
@@ -367,8 +419,7 @@ export class FeedV2Service {
     const byChannel: Record<string, number> = {};
 
     const cParams: any[] = [companyId, userId];
-    let cSql =
-      `SELECT n.id, n."spaceId", n."channelId"
+    let cSql = `SELECT n.id, n."spaceId", n."channelId"
        FROM news_entity n
        INNER JOIN news_audience a
            ON a."newsId" = n.id AND a."companyId" = n."companyId" AND a."userId" = $2
@@ -388,8 +439,7 @@ export class FeedV2Service {
     const meta = await this.detectEventMeta();
     if (meta) {
       const { table, typeCol, newsRef, userIdCol } = meta;
-      cSql =
-        `SELECT n.id, n."spaceId", n."channelId",
+      cSql = `SELECT n.id, n."spaceId", n."channelId",
                 e._has AS has_ev
          FROM (
            ${cSql}

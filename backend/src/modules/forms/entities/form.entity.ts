@@ -38,6 +38,16 @@ export class FormEntity {
   @Column('jsonb', { nullable: true })
   description: TranslatableString | null;
 
+  @Column({
+    type: 'enum',
+    enum: ['public', 'private', 'specific_groups', 'journey_only'],
+    default: 'public',
+  })
+  visibility: 'public' | 'private' | 'specific_groups' | 'journey_only';
+
+  @Column({ length: 50, nullable: true })
+  template: string; // e.g., 'nr1_perception', 'nr1_near_miss'
+
   @Column('text', { default: 'draft' })
   status: FormStatus; // Usando o tipo corrigido
 

@@ -4,32 +4,32 @@ import {
   Column,
   Index,
   CreateDateColumn,
-} from 'typeorm'
+} from 'typeorm';
 
-export type FormChatActor = 'user' | 'rh'
+export type FormChatActor = 'user' | 'rh';
 
 @Entity('form_submission_chat')
 @Index(['companyId', 'submissionId', 'createdAt'])
 export class FormSubmissionChatEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
   @Index()
-  submissionId: string
+  submissionId: string;
 
   @Column('varchar', { length: 20 })
-  actor: FormChatActor
+  actor: FormChatActor;
 
   @Column('uuid', { nullable: true })
-  userId: string | null // ID do usuário do CMS (RH) ou do App (Colaborador)
+  userId: string | null; // ID do usuário do CMS (RH) ou do App (Colaborador)
 
   @Column('text')
-  message: string
+  message: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  createdAt: Date
+  createdAt: Date;
 }

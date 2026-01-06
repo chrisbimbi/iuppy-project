@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { CompanyModule, ModuleKey, User } from '@shared/types'
 import type { AccessGrant, UpsertAccessGrantDto, ScopeType } from '@shared/types/Access'
 import { AccessService } from '../services/access.service'
+import { useIntl } from 'react-intl'
 
 type SpaceLite = { id: string; name: string }
 
@@ -36,6 +37,7 @@ const baseDraft = (): Draft => ({
 const UserPermissionsModal: React.FC<Props> = ({
   show, onClose, companyId, user, enabledModules, spaces, moduleLabels, readOnly = false
 }) => {
+  const intl = useIntl()
   const [loading, setLoading] = useState(false)
   const [savingKey, setSavingKey] = useState<ModuleKey | null>(null)
   const isReadOnly = !!readOnly
@@ -173,7 +175,7 @@ const UserPermissionsModal: React.FC<Props> = ({
         <div className="modal-dialog modal-xl">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">Permissões de {user.name || user.email}</h5>
+              <h5 className="modal-title">{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.TITLE', defaultMessage: 'Permissões de {name}' }, { name: user.name || user.email })}</h5>
               <button className="btn btn-icon" onClick={onClose} aria-label="Close">
                 <i className="bi bi-x-lg"></i>
               </button>
@@ -186,7 +188,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                 </div>
               ) : moduleKeys.length === 0 ? (
                 <div className="alert alert-warning">
-                  Nenhum módulo habilitado para esta empresa. Ative módulos na aba <strong>Módulos</strong> para configurar permissões.
+                  {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.EMPTY', defaultMessage: 'Nenhum módulo habilitado para esta empresa. Ative módulos na aba Módulos para configurar permissões.' })}
                 </div>
               ) : (
                 <div className="row g-6">
@@ -206,9 +208,9 @@ const UserPermissionsModal: React.FC<Props> = ({
                                 className="btn btn-sm btn-light-danger"
                                 onClick={() => handleClear(k)}
                                 disabled={savingKey === k || isReadOnly}
-                                title="Remover todas as permissões deste módulo"
+                                title={intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.BUTTON.CLEAR_TOOLTIP', defaultMessage: 'Remover todas as permissões deste módulo' })}
                               >
-                                Limpar
+                                {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.BUTTON.CLEAR', defaultMessage: 'Limpar' })}
                               </button>
                             </div>
                           </div>
@@ -216,7 +218,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                           <div className="card-body">
                             <div className="row g-4">
                               <div className="col-12">
-                                <label className="form-label d-block mb-2">Permissões</label>
+                                <label className="form-label d-block mb-2">{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.PERMISSIONS', defaultMessage: 'Permissões' })}</label>
 
                                 <div className="form-check form-check-custom form-check-solid mb-2">
                                   <input
@@ -228,7 +230,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                                     disabled={isReadOnly}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-view`}>
-                                    Pode visualizar
+                                    {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.CAN_VIEW', defaultMessage: 'Pode visualizar' })}
                                   </label>
                                 </div>
 
@@ -242,7 +244,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                                     onChange={e => setDraft(k, { canEdit: e.target.checked })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-edit`}>
-                                    Pode editar
+                                    {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.CAN_EDIT', defaultMessage: 'Pode editar' })}
                                   </label>
                                 </div>
 
@@ -256,13 +258,13 @@ const UserPermissionsModal: React.FC<Props> = ({
                                     onChange={e => setDraft(k, { canManage: e.target.checked })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-manage`}>
-                                    Pode gerenciar (admin do módulo)
+                                    {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.CAN_MANAGE', defaultMessage: 'Pode gerenciar (admin do módulo)' })}
                                   </label>
                                 </div>
                               </div>
 
                               <div className="col-12">
-                                <label className="form-label d-block mb-2">Escopo</label>
+                                <label className="form-label d-block mb-2">{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.SCOPE', defaultMessage: 'Escopo' })}</label>
 
                                 <div className="form-check form-check-inline">
                                   <input
@@ -275,7 +277,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                                     onChange={() => setDraft(k, { scopeType: 'ALL_SPACES' })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-all`}>
-                                    Todos os espaços
+                                    {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.ALL_SPACES', defaultMessage: 'Todos os espaços' })}
                                   </label>
                                 </div>
 
@@ -290,7 +292,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                                     onChange={() => setDraft(k, { scopeType: 'SPACE_IDS' })}
                                   />
                                   <label className="form-check-label" htmlFor={`${k}-byspaces`}>
-                                    Por espaços
+                                    {intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.BY_SPACES', defaultMessage: 'Por espaços' })}
                                   </label>
                                 </div>
                               </div>
@@ -298,10 +300,10 @@ const UserPermissionsModal: React.FC<Props> = ({
                               {hasAny && d?.scopeType === 'SPACE_IDS' && (
                                 <div className="col-12">
                                   <div className="border rounded p-3">
-                                    <div className="fw-semibold mb-2">Selecionar espaços</div>
+                                    <div className="fw-semibold mb-2">{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.SELECT_SPACES', defaultMessage: 'Selecionar espaços' })}</div>
                                     <div className="row g-2">
                                       {spaces.length === 0 && (
-                                        <div className="text-muted">Nenhum espaço encontrado.</div>
+                                        <div className="text-muted">{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.LABEL.NO_SPACES', defaultMessage: 'Nenhum espaço encontrado.' })}</div>
                                       )}
                                       {spaces.map(s => (
                                         <div key={s.id} className="col-6">
@@ -333,7 +335,7 @@ const UserPermissionsModal: React.FC<Props> = ({
                               onClick={() => handleSave(k)}
                               disabled={savingKey === k || isReadOnly}
                             >
-                              {savingKey === k ? 'Salvando…' : 'Salvar'}
+                              {savingKey === k ? intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.BUTTON.SAVING', defaultMessage: 'Salvando…' }) : intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.BUTTON.SAVE', defaultMessage: 'Salvar' })}
                             </button>
                           </div>
                         </div>
@@ -345,7 +347,7 @@ const UserPermissionsModal: React.FC<Props> = ({
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-light" onClick={onClose}>Fechar</button>
+              <button className="btn btn-light" onClick={onClose}>{intl.formatMessage({ id: 'COMPANY.PERMISSIONS.MODAL.BUTTON.CLOSE', defaultMessage: 'Fechar' })}</button>
             </div>
           </div>
         </div>

@@ -7288,6 +7288,16 @@ svgo@^1.0.0:
     unquote "~1.1.1"
     util.promisify "~1.0.0"
 
+sweetalert2-react-content@^5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/sweetalert2-react-content/-/sweetalert2-react-content-5.1.0.tgz#d57f8fe61ec090738373442e427c65a78ac2850b"
+  integrity sha512-SBh41SdyHDY9NzwrIG6LACbClCMxIlEFP86tGVr/B4zGD4H2gGXB8o7UAJRc/RtBd/iQL9hIvuCAkrk0AgKEMA==
+
+sweetalert2@^11.26.3:
+  version "11.26.3"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.26.3.tgz#6e8188cf71818af34d62fe33a2465690cde9836d"
+  integrity sha512-VU0hGw/WfI9h7Mh+SCsDlWgtxDwWZ6ccqS7QcO8zEeWnwplN1GptcLstq76OluUBSLUza6ldvKd3558OhjpJ9A==
+
 tabbable@^6.0.0:
   version "6.2.0"
   resolved "https://registry.npmjs.org/tabbable/-/tabbable-6.2.0.tgz"

@@ -1,8 +1,8 @@
+// lib/features/notifications/notifications_page.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'notifications_provider.dart';
-import '../forms/local_form_store.dart';
 import '../../core/providers.dart';
 
 class NotificationsPage extends ConsumerWidget {
@@ -74,7 +74,9 @@ class _NotificationCard extends ConsumerWidget {
       case NotificationType.news:
         final newsId = item.payload['newsId'];
         if (newsId != null) {
+          // Marca lido localmente
           ref.read(localNewsStoreProvider).markRead(newsId);
+          // Força update do badge global
           ref.read(newsSeenVersionProvider.notifier).state++;
           context.push('/news/article/$newsId');
         }
@@ -91,7 +93,6 @@ class _NotificationCard extends ConsumerWidget {
         final fid = item.payload['formId'];
         final sid = item.payload['submissionId'];
         if (fid != null && sid != null) {
-          // 🔥 ROTEAMENTO INTELIGENTE
           final action = (item.subtype == 'approve' || item.subtype == 'reject')
               ? 'details'
               : 'chat';
@@ -104,17 +105,46 @@ class _NotificationCard extends ConsumerWidget {
           context.push('/surveys/$sid');
         }
         break;
+      case NotificationType.journey:
+        final jid = item.payload['journeyId'];
+        if (jid != null) {
+          context.push('/journeys/$jid');
+        }
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Formata título para "Nova mensagem em {Formulário}" se for chat
     String displayTitle = item.title;
     if (item.type == NotificationType.formReply && item.subtype == 'chat') {
       displayTitle = 'Nova mensagem em ${item.title}';
-    } else if (item.type == NotificationType.formReply) {
-      displayTitle = item.title; // "Formulário Tal"
+    }
+
+    final isSurvey = item.type == NotificationType.survey;
+    final endsAt = item.payload['endsAt']?.toString();
+    final ack = item.payload['ack'] == true;
+    final isSubmitted = item.payload['isSubmitted'] == true;
+
+    String deadlineText = '';
+    Color deadlineColor = Colors.grey;
+
+    if (isSurvey && endsAt != null && endsAt.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(endsAt).toLocal();
+        final now = DateTime.now();
+        deadlineText =
+            '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+
+        if (dt.isBefore(now)) {
+          deadlineText = 'Expirada';
+          deadlineColor = Colors.grey;
+        } else if (dt.difference(now).inHours < 24) {
+          deadlineColor = Colors.red.shade700;
+        } else {
+          deadlineColor = Colors.orange.shade800;
+        }
+      } catch (_) {}
     }
 
     return Card(
@@ -203,6 +233,29 @@ class _NotificationCard extends ConsumerWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+
+                    // Chips para Survey
+                    if (isSurvey && !isSubmitted) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (deadlineText.isNotEmpty)
+                            _MiniChip(
+                              icon: Icons.timer_outlined,
+                              text: 'Até $deadlineText',
+                              color: deadlineColor,
+                            ),
+                          if (ack)
+                            _MiniChip(
+                              icon: Icons.notification_important_rounded,
+                              text: 'Ação Necessária',
+                              color: Colors.red.shade700,
+                            ),
+                        ],
+                      )
+                    ]
                   ],
                 ),
               ),
@@ -219,9 +272,10 @@ class _NotificationCard extends ConsumerWidget {
     Color bg;
 
     switch (item.type) {
+      // 🔥 CORREÇÃO: Icone para News
       case NotificationType.news:
-        icon = Icons.article_rounded;
-        color = Colors.blue.shade600;
+        icon = Icons.newspaper_rounded;
+        color = Colors.blue.shade700;
         bg = Colors.blue.shade50;
         break;
       case NotificationType.formNew:
@@ -239,7 +293,6 @@ class _NotificationCard extends ConsumerWidget {
           color = Colors.red.shade600;
           bg = Colors.red.shade50;
         } else {
-          // chat
           icon = Icons.chat_bubble_rounded;
           color = Colors.indigo.shade600;
           bg = Colors.indigo.shade50;
@@ -250,14 +303,16 @@ class _NotificationCard extends ConsumerWidget {
         color = Colors.orange.shade600;
         bg = Colors.orange.shade50;
         break;
+      case NotificationType.journey:
+        icon = Icons.flag_rounded;
+        color = Colors.teal.shade600;
+        bg = Colors.teal.shade50;
+        break;
     }
 
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
       child: Icon(icon, color: color, size: 22),
     );
   }
@@ -265,17 +320,45 @@ class _NotificationCard extends ConsumerWidget {
   String _timeAgo(DateTime d) {
     final now = DateTime.now();
     final diff = now.difference(d);
+    if (diff.inDays > 30) return '${d.day}/${d.month}';
+    if (diff.inDays >= 1) return 'há ${diff.inDays} d';
+    if (diff.inHours >= 1) return 'há ${diff.inHours} h';
+    if (diff.inMinutes >= 1) return 'há ${diff.inMinutes} m';
+    return 'agora';
+  }
+}
 
-    if (diff.inDays > 30) {
-      return '${d.day}/${d.month}';
-    } else if (diff.inDays >= 1) {
-      return 'há ${diff.inDays} d';
-    } else if (diff.inHours >= 1) {
-      return 'há ${diff.inHours} h';
-    } else if (diff.inMinutes >= 1) {
-      return 'há ${diff.inMinutes} m';
-    } else {
-      return 'agora';
-    }
+class _MiniChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _MiniChip(
+      {required this.icon, required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

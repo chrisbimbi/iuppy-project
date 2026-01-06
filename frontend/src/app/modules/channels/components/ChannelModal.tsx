@@ -7,6 +7,7 @@ import { useUsers } from 'src/app/modules/groups/provider/useUsers'
 import { ChannelType } from '@shared/types/Channel'
 import type { AxiosError } from 'axios'
 import './ChannelModal.css'
+import { useIntl } from 'react-intl'
 
 // ⬇️ capabilities
 import { useAccess } from 'src/app/modules/company/providers/AccessProvider'
@@ -22,12 +23,6 @@ interface Props {
 
 type Feedback = { type: 'success' | 'error'; message: string }
 
-const TYPES: { key: ChannelType; label: string; img: string }[] = [
-  { key: ChannelType.ARTICLES, label: 'Artigos', img: '/media/channel-types/articles.png' },
-  { key: ChannelType.MEDIA, label: 'Mídia', img: '/media/channel-types/media.png' },
-  { key: ChannelType.UPDATES, label: 'Updates', img: '/media/channel-types/updates.png' },
-]
-
 const ChannelModal: React.FC<Props> = ({
   show,
   onHide,
@@ -35,6 +30,7 @@ const ChannelModal: React.FC<Props> = ({
   companyId,
   onSave,
 }) => {
+  const intl = useIntl()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState<ChannelType>(ChannelType.ARTICLES)
@@ -62,6 +58,12 @@ const ChannelModal: React.FC<Props> = ({
 
   // se não puder editar em lugar nenhum, bloquear o salvar
   const canSave = useMemo(() => canActOnAnySpace(can, 'edit', 'channels', selectedSpaces), [can, selectedSpaces])
+
+  const TYPES: { key: ChannelType; label: string; img: string }[] = [
+    { key: ChannelType.ARTICLES, label: intl.formatMessage({ id: 'CHANNELS.TYPE.ARTICLES' }), img: '/media/channel-types/articles.png' },
+    { key: ChannelType.MEDIA, label: intl.formatMessage({ id: 'CHANNELS.TYPE.MEDIA' }), img: '/media/channel-types/media.png' },
+    { key: ChannelType.UPDATES, label: intl.formatMessage({ id: 'CHANNELS.TYPE.UPDATES' }), img: '/media/channel-types/updates.png' },
+  ]
 
   useEffect(() => {
     if (groupsRef.current) setGroupsModal(new Modal(groupsRef.current))
@@ -123,16 +125,16 @@ const ChannelModal: React.FC<Props> = ({
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      setFeedback({ type: 'error', message: 'O nome é obrigatório.' })
+      setFeedback({ type: 'error', message: intl.formatMessage({ id: 'CHANNELS.MODAL.FEEDBACK.NAME_REQUIRED' }) })
       return
     }
     if (selectedSpaces.length === 0) {
-      setFeedback({ type: 'error', message: 'Selecione ao menos um espaço.' })
+      setFeedback({ type: 'error', message: intl.formatMessage({ id: 'CHANNELS.MODAL.FEEDBACK.SPACE_REQUIRED' }) })
       return
     }
     // ⬇️ verificação final de permissão
     if (!canSave) {
-      setFeedback({ type: 'error', message: 'Você não tem permissão para salvar canais nos espaços selecionados.' })
+      setFeedback({ type: 'error', message: intl.formatMessage({ id: 'CHANNELS.MODAL.FEEDBACK.NO_PERM_SAVE' }) })
       return
     }
 
@@ -153,7 +155,7 @@ const ChannelModal: React.FC<Props> = ({
       } else {
         await ChannelsService.createChannel(payload)
       }
-      setFeedback({ type: 'success', message: 'Salvo com sucesso!' })
+      setFeedback({ type: 'success', message: intl.formatMessage({ id: 'CHANNELS.MODAL.FEEDBACK.SUCCESS' }) })
       onSave()
       onHide()
     } catch (e) {
@@ -161,7 +163,7 @@ const ChannelModal: React.FC<Props> = ({
       const msg =
         (Array.isArray(err.response?.data?.message) && err.response?.data?.message.join(' • ')) ||
         err.response?.data?.message ||
-        'Erro ao salvar canal.'
+        intl.formatMessage({ id: 'CHANNELS.MODAL.FEEDBACK.ERROR' })
       setFeedback({ type: 'error', message: String(msg) })
     }
   }
@@ -190,7 +192,7 @@ const ChannelModal: React.FC<Props> = ({
 
             <div className="modal-header">
               <h5 className="modal-title">
-                {channelId ? 'Editar Canal' : 'Criar Canal'}
+                {channelId ? intl.formatMessage({ id: 'CHANNELS.MODAL.TITLE.EDIT' }) : intl.formatMessage({ id: 'CHANNELS.MODAL.TITLE.CREATE' })}
               </h5>
               <button className="btn-close" onClick={onHide} />
             </div>
@@ -204,16 +206,16 @@ const ChannelModal: React.FC<Props> = ({
 
               {readOnlyNoPerm && (
                 <div className="alert alert-warning">
-                  Você não tem permissão para criar/editar canais em nenhum espaço.
+                  {intl.formatMessage({ id: 'CHANNELS.MODAL.ALERT.NO_PERM' })}
                 </div>
               )}
 
               {/* Nome */}
               <div className="mb-3">
-                <label className="form-label">Nome*</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.NAME' })}</label>
                 <input
                   className="form-control"
-                  placeholder="Digite o nome do canal..."
+                  placeholder={intl.formatMessage({ id: 'CHANNELS.MODAL.PLACEHOLDER.NAME' })}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   disabled={readOnlyNoPerm}
@@ -222,11 +224,11 @@ const ChannelModal: React.FC<Props> = ({
 
               {/* Descrição */}
               <div className="mb-3">
-                <label className="form-label">Descrição</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.DESCRIPTION' })}</label>
                 <textarea
                   className="form-control"
                   rows={2}
-                  placeholder="Breve descrição..."
+                  placeholder={intl.formatMessage({ id: 'CHANNELS.MODAL.PLACEHOLDER.DESCRIPTION' })}
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   disabled={readOnlyNoPerm}
@@ -235,7 +237,7 @@ const ChannelModal: React.FC<Props> = ({
 
               {/* Tipo de Canal */}
               <div className="mb-4">
-                <label className="form-label">Tipo de Canal</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.TYPE' })}</label>
                 <div className="d-flex gap-3 channel-type-selector">
                   {TYPES.map(t => (
                     <div
@@ -253,7 +255,7 @@ const ChannelModal: React.FC<Props> = ({
 
               {/* Espaços */}
               <div className="mb-3">
-                <label className="form-label">Espaços*</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.SPACES' })}</label>
                 <select
                   multiple
                   className="form-select"
@@ -270,7 +272,7 @@ const ChannelModal: React.FC<Props> = ({
                     </option>
                   ))}
                 </select>
-                <div className="form-text">Ctrl/Cmd + clique para múltipla seleção</div>
+                <div className="form-text">{intl.formatMessage({ id: 'CHANNELS.MODAL.HELP.SPACES' })}</div>
               </div>
 
               {/* Publicado */}
@@ -283,18 +285,18 @@ const ChannelModal: React.FC<Props> = ({
                   onChange={e => setIsPublished(e.target.checked)}
                   disabled={readOnlyNoPerm}
                 />
-                <label htmlFor="isPublished" className="form-check-label">Publicado</label>
+                <label htmlFor="isPublished" className="form-check-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.PUBLISHED' })}</label>
               </div>
 
               {/* Contribuidores */}
               <div className="mb-3">
-                <label className="form-label">Contribuidores</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.CONTRIBUTORS' })}</label>
                 <button
                   className="btn btn-outline-primary btn-sm ms-2"
                   onClick={() => !readOnlyNoPerm && contribModal?.show()}
                   disabled={readOnlyNoPerm}
                 >
-                  {selectedContrib.length ? 'Editar contrib.' : 'Selecionar contrib.'}
+                  {selectedContrib.length ? intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.EDIT_CONTRIB' }) : intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.SELECT_CONTRIB' })}
                 </button>
                 <div className="mt-1">
                   {users.filter(u => selectedContrib.includes(u.id)).map(u => (
@@ -305,13 +307,13 @@ const ChannelModal: React.FC<Props> = ({
 
               {/* Administradores */}
               <div className="mb-3">
-                <label className="form-label">Administradores</label>
+                <label className="form-label">{intl.formatMessage({ id: 'CHANNELS.MODAL.LABEL.ADMINS' })}</label>
                 <button
                   className="btn btn-outline-primary btn-sm ms-2"
                   onClick={() => !readOnlyNoPerm && adminModal?.show()}
                   disabled={readOnlyNoPerm}
                 >
-                  {selectedAdmins.length ? 'Editar admins' : 'Selecionar admins'}
+                  {selectedAdmins.length ? intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.EDIT_ADMINS' }) : intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.SELECT_ADMINS' })}
                 </button>
                 <div className="mt-1">
                   {users.filter(u => selectedAdmins.includes(u.id)).map(u => (
@@ -322,9 +324,9 @@ const ChannelModal: React.FC<Props> = ({
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-light" onClick={onHide}>Cancelar</button>
+              <button className="btn btn-light" onClick={onHide}>{intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.CANCEL' })}</button>
               <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSave}>
-                Salvar
+                {intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.SAVE' })}
               </button>
             </div>
           </div>
@@ -337,7 +339,7 @@ const ChannelModal: React.FC<Props> = ({
         <div className="modal-dialog modal-dialog-scrollable">
           <div className="modal-content p-4">
             <div className="modal-header">
-              <h5 className="modal-title">Selecionar Grupos</h5>
+              <h5 className="modal-title">{intl.formatMessage({ id: 'CHANNELS.SUBMODAL.GROUPS.TITLE' })}</h5>
               <button
                 className="btn-close"
                 onClick={() => {
@@ -373,7 +375,7 @@ const ChannelModal: React.FC<Props> = ({
                   groupsModal?.hide()
                 }}
               >
-                Cancelar
+                {intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.CANCEL' })}
               </button>
               <button className="btn btn-primary" onClick={() => groupsModal?.hide()}>OK</button>
             </div>
@@ -386,7 +388,7 @@ const ChannelModal: React.FC<Props> = ({
         <div className="modal-dialog modal-dialog-scrollable">
           <div className="modal-content p-4">
             <div className="modal-header">
-              <h5 className="modal-title">Selecionar Contribuidores</h5>
+              <h5 className="modal-title">{intl.formatMessage({ id: 'CHANNELS.SUBMODAL.CONTRIB.TITLE' })}</h5>
               <button
                 className="btn-close"
                 onClick={() => {
@@ -422,7 +424,7 @@ const ChannelModal: React.FC<Props> = ({
                   contribModal?.hide()
                 }}
               >
-                Cancelar
+                {intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.CANCEL' })}
               </button>
               <button className="btn btn-primary" onClick={() => contribModal?.hide()}>OK</button>
             </div>
@@ -435,7 +437,7 @@ const ChannelModal: React.FC<Props> = ({
         <div className="modal-dialog modal-dialog-scrollable">
           <div className="modal-content p-4">
             <div className="modal-header">
-              <h5 className="modal-title">Selecionar Administradores</h5>
+              <h5 className="modal-title">{intl.formatMessage({ id: 'CHANNELS.SUBMODAL.ADMINS.TITLE' })}</h5>
               <button
                 className="btn-close"
                 onClick={() => {
@@ -471,7 +473,7 @@ const ChannelModal: React.FC<Props> = ({
                   adminModal?.hide()
                 }}
               >
-                Cancelar
+                {intl.formatMessage({ id: 'CHANNELS.MODAL.BUTTON.CANCEL' })}
               </button>
               <button className="btn btn-primary" onClick={() => adminModal?.hide()}>OK</button>
             </div>

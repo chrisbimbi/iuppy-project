@@ -1,6 +1,13 @@
 // backend/src/modules/forms/analytics/dto/analytics-query.dto.ts
 
-import { IsOptional, IsString, IsIn, IsDateString, IsBoolean, IsArray } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsIn,
+  IsDateString,
+  IsBoolean,
+  IsArray,
+} from 'class-validator';
 
 export class AnalyticsQueryDto {
   @IsOptional()
@@ -31,7 +38,7 @@ export class AnalyticsQueryDto {
   @IsOptional()
   @IsIn(['all', 'internal', 'external'])
   audience?: 'all' | 'internal' | 'external';
-  
+
   // Filtros de paginação
   @IsOptional()
   @IsString()

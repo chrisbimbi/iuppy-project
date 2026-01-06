@@ -137,14 +137,18 @@ export class ChannelsV2Service {
 
     if (hasUserChannel) {
       ucCompanyCol =
-        (await pickColumn(this.ds, 'user_channel', ['companyId', 'company_id'])) ||
-        'companyId';
+        (await pickColumn(this.ds, 'user_channel', [
+          'companyId',
+          'company_id',
+        ])) || 'companyId';
       ucUserCol =
         (await pickColumn(this.ds, 'user_channel', ['userId', 'user_id'])) ||
         'userId';
       ucChannelCol =
-        (await pickColumn(this.ds, 'user_channel', ['channelId', 'channel_id'])) ||
-        'channelId';
+        (await pickColumn(this.ds, 'user_channel', [
+          'channelId',
+          'channel_id',
+        ])) || 'channelId';
       const r = await this.ds.query(
         `SELECT 1 FROM "user_channel" WHERE "${ucCompanyCol}" = $1 AND "${ucUserCol}" = $2 LIMIT 1`,
         [companyId, userId],
@@ -256,10 +260,10 @@ export class ChannelsV2Service {
       if (spaceId) {
         // filtra no lateral
         lateralExpr = arrayIsUUID
-          ? ` (SELECT x FROM unnest(c."${spaceIdsCol}") AS x WHERE x = $${params.length +
-          1}::uuid) `
-          : ` (SELECT x FROM unnest(c."${spaceIdsCol}") AS x WHERE x = $${params.length +
-          1}::text) `;
+          ? ` (SELECT x FROM unnest(c."${spaceIdsCol}") AS x WHERE x = $${params.length + 1
+          }::uuid) AS sub `
+          : ` (SELECT x FROM unnest(c."${spaceIdsCol}") AS x WHERE x = $${params.length + 1
+          }::text) AS sub `;
         params.push(spaceId);
       }
 

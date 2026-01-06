@@ -4,7 +4,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Index,
-} from 'typeorm'
+} from 'typeorm';
 
 export type FormEventType =
   | 'form_impression'
@@ -20,39 +20,39 @@ export type FormEventType =
   | 'form_submit_attempt'
   | 'form_submit_success'
   | 'form_submit_fail'
-  | 'form_view_submission'
+  | 'form_view_submission';
 
 @Entity('form_event')
 @Index(['companyId', 'formId'])
 @Index(['companyId', 'ts'])
 export class FormEventEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @Column('uuid')
-  companyId: string
+  companyId: string;
 
   @Column('uuid')
-  formId: string
+  formId: string;
 
   @Column('text')
-  type: FormEventType
+  type: FormEventType;
 
   @Column('uuid', { nullable: true })
-  userId: string | null
+  userId: string | null;
 
   @Column('boolean', { default: false })
-  external: boolean
+  external: boolean;
 
   @Column('text', { nullable: true })
-  externalEmail: string | null
+  externalEmail: string | null;
 
   @Column('uuid', { nullable: true })
-  fieldId: string | null
+  fieldId: string | null;
 
   @Column('jsonb', { nullable: true })
-  meta: any | null
+  meta: any | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  ts: Date
+  ts: Date;
 }

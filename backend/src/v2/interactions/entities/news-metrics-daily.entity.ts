@@ -4,6 +4,9 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 @Index(['newsId', 'date'])
 export class NewsMetricsDailyEntity {
   @PrimaryColumn('uuid')
+  companyId!: string;
+
+  @PrimaryColumn('uuid')
   newsId!: string;
 
   @PrimaryColumn('date')
@@ -26,4 +29,7 @@ export class NewsMetricsDailyEntity {
 
   @Column('integer', { default: 0 })
   shares!: number;
+
+  @Column('integer', { default: 0 })
+  favorites!: number;
 }

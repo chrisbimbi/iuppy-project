@@ -10,6 +10,7 @@ import '../features/auth/login_page.dart';
 import '../features/home/home_page.dart';
 import '../features/news/news_channel_list_page.dart';
 import '../features/news/news_detail_page.dart';
+import '../features/news/favorites_page.dart';
 import '../features/surveys/surveys_list_page.dart';
 import '../features/surveys/survey_detail_page.dart';
 import '../features/forms/forms_list_page.dart';
@@ -17,6 +18,24 @@ import '../features/forms/form_submit_page.dart';
 
 // 🔥 NOVO IMPORT
 import '../features/notifications/notifications_page.dart';
+import '../features/journeys/ui/journeys_list_page.dart';
+
+import '../features/journeys/ui/step_detail_page.dart';
+import '../features/menu/profile_page.dart';
+import '../features/menu/company_page.dart';
+import '../features/menu/modules_page.dart';
+import '../features/menu/team_page.dart';
+import '../features/chat/chat_list_page.dart';
+import '../features/chat/chat_room_page.dart';
+import '../features/chat/chat_info_page.dart';
+import '../features/social/social_feed_page.dart';
+import '../features/social/create_post_page.dart';
+import '../features/vacations/vacations_page.dart';
+import '../features/vacations/vacation_request_screen.dart';
+import '../features/vacations/admin/vacation_policy_page.dart';
+import '../features/vacations/manager/vacation_manager_page.dart';
+import '../features/performance/performance_page.dart';
+import '../features/nr1/views/report_page.dart';
 
 // ... (GoRouterRefreshStream e _normalizeDeepLinkUri mantidos iguais) ...
 
@@ -215,7 +234,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/favorites',
-        builder: (_, __) => const _Stub(title: 'Favoritos'),
+        builder: (_, __) => const FavoritesPage(),
       ),
       GoRoute(
         path: '/groups',
@@ -227,13 +246,131 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         builder: (_, __) => const NotificationsPage(),
       ),
+      // 1. Journey List (Root)
+      GoRoute(
+        path: '/journeys',
+        builder: (_, __) => const JourneysListPage(),
+      ),
+      // 2. Journey Detail (by ID)
+      GoRoute(
+        path: '/journeys/:id',
+        builder: (_, state) =>
+            JourneysListPage(journeyId: state.pathParameters['id']),
+      ),
+      // 3. Step Detail (Nested path)
+      GoRoute(
+        path: '/journeys/:journeyId/steps/:stepId',
+        builder: (context, state) {
+          final journeyId = state.pathParameters['journeyId']!;
+          final stepId = state.pathParameters['stepId']!;
+          return StepDetailPage(journeyId: journeyId, stepId: stepId);
+        },
+      ),
+      // Keep legacy/fallback if needed, but the UI uses the above now.
+      GoRoute(
+        path: '/journeys/step',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final journeyId = extra?['journeyId'] as String? ??
+              state.uri.queryParameters['journeyId'] ??
+              '';
+          final stepId = extra?['stepId'] as String? ??
+              state.uri.queryParameters['stepId'] ??
+              '';
+          return StepDetailPage(journeyId: journeyId, stepId: stepId);
+        },
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (_, __) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/company',
+        builder: (_, __) => const CompanyPage(),
+      ),
+      GoRoute(
+        path: '/team',
+        builder: (_, __) => const TeamPage(),
+      ),
+      GoRoute(
+        path: '/modules',
+        builder: (_, __) => const ModulesPage(),
+      ),
+      GoRoute(
+        path: '/chat',
+        builder: (_, __) => const ChatListPage(),
+        routes: [
+          GoRoute(
+              path: ':id',
+              builder: (_, state) => ChatRoomPage(
+                  conversationId: state.pathParameters['id']!,
+                  title: state.uri.queryParameters['title']),
+              routes: [
+                GoRoute(
+                    path: 'info',
+                    builder: (_, state) => ChatInfoPage(
+                        conversationId: state.pathParameters['id']!,
+                        title: state.uri.queryParameters['title'] ?? 'Info'))
+              ]),
+        ],
+      ),
+      GoRoute(
+        path: '/social/feed',
+        builder: (_, __) => const SocialFeedPage(),
+        routes: [
+          GoRoute(
+            path: 'create',
+            builder: (_, __) => const CreatePostPage(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/vacations',
+        builder: (_, __) => const VacationsPage(),
+        routes: [
+          GoRoute(
+            path: 'request',
+            builder: (context, state) => const VacationRequestScreen(),
+          ),
+          GoRoute(
+            path: 'admin',
+            builder: (context, state) => const VacationPolicyPage(),
+          ),
+          GoRoute(
+            path: 'manager',
+            builder: (context, state) => const VacationManagerPage(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/performance',
+        builder: (_, __) => const PerformancePage(),
+      ),
+      GoRoute(
+        path: '/nr1/report',
+        builder: (_, __) => const Nr1ReportPage(),
+      ),
+      GoRoute(
+          path: '/modules/nr1',
+          builder: (_, __) => const _Stub(
+              title: 'NR-1 Hub'), // Placeholder for now or specific hub page
+          routes: [
+            GoRoute(
+              path: 'participation',
+              builder: (_, __) => const _Stub(title: 'Participação'),
+            ),
+            GoRoute(
+              path: 'risks',
+              builder: (_, __) => const _Stub(title: 'Riscos'),
+            ),
+          ]),
     ],
   );
 });
 
 class _Stub extends StatelessWidget {
   final String title;
-  const _Stub({required this.title, super.key});
+  const _Stub({required this.title});
 
   @override
   Widget build(BuildContext context) {

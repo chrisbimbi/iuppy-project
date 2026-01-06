@@ -30,6 +30,7 @@ class NewsItems extends Table {
   TextColumn get title => text()();
   TextColumn get content => text().nullable()();
   TextColumn get channelId => text()();
+  TextColumn get hashtags => text().nullable()(); // New column
   DateTimeColumn get createdAt => dateTime().nullable()();
   BoolColumn get isPublished => boolean().withDefault(const Constant(true))();
   @override
@@ -57,12 +58,33 @@ class SurveyQuestions extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Spaces, Channels, NewsItems, Surveys, SurveyQuestions])
+
+class Groups extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Spaces, Channels, NewsItems, Surveys, SurveyQuestions, Groups])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'iuppy.db'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3; // Bump version
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(newsItems, newsItems.hashtags);
+          }
+          if (from < 3) {
+            await m.createTable(groups);
+          }
+        },
+      );
 
   // Cache upserts
   Future<void> cacheSpaces(List<Map<String, dynamic>> items) async {
@@ -76,6 +98,21 @@ class AppDatabase extends _$AppDatabase {
                   description: Value(m['description'] as String?),
                   active: Value((m['active'] as bool?) ?? true),
                   priority: Value((m['priority'] as int?) ?? 0),
+                ))
+            .toList(),
+      );
+    });
+  }
+
+  Future<void> cacheGroups(List<Map<String, dynamic>> items) async {
+    await batch((b) {
+      b.insertAllOnConflictUpdate(
+        groups,
+        items
+            .map((m) => GroupsCompanion.insert(
+                  id: m['id'] as String,
+                  name: m['name'] as String? ?? '',
+                  active: Value((m['active'] as bool?) ?? true),
                 ))
             .toList(),
       );
@@ -114,6 +151,7 @@ class AppDatabase extends _$AppDatabase {
                   title: m['title'] as String? ?? '',
                   content: Value(m['content'] as String?),
                   channelId: m['channelId'] as String? ?? '',
+                  hashtags: Value((m['hashtags'] as List?)?.join(',') ?? ''), // Store as CSV
                   createdAt: Value(DateTime.tryParse(
                       (m['createdAt'] ?? '') as String? ?? '')),
                   isPublished: Value((m['isPublished'] as bool?) ?? true),
@@ -173,6 +211,15 @@ class AppDatabase extends _$AppDatabase {
         .toList();
   }
 
+  Future<List<Map<String, dynamic>>> getGroups() async {
+     final rows = await select(groups).get();
+     return rows.map((r) => {
+         'id': r.id,
+         'name': r.name,
+         'active': r.active,
+     }).toList();
+  }
+
   Future<List<Map<String, dynamic>>> getChannels({String? spaceId}) async {
     final q = select(channels);
     if (spaceId != null && spaceId.isNotEmpty) {
@@ -201,8 +248,9 @@ class AppDatabase extends _$AppDatabase {
               'id': r.id,
               'title': r.title,
               'channelId': r.channelId,
+              'hashtags': (r.hashtags ?? '').split(',').where((e) => e.isNotEmpty).toList(), // Parse CSV
               'createdAt': r.createdAt?.toIso8601String(),
-              'isPublished': r.isPublished, // 👈 essencial pro fallback
+              'isPublished': r.isPublished,
             })
         .toList();
   }

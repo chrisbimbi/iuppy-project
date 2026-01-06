@@ -1,18 +1,20 @@
-import React, {FC} from 'react'
-import {KTIcon} from '../../../../..//helpers'
-import {ErrorMessage, Field} from 'formik'
+import React, { FC } from 'react'
+import { KTIcon } from '../../../../..//helpers'
+import { ErrorMessage, Field } from 'formik'
+import { useIntl } from 'react-intl'
 
 const Step2: FC = () => {
+  const intl = useIntl()
   return (
     <div className='w-100'>
       <div className='pb-10 pb-lg-15'>
-        <h2 className='fw-bolder text-gray-900'>Account Info</h2>
+        <h2 className='fw-bolder text-gray-900'>{intl.formatMessage({ id: 'WIZARDS.STEP2.TITLE', defaultMessage: 'Account Info' })}</h2>
 
         <div className='text-gray-500 fw-bold fs-6'>
-          If you need more info, please check out
+          {intl.formatMessage({ id: 'WIZARDS.COMMON.MORE_INFO', defaultMessage: 'If you need more info, please check out' })}
           <a href='/dashboard' className='link-primary fw-bolder'>
             {' '}
-            Help Page
+            {intl.formatMessage({ id: 'WIZARDS.COMMON.HELP_PAGE', defaultMessage: 'Help Page' })}
           </a>
           .
         </div>
@@ -20,11 +22,11 @@ const Step2: FC = () => {
 
       <div className='mb-10 fv-row'>
         <label className='d-flex align-items-center form-label mb-3'>
-          Specify Team Size
+          {intl.formatMessage({ id: 'WIZARDS.STEP2.TEAM_SIZE', defaultMessage: 'Specify Team Size' })}
           <i
             className='fas fa-exclamation-circle ms-2 fs-7'
             data-bs-toggle='tooltip'
-            title='Provide your team size to help us setup your billing'
+            title={intl.formatMessage({ id: 'WIZARDS.STEP2.TEAM_SIZE_TOOLTIP', defaultMessage: 'Provide your team size to help us setup your billing' })}
           ></i>
         </label>
 
@@ -95,12 +97,12 @@ const Step2: FC = () => {
         </div>
 
         <div className='form-text'>
-          Customers will see this shortened version of your statement descriptor
+          {intl.formatMessage({ id: 'WIZARDS.STEP2.SHORTENED_DESCRIPTOR', defaultMessage: 'Customers will see this shortened version of your statement descriptor' })}
         </div>
       </div>
 
       <div className='mb-10 fv-row'>
-        <label className='form-label mb-3'>Team Account Name</label>
+        <label className='form-label mb-3'>{intl.formatMessage({ id: 'WIZARDS.STEP2.TEAM_ACCOUNT_NAME', defaultMessage: 'Team Account Name' })}</label>
 
         <Field
           type='text'
@@ -114,11 +116,11 @@ const Step2: FC = () => {
 
       <div className='mb-0 fv-row'>
         <label className='d-flex align-items-center form-label mb-5'>
-          Select Account Plan
+          {intl.formatMessage({ id: 'WIZARDS.STEP2.SELECT_ACCOUNT_PLAN', defaultMessage: 'Select Account Plan' })}
           <i
             className='fas fa-exclamation-circle ms-2 fs-7'
             data-bs-toggle='tooltip'
-            title='Monthly billing will be based on your account plan'
+            title={intl.formatMessage({ id: 'WIZARDS.STEP2.ACCOUNT_PLAN_TOOLTIP', defaultMessage: 'Monthly billing will be based on your account plan' })}
           ></i>
         </label>
 
@@ -133,10 +135,10 @@ const Step2: FC = () => {
 
               <span className='d-flex flex-column'>
                 <span className='fw-bolder text-gray-800 text-hover-primary fs-5'>
-                  Company Account
+                  {intl.formatMessage({ id: 'WIZARDS.STEP2.COMPANY_ACCOUNT', defaultMessage: 'Company Account' })}
                 </span>
                 <span className='fs-6 fw-bold text-gray-500'>
-                  Use images to enhance your post flow
+                  {intl.formatMessage({ id: 'WIZARDS.STEP2.COMPANY_ACCOUNT_DESC', defaultMessage: 'Use images to enhance your post flow' })}
                 </span>
               </span>
             </span>
@@ -156,9 +158,9 @@ const Step2: FC = () => {
 
               <span className='d-flex flex-column'>
                 <span className='fw-bolder text-gray-800 text-hover-primary fs-5'>
-                  Developer Account
+                  {intl.formatMessage({ id: 'WIZARDS.STEP2.DEVELOPER_ACCOUNT', defaultMessage: 'Developer Account' })}
                 </span>
-                <span className='fs-6 fw-bold text-gray-500'>Use images to your post time</span>
+                <span className='fs-6 fw-bold text-gray-500'>{intl.formatMessage({ id: 'WIZARDS.STEP2.DEVELOPER_ACCOUNT_DESC', defaultMessage: 'Use images to your post time' })}</span>
               </span>
             </span>
 
@@ -177,10 +179,10 @@ const Step2: FC = () => {
 
               <span className='d-flex flex-column'>
                 <span className='fw-bolder text-gray-800 text-hover-primary fs-5'>
-                  Testing Account
+                  {intl.formatMessage({ id: 'WIZARDS.STEP2.TESTING_ACCOUNT', defaultMessage: 'Testing Account' })}
                 </span>
                 <span className='fs-6 fw-bold text-gray-500'>
-                  Use images to enhance time travel rivers
+                  {intl.formatMessage({ id: 'WIZARDS.STEP2.TESTING_ACCOUNT_DESC', defaultMessage: 'Use images to enhance time travel rivers' })}
                 </span>
               </span>
             </span>
@@ -195,4 +197,4 @@ const Step2: FC = () => {
   )
 }
 
-export {Step2}
+export { Step2 }

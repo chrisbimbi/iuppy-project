@@ -1,4 +1,5 @@
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
+import { useIntl } from 'react-intl'
 import { createPortal } from 'react-dom'
 import { CreateSurveyQuestionDto, SurveyQuestion, SurveyQuestionType } from '@shared/types'
 
@@ -19,6 +20,7 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
   const [shuffleOptions, setShuffleOptions] = useState(false)
   const [options, setOptions] = useState<string[]>([])
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const intl = useIntl()
 
   useEffect(() => {
     if (!isOpen) return
@@ -52,13 +54,13 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
     e.stopPropagation()
 
     if (!questionText.trim()) {
-      alert('Informe o enunciado da pergunta.')
+      alert(intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.ERROR.NO_TEXT', defaultMessage: 'Informe o enunciado da pergunta.' }))
       return
     }
     if (needsOptions) {
       const clean = options.map(o => o.trim()).filter(Boolean)
       if (clean.length < 2) {
-        alert('Informe pelo menos duas opções.')
+        alert(intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.ERROR.NO_OPTIONS', defaultMessage: 'Informe pelo menos duas opções.' }))
         return
       }
     }
@@ -101,29 +103,29 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
         aria-modal="true"
       >
         <div className="card-header">
-          <h5 className="mb-0">{initial ? 'Editar Pergunta' : 'Nova Pergunta'}</h5>
+          <h5 className="mb-0">{initial ? intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.TITLE.EDIT', defaultMessage: 'Editar Pergunta' }) : intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.TITLE.NEW', defaultMessage: 'Nova Pergunta' })}</h5>
         </div>
 
         <form onSubmit={handleSubmit} onKeyDownCapture={e => e.stopPropagation()}>
           <div className="card-body">
             <div className="mb-4">
-              <label className="form-label">Tipo</label>
+              <label className="form-label">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.LABEL.TYPE', defaultMessage: 'Tipo' })}</label>
               <select
                 className="form-select"
                 value={type}
                 onChange={e => setType(e.target.value as SurveyQuestionType)}
               >
-                <option value="text">Texto (aberta)</option>
-                <option value="single">Única escolha</option>
-                <option value="multi">Múltipla escolha</option>
-                <option value="stars">Estrelas (1–5)</option>
-                <option value="scale">Escala (1–10)</option>
-                <option value="nps">NPS (0–10)</option>
+                <option value="text">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.TEXT', defaultMessage: 'Texto (aberta)' })}</option>
+                <option value="single">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.SINGLE', defaultMessage: 'Única escolha' })}</option>
+                <option value="multi">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.MULTI', defaultMessage: 'Múltipla escolha' })}</option>
+                <option value="stars">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.STARS', defaultMessage: 'Estrelas (1–5)' })}</option>
+                <option value="scale">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.SCALE', defaultMessage: 'Escala (1–10)' })}</option>
+                <option value="nps">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.OPTION.NPS', defaultMessage: 'NPS (0–10)' })}</option>
               </select>
             </div>
 
             <div className="mb-4">
-              <label className="form-label">Enunciado</label>
+              <label className="form-label">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.LABEL.TEXT', defaultMessage: 'Enunciado' })}</label>
               <input
                 ref={firstInputRef}
                 className="form-control"
@@ -134,7 +136,7 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
             </div>
 
             <div className="mb-4">
-              <label className="form-label">Descrição (opcional)</label>
+              <label className="form-label">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.LABEL.DESCRIPTION', defaultMessage: 'Descrição (opcional)' })}</label>
               <textarea
                 className="form-control"
                 rows={3}
@@ -151,20 +153,20 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
                 checked={isRequired}
                 onChange={e => setIsRequired(e.target.checked)}
               />
-              <label className="form-check-label" htmlFor="qreq">Resposta obrigatória</label>
+              <label className="form-check-label" htmlFor="qreq">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.CHECKBOX.REQUIRED', defaultMessage: 'Resposta obrigatória' })}</label>
             </div>
 
             {(type === 'single' || type === 'multi') && (
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <label className="form-label mb-0">Opções</label>
+                  <label className="form-label mb-0">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.LABEL.OPTIONS', defaultMessage: 'Opções' })}</label>
                   <button type="button" className="btn btn-light btn-sm" onClick={addOption}>
-                    + Adicionar opção
+                    {intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.BUTTON.ADD_OPTION', defaultMessage: '+ Adicionar opção' })}
                   </button>
                 </div>
 
                 {options.length === 0 && (
-                  <div className="text-muted small">Adicione pelo menos duas opções.</div>
+                  <div className="text-muted small">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.HINT.OPTIONS', defaultMessage: 'Adicione pelo menos duas opções.' })}</div>
                 )}
 
                 {options.map((opt, idx) => (
@@ -173,14 +175,14 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
                       className="form-control"
                       value={opt}
                       onChange={e => changeOption(idx, e.target.value)}
-                      placeholder={`Opção ${idx + 1}`}
+                      placeholder={`${intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.PLACEHOLDER.OPTION', defaultMessage: 'Opção' })} ${idx + 1}`}
                     />
                     <button
                       type="button"
                       className="btn btn-light-danger btn-sm"
                       onClick={() => removeOption(idx)}
                     >
-                      Remover
+                      {intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.BUTTON.REMOVE', defaultMessage: 'Remover' })}
                     </button>
                   </div>
                 ))}
@@ -193,15 +195,15 @@ const QuestionForm: FC<Props> = ({ isOpen, initial, onSubmit, onClose }) => {
                     checked={shuffleOptions}
                     onChange={e => setShuffleOptions(e.target.checked)}
                   />
-                  <label className="form-check-label" htmlFor="shuffle">Embaralhar opções</label>
+                  <label className="form-check-label" htmlFor="shuffle">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.CHECKBOX.SHUFFLE', defaultMessage: 'Embaralhar opções' })}</label>
                 </div>
               </div>
             )}
           </div>
 
           <div className="card-footer d-flex justify-content-end gap-2">
-            <button type="button" className="btn btn-light" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">Salvar</button>
+            <button type="button" className="btn btn-light" onClick={onClose}>{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.BUTTON.CANCEL', defaultMessage: 'Cancelar' })}</button>
+            <button type="submit" className="btn btn-primary">{intl.formatMessage({ id: 'SURVEYS.QUESTION_FORM.BUTTON.SAVE', defaultMessage: 'Salvar' })}</button>
           </div>
         </form>
       </div>

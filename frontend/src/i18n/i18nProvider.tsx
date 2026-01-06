@@ -8,6 +8,7 @@ import '@formatjs/intl-relativetimeformat/locale-data/fr'
 import '@formatjs/intl-relativetimeformat/locale-data/ja'
 import '@formatjs/intl-relativetimeformat/locale-data/zh'
 import '@formatjs/intl-relativetimeformat/locale-data/pt'
+import '@formatjs/intl-relativetimeformat/locale-data/it'
 
 import deMessages from './messages/de.json'
 import enMessages from './messages/en.json'
@@ -16,6 +17,7 @@ import frMessages from './messages/fr.json'
 import jaMessages from './messages/ja.json'
 import zhMessages from './messages/zh.json'
 import ptBRMessages from './messages/pt-BR.json'
+import itMessages from './messages/it.json'
 import { WithChildren } from '../helpers'
 
 const allMessages = {
@@ -26,6 +28,7 @@ const allMessages = {
   fr: frMessages,
   ja: jaMessages,
   zh: zhMessages,
+  it: itMessages,
 }
 
 type SupportedLocales = keyof typeof allMessages

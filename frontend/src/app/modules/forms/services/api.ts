@@ -101,7 +101,7 @@ export const FormsApi = {
   // =============================================
   // S1: CRUD de formulários (Usam withCompanyId)
   // =============================================
-  list: (params?: { status?: string; companyId?: string }) => {
+  list: (params?: { status?: string; companyId?: string; template?: string; visibility?: string }) => {
     return api
       .get('/forms', { params: withCompanyId(params) })
       .then((r) => r.data);
@@ -129,19 +129,19 @@ export const FormsApi = {
 
   publish: (formId: string) => {
     return api
-      .post(`/forms/${formId}/publish`, null, { params: withCompanyId() })
+      .post(`/forms/${formId}/publish`, {}, { params: withCompanyId() })
       .then((r) => r.data);
   },
 
   unpublish: (formId: string) => {
     return api
-      .post(`/forms/${formId}/unpublish`, null, { params: withCompanyId() })
+      .post(`/forms/${formId}/unpublish`, {}, { params: withCompanyId() })
       .then((r) => r.data);
   },
 
   duplicate: (formId: string) => {
     return api
-      .post(`/forms/${formId}/duplicate`, null, { params: withCompanyId() })
+      .post(`/forms/${formId}/duplicate`, {}, { params: withCompanyId() })
       .then((r) => r.data);
   },
 
@@ -154,8 +154,8 @@ export const FormsApi = {
   // =============================================
   // S1: Segmentação e Submissões (Usam withCompanyId)
   // =============================================
-  segmentationOptions: () => {
-    return api.get('/forms/segments', { params: withCompanyId() }).then((r) => r.data);
+  segmentationOptions: (companyId?: string) => {
+    return api.get('/forms/segments', { params: withCompanyId({ companyId }) }).then((r) => r.data);
   },
 
   getSubmissionDetail: (formId: string, submissionId: string) => {

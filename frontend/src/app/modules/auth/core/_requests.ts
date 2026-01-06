@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
   const auth = authHelper.getAuth()
   if (auth?.api_token) {
     config.headers = config.headers || {}
-    ;(config.headers as any).Authorization = `Bearer ${auth.api_token}`
+      ; (config.headers as any).Authorization = `Bearer ${auth.api_token}`
   }
   return config
 })
@@ -98,4 +98,14 @@ export async function logout() {
   } finally {
     authHelper.removeAuth()
   }
+}
+
+export function register(email: string, firstname: string, lastname: string, password: string, password_confirmation: string) {
+  return axios.post(`${AUTH_BASE}/register`, {
+    email,
+    firstname,
+    lastname,
+    password,
+    password_confirmation,
+  })
 }

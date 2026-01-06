@@ -26,7 +26,7 @@ class CurvedNavBar extends StatelessWidget {
         const NavigationDestination(
             icon: Icon(Icons.home_outlined), label: 'Início'),
         const NavigationDestination(
-            icon: Icon(Icons.star_border), label: 'Favoritos'),
+            icon: Icon(Icons.bookmark_border), label: 'Favoritos'),
         NavigationDestination(
           icon: _BadgeIcon(
             show: (badges[2] ?? 0) > 0,
@@ -35,8 +35,13 @@ class CurvedNavBar extends StatelessWidget {
           ),
           label: 'Alertas',
         ),
-        const NavigationDestination(
-            icon: Icon(Icons.settings_outlined), label: 'Ajustes'),
+        NavigationDestination(
+            icon: _BadgeIcon(
+              show: (badges[3] ?? 0) > 0,
+              count: badges[3] ?? 0,
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            label: 'Chat'),
         const NavigationDestination(icon: Icon(Icons.menu), label: 'Menu'),
       ],
     );

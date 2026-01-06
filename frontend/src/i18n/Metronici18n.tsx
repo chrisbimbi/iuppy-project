@@ -1,13 +1,13 @@
-import {useContext} from 'react'
-import {IntlContext} from 'react-intl'
+import { useContext } from 'react'
+import { IntlContext } from 'react-intl'
 
 export function useLanguage() {
   const intlContext = useContext(IntlContext)
   return intlContext?.locale || 'pt-BR'
 }
 
-export function useLang(): 'en' | 'de' | 'es' | 'fr' | 'ja' | 'zh' | 'pt-BR' {
-  return useLanguage() as 'en' | 'de' | 'es' | 'fr' | 'ja' | 'zh' | 'pt-BR'
+export function useLang(): 'en' | 'de' | 'es' | 'fr' | 'ja' | 'zh' | 'pt-BR' | 'it' {
+  return useLanguage() as 'en' | 'de' | 'es' | 'fr' | 'ja' | 'zh' | 'pt-BR' | 'it'
 }
 
 export function setLanguage(lang: string) {

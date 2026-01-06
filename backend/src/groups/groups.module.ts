@@ -15,5 +15,6 @@ import { GroupMembersController } from './group-members.controller';
   ],
   providers: [GroupsService, GroupMembersService],
   controllers: [GroupsController, GroupMembersController],
+  exports: [GroupsService],
 })
-export class GroupsModule {}
+export class GroupsModule { }

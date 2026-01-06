@@ -1,17 +1,19 @@
-import {FC} from 'react'
-import {Link} from 'react-router-dom'
-import {toAbsoluteUrl} from '../../../..//helpers'
+import { FC } from 'react'
+import { Link } from 'react-router-dom'
+import { toAbsoluteUrl } from '../../../..//helpers'
+import { useIntl } from 'react-intl'
 
 const Error500: FC = () => {
+  const intl = useIntl()
   return (
     <>
       {/* begin::Title */}
-      <h1 className='fw-bolder fs-2qx text-gray-900 mb-4'>System Error</h1>
+      <h1 className='fw-bolder fs-2qx text-gray-900 mb-4'>{intl.formatMessage({ id: 'ERRORS.500.TITLE', defaultMessage: 'System Error' })}</h1>
       {/* end::Title */}
 
       {/* begin::Text */}
       <div className='fw-semibold fs-6 text-gray-500 mb-7'>
-        Something went wrong! Please try again later.
+        {intl.formatMessage({ id: 'ERRORS.500.MESSAGE', defaultMessage: 'Something went wrong! Please try again later.' })}
       </div>
       {/* end::Text */}
 
@@ -33,7 +35,7 @@ const Error500: FC = () => {
       {/* begin::Link */}
       <div className='mb-0'>
         <Link to='/dashboard' className='btn btn-sm btn-primary'>
-          Return Home
+          {intl.formatMessage({ id: 'ERRORS.BUTTON.HOME', defaultMessage: 'Return Home' })}
         </Link>
       </div>
       {/* end::Link */}
@@ -41,4 +43,4 @@ const Error500: FC = () => {
   )
 }
 
-export {Error500}
+export { Error500 }

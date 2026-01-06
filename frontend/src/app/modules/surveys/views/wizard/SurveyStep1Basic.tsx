@@ -1,5 +1,6 @@
 // frontend/src/app/modules/surveys/views/wizard/SurveyStep1Basic.tsx
 import { FC, useMemo } from 'react'
+import { useIntl } from 'react-intl'
 import { CreateSurveyDto } from '@shared/types'
 import { useAuth } from 'src/app/modules/auth'
 import { useSpaces } from 'src/app/modules/spaces/hooks/useSpaces'
@@ -15,6 +16,7 @@ const SurveyStep1Basic: FC<Props> = ({ data, setFieldValue }) => {
     const companyId = currentUser!.companyId
     const { data: spaces = [] } = useSpaces(companyId)
     const { groups = [] } = useGroups({ companyId })
+    const intl = useIntl()
 
     const selectedGroups = useMemo(
         () => groups.filter(g => (data.groupIds ?? []).includes(g.id)),
@@ -24,23 +26,23 @@ const SurveyStep1Basic: FC<Props> = ({ data, setFieldValue }) => {
     return (
         <div className="w-100">
             <div className="pb-8">
-                <h3 className="fw-bold text-dark">Informações Básicas</h3>
-                <div className="text-muted">Título, descrição, espaços e visibilidade</div>
+                <h3 className="fw-bold text-dark">{intl.formatMessage({ id: 'SURVEYS.STEP1.TITLE', defaultMessage: 'Informações Básicas' })}</h3>
+                <div className="text-muted">{intl.formatMessage({ id: 'SURVEYS.STEP1.SUBTITLE', defaultMessage: 'Título, descrição, espaços e visibilidade' })}</div>
             </div>
 
             <div className="mb-6">
-                <label className="form-label required">Título</label>
+                <label className="form-label required">{intl.formatMessage({ id: 'SURVEYS.STEP1.LABEL.TITLE', defaultMessage: 'Título' })}</label>
                 <input
                     className="form-control"
                     value={data.title}
                     onChange={e => setFieldValue('title', e.target.value, true)}
-                    placeholder="Digite um título"
+                    placeholder={intl.formatMessage({ id: 'SURVEYS.STEP1.PLACEHOLDER.TITLE', defaultMessage: 'Digite um título' })}
                     required
                 />
             </div>
 
             <div className="mb-6">
-                <label className="form-label">Descrição</label>
+                <label className="form-label">{intl.formatMessage({ id: 'SURVEYS.STEP1.LABEL.DESCRIPTION', defaultMessage: 'Descrição' })}</label>
                 <textarea
                     className="form-control"
                     value={data.description || ''}
@@ -50,7 +52,7 @@ const SurveyStep1Basic: FC<Props> = ({ data, setFieldValue }) => {
             </div>
 
             <div className="mb-6">
-                <label className="form-label required">Espaços</label>
+                <label className="form-label required">{intl.formatMessage({ id: 'SURVEYS.STEP1.LABEL.SPACES', defaultMessage: 'Espaços' })}</label>
                 <select
                     className="form-select"
                     multiple
@@ -67,25 +69,26 @@ const SurveyStep1Basic: FC<Props> = ({ data, setFieldValue }) => {
                         <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                 </select>
-                <div className="form-text">Selecione pelo menos 1 espaço</div>
+                <div className="form-text">{intl.formatMessage({ id: 'SURVEYS.STEP1.HINT.SPACES', defaultMessage: 'Selecione pelo menos 1 espaço' })}</div>
             </div>
 
             <div className="mb-6">
-                <label className="form-label required">Visibilidade</label>
+                <label className="form-label required">{intl.formatMessage({ id: 'SURVEYS.STEP1.LABEL.VISIBILITY', defaultMessage: 'Visibilidade' })}</label>
                 <select
                     className="form-select"
                     value={data.visibility}
                     onChange={e => setFieldValue('visibility', e.target.value, true)}
                 >
-                    <option value="public">Público (todos do(s) espaço(s))</option>
-                    <option value="private">Privado (apenas admins)</option>
-                    <option value="specific_groups">Grupos específicos</option>
+                    <option value="public">{intl.formatMessage({ id: 'SURVEYS.STEP1.OPTION.PUBLIC', defaultMessage: 'Público (todos do(s) espaço(s))' })}</option>
+                    <option value="private">{intl.formatMessage({ id: 'SURVEYS.STEP1.OPTION.PRIVATE', defaultMessage: 'Privado (apenas admins)' })}</option>
+                    <option value="specific_groups">{intl.formatMessage({ id: 'SURVEYS.STEP1.OPTION.GROUPS', defaultMessage: 'Grupos específicos' })}</option>
+                    <option value="journey_only">{intl.formatMessage({ id: 'SURVEYS.STEP1.OPTION.JOURNEY_ONLY', defaultMessage: 'Apenas para Jornadas' })}</option>
                 </select>
             </div>
 
             {data.visibility === 'specific_groups' && (
                 <div className="mb-6">
-                    <label className="form-label required">Grupos</label>
+                    <label className="form-label required">{intl.formatMessage({ id: 'SURVEYS.STEP1.LABEL.GROUPS', defaultMessage: 'Grupos' })}</label>
                     <select
                         className="form-select"
                         multiple
@@ -122,7 +125,7 @@ const SurveyStep1Basic: FC<Props> = ({ data, setFieldValue }) => {
                     onChange={e => setFieldValue('isAnonymous', e.target.checked, true)}
                 />
                 <label className="form-check-label" htmlFor="chk-anon">
-                    Enquete anônima
+                    {intl.formatMessage({ id: 'SURVEYS.STEP1.CHECKBOX.ANONYMOUS', defaultMessage: 'Enquete anônima' })}
                 </label>
             </div>
         </div>

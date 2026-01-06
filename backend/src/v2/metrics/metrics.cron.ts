@@ -11,7 +11,9 @@ try {
   Cron = sch.Cron;
   CronExpression = sch.CronExpression;
   hasSchedule = !!Cron && !!CronExpression;
-} catch { hasSchedule = false; }
+} catch {
+  hasSchedule = false;
+}
 
 // Se houver schedule, registramos um cron simples; se não, exportamos um no-op
 let ExportedClass: any;

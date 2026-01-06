@@ -24,6 +24,12 @@ project 'Runner', {
   'Debug' => :debug,
   'Profile' => :release,
   'Release' => :release,
+  'Debug-iuppyDev' => :debug,
+  'Release-iuppyProd' => :release,
+  'Profile-iuppyProd' => :release,
+  'Debug-nextsalesDev' => :debug,
+  'Release-nextsalesProd' => :release,
+  'Profile-nextsalesProd' => :release,
 }
 
 target 'Runner' do
@@ -38,5 +44,16 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    
+    # Enable permissions for permission_handler
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_MICROPHONE=1',
+        # Add other permissions if needed (e.g. CAMERA, PHOTOS)
+        # 'PERMISSION_CAMERA=1', 
+        # 'PERMISSION_PHOTOS=1',
+      ]
+    end
   end
 end

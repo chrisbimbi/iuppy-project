@@ -1,11 +1,14 @@
 
-import {FC} from 'react'
-import {KTIcon, toAbsoluteUrl} from '../../../../..//helpers'
-import {ChatInner, Dropdown1} from '../../../../..//partials'
+import { FC } from 'react'
+import { KTIcon, toAbsoluteUrl } from '../../../../..//helpers'
+import { ChatInner, Dropdown1 } from '../../../../..//partials'
 import { Toolbar } from '../../../../..//layout/components/toolbar/Toolbar'
 import { Content } from '../../../../..//layout/components/Content'
 
+import { useIntl } from 'react-intl'
+
 const Private: FC = () => {
+  const intl = useIntl()
   return (
     <>
       <Toolbar />
@@ -24,7 +27,7 @@ const Private: FC = () => {
                     type='text'
                     className='form-control form-control-solid px-15'
                     name='search'
-                    placeholder='Search by username or email...'
+                    placeholder={intl.formatMessage({ id: 'APPS.CHAT.SEARCH.PLACEHOLDER' })}
                   />
                 </form>
               </div>
@@ -282,7 +285,9 @@ const Private: FC = () => {
 
                     <div className='mb-0 lh-1'>
                       <span className='badge badge-success badge-circle w-10px h-10px me-1'></span>
-                      <span className='fs-7 fw-bold text-gray-500'>Active</span>
+                      <span className='fs-7 fw-bold text-gray-500'>
+                        {intl.formatMessage({ id: 'APPS.CHAT.STATUS.ACTIVE' })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -304,10 +309,10 @@ const Private: FC = () => {
               <ChatInner />
             </div>
           </div>
-        </div> 
+        </div>
       </Content>
     </>
   )
 }
 
-export {Private}
+export { Private }

@@ -45,56 +45,56 @@ import { FormAuditLogEntity } from './entities/form_audit_log.entity';
 
 // Dependências
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { AccessControlModule } from 'src/access-control/access-control.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      FormEntity,
-      FormFieldEntity,
-      FormSubmissionEntity,
-      FormAnswerEntity,
-      FormAttachmentEntity,
-      FormRhActionEntity,
-      FormNotificationSettingEntity,
-      FormEventEntity,
-      FormMetricsDailyEntity,
-      FormBadgeStateEntity,
-      ReminderEventEntity,
-      NotificationEventEntity,
-      FormSubmissionChatEntity, // <-- S3+: Registrada
-      // ==================================
-      // CORREÇÃO: Registrar a entidade de Log
-      // ==================================
-      FormAuditLogEntity,
-    ]),
-    NotificationsModule,
-  ],
-  controllers: [
-    FormsController,
-    FormsEventsController,
-    PublicFormsController,
-    FormsAnalyticsController,
-    FormsRemindersController,
-  ],
-  providers: [
-    // Services
-    FormsService,
-    FormsEventsService,
-    FormsAnalyticsService,
-    FormsRemindersService,
+  imports: [
+    TypeOrmModule.forFeature([
+      FormEntity,
+      FormFieldEntity,
+      FormSubmissionEntity,
+      FormAnswerEntity,
+      FormAttachmentEntity,
+      FormRhActionEntity,
+      FormNotificationSettingEntity,
+      FormEventEntity,
+      FormMetricsDailyEntity,
+      FormBadgeStateEntity,
+      ReminderEventEntity,
+      NotificationEventEntity,
+      FormSubmissionChatEntity, // <-- S3+: Registrada
+      // ==================================
+      // CORREÇÃO: Registrar a entidade de Log
+      // ==================================
+      FormAuditLogEntity,
+    ]),
+    NotificationsModule,
+    AccessControlModule,
+  ],
+  controllers: [
+    FormsController,
+    FormsEventsController,
+    PublicFormsController,
+    FormsAnalyticsController,
+    FormsRemindersController,
+  ],
+  providers: [
+    // Services
+    FormsService,
+    FormsEventsService,
+    FormsAnalyticsService,
+    FormsRemindersService, // Guards
 
-    // Guards
-    FormsAclGuard,
+    FormsAclGuard, // Crons
 
-    // Crons
-    FormsRemindersCron,
-    FormsAnalyticsCron,
-  ],
-  exports: [
-    TypeOrmModule,
-    FormsService,
-    FormsAnalyticsService,
-    FormsRemindersService,
-  ],
+    FormsRemindersCron,
+    FormsAnalyticsCron,
+  ],
+  exports: [
+    TypeOrmModule,
+    FormsService,
+    FormsAnalyticsService,
+    FormsRemindersService,
+  ],
 })
-export class FormsModule {}
+export class FormsModule { }

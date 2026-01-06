@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/providers.dart';
 import '../forms/providers/forms_provider.dart';
-import '../forms/local_form_store.dart';
+import '../surveys/survey_providers.dart'; // Import Survey Store
+import '../journeys/journey_providers.dart'; // Import Journey Provider
 
 enum NotificationType {
   news,
   formNew,
   formReply,
   survey,
+  journey, // 🔥 Novo tipo
 }
 
 class NotificationItem {
@@ -39,6 +41,7 @@ final notificationsListProvider =
   ref.watch(feedVersionProvider);
   ref.watch(formsRefreshProvider);
   ref.watch(formsSeenVersionProvider);
+  ref.watch(surveysSeenVersionProvider); // 🔥 Ouve mudanças em Surveys
 
   final items = <NotificationItem>[];
 
@@ -92,9 +95,10 @@ final notificationsListProvider =
         final rawTitle = f['title'];
         String title = 'Novo Formulário';
         if (rawTitle is String) title = rawTitle;
-        if (rawTitle is Map)
+        if (rawTitle is Map) {
           title =
               rawTitle['pt-BR'] ?? rawTitle.values.first ?? 'Novo Formulário';
+        }
 
         items.add(NotificationItem(
           id: id,
@@ -111,30 +115,25 @@ final notificationsListProvider =
 
   // 3. INTERAÇÕES GRANULARES (Chat + Ações)
   try {
-    // Pega o mapa de 'unread' para saber quantas mensagens novas temos por submissão
     final mySubs = await ref.watch(myFormsSubmissionsProvider.future);
     final subsList = (mySubs['items'] as List? ?? []);
-    // chave = submissionId, valor = qtd não lida
     final unreadMap = {
       for (var s in subsList)
         s['submissionId'].toString(): (s['unreadChatCount'] as int? ?? 0)
     };
 
-    // Busca histórico granular
     final interactions =
         await ref.read(formsRepoProvider).myInteractions(limit: 50);
 
-    // Contador para saber quais são as 'top N' mensagens não lidas
     final processedCounts = <String, int>{};
 
     for (final item in interactions) {
       final subId = item['submissionId']?.toString() ?? '';
-      final type = item['type']?.toString() ?? 'chat'; // chat, approve, reject
+      final type = item['type']?.toString() ?? 'chat';
 
       final totalUnread = unreadMap[subId] ?? 0;
       final currentProcessed = processedCounts[subId] ?? 0;
 
-      // Se ainda não "consumimos" todas as não lidas dessa submissão, este item é novo
       final isRead = currentProcessed >= totalUnread;
       if (!isRead) processedCounts[subId] = currentProcessed + 1;
 
@@ -144,9 +143,9 @@ final notificationsListProvider =
       final rawTitle = item['formTitle'];
       String title = 'Formulário';
       if (rawTitle != null) {
-        if (rawTitle is String)
+        if (rawTitle is String) {
           title = rawTitle;
-        else if (rawTitle is Map) title = rawTitle['pt-BR'] ?? 'Formulário';
+        } else if (rawTitle is Map) title = rawTitle['pt-BR'] ?? 'Formulário';
       }
 
       String subtitle = item['message']?.toString() ?? '';
@@ -181,32 +180,92 @@ final notificationsListProvider =
     debugPrint('[NotifProvider] Erro Interações: $e');
   }
 
-  // 4. ENQUETES
+  // 4. ENQUETES (🔥 COM METADADOS PARA CHIPS)
   try {
     final surveysRepo = ref.read(surveysRepoProvider);
     final surveys = await surveysRepo
         .list(limit: 20)
         .catchError((_) => <Map<String, dynamic>>[]);
 
+    final seenIds = await ref.read(localSurveyStoreProvider).getSeenIds();
+    final submittedIds =
+        await ref.read(localSurveyStoreProvider).getSubmittedIds();
+
+    final now = DateTime.now();
+    final threeDaysAgo = now.subtract(const Duration(days: 3));
+
     for (final s in surveys) {
       final id = s['id']?.toString() ?? '';
-      final title = s['title']?.toString() ?? 'Nova Enquete';
+      if (id.isEmpty) continue;
+
       final dateStr = s['startsAt']?.toString() ?? s['createdAt']?.toString();
       final date = DateTime.tryParse(dateStr ?? '') ?? DateTime.now();
 
+      final isSubmitted = submittedIds.contains(id);
+      final isRead = seenIds.contains(id) || isSubmitted;
+
+      if (isRead && date.isBefore(threeDaysAgo)) continue;
+
       items.add(NotificationItem(
         id: id,
-        title: title,
-        subtitle: 'Participe da nossa pesquisa.',
+        title: s['title']?.toString() ?? 'Nova Enquete',
+        subtitle: isSubmitted
+            ? 'Você já respondeu.'
+            : (s['description']?.toString() ?? 'Participe da nossa pesquisa.'),
         date: date,
         type: NotificationType.survey,
-        isRead: true,
-        payload: {'surveyId': id},
+        isRead: isRead,
+        payload: {
+          'surveyId': id,
+          'endsAt': s['endsAt'], // 🔥 Data fim para cronômetro
+          'ack': s['acknowledgementRequired'] == true, // 🔥 Ação necessária
+          'isAnonymous': s['isAnonymous'] == true, // 🔥 Anonimato
+          'isSubmitted': isSubmitted, // 🔥 Estado
+        },
       ));
     }
   } catch (_) {}
 
-  items.sort((a, b) => b.date.compareTo(a.date));
+  // 5. JORNADAS (🔥 NOVOS PASSOS)
+  try {
+    final journeys = await ref
+        .watch(journeyProgressProvider.future)
+        .catchError((_) => <Map<String, dynamic>>[]);
 
+    for (final j in journeys) {
+      final journeyId = j['journey']['id']?.toString() ?? '';
+      final journeyTitle = j['journey']['title']?.toString() ?? 'Jornada';
+      final steps = (j['journey']['steps'] as List?) ?? [];
+
+      for (final step in steps) {
+        final stepId = step['id']?.toString() ?? '';
+        final isLocked = step['locked'] == true;
+        final isCompleted = step['completed'] == true;
+
+        // Se o passo está liberado e não foi completado -> É uma notificação/pendência
+        if (!isLocked && !isCompleted) {
+          // Usar data de hoje como referência, já que não temos a data exata de liberação no payload simplificado
+          // Ou poderíamos tentar estimar, mas para ordenação, "agora" serve para itens ativos.
+          // Melhor: se tiver releaseTime, usar hoje + releaseTime?
+          // Simplificação: DateTime.now() para itens ativos.
+
+          items.add(NotificationItem(
+            id: stepId,
+            title: step['title']?.toString() ?? 'Novo Passo',
+            subtitle: journeyTitle,
+            date: DateTime.now(), // Itens ativos aparecem no topo
+            type: NotificationType.journey,
+            isRead: false, // Sempre não lido enquanto não completar
+            payload: {
+              'journeyId': journeyId,
+              'stepId': stepId,
+            },
+          ));
+        }
+      }
+    }
+  } catch (_) {}
+
+  items.sort((a, b) => b.date.compareTo(a.date));
   return items;
 });

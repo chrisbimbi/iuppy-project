@@ -18,7 +18,7 @@ export function useSurveys(companyId: string, filters?: Filters) {
         if (!companyId) return
         setLoading(true)
 
-        SurveyService.list(companyId, filters)
+        SurveyService.list(companyId, { ...filters, visibility: 'all' })
             .then(async (surveys) => {
                 const surveysWithCounts = await Promise.all(
                     surveys.map(async (survey) => {

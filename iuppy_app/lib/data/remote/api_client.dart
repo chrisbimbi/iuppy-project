@@ -24,7 +24,7 @@ class ApiClient {
     if (qp != null && qp.isNotEmpty) {
       final keys = qp.keys.toList()..sort();
       for (final k in keys) {
-        buf.write('&${k}=${qp[k]}');
+        buf.write('&$k=${qp[k]}');
       }
     }
     return buf.toString();
@@ -80,7 +80,7 @@ class ApiClient {
           requestBody: true,
           responseHeader: false,
           responseBody: false,
-          error: false,
+          error: true,
           logPrint: (o) => debugPrint('[DIO] $o'),
         ),
       );
@@ -90,6 +90,9 @@ class ApiClient {
 
   /// Exponibiliza o baseUrl para normalização de URLs no app.
   String get baseUrl => _dio.options.baseUrl;
+
+  /// Exposes the underlying Dio instance for repositories that need direct access.
+  Dio get dio => _dio;
 
   // Opcional
   void setAuthToken(String token) {
@@ -107,6 +110,64 @@ class ApiClient {
   Future<Map<String, dynamic>> getMe() async {
     final resp = await _dio.get('/auth/me');
     return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<String?> lookupPhone(String email) async {
+    try {
+      final resp = await _dio.post('/auth/lookup', data: {'email': email});
+      return resp.data['phone'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> requestEmailOtp(String email) async {
+    await _dio.post('/auth/otp/email/request', data: {'email': email});
+  }
+
+  Future<Map<String, dynamic>> verifyEmailOtp(String email, String code) async {
+    final resp = await _dio.post('/auth/otp/email/verify', data: {
+      'email': email,
+      'code': code,
+    });
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<Map<String, dynamic>> loginById(
+      String identifier, String idToken) async {
+    final resp = await _dio.post('/auth/login-by-id', data: {
+      'identifier': identifier,
+      'idToken': idToken,
+    });
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> data) async {
+    await _dio.patch('/auth/me', data: data);
+  }
+
+  Future<List<Map<String, dynamic>>> getUsers({
+    String? query,
+    int limit = 20,
+    int offset = 0,
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/users',
+      queryParameters: {
+        'companyId': companyId,
+        if (query != null && query.isNotEmpty) 'q': query,
+        'limit': limit,
+        'offset': offset,
+      },
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
   }
 
   // ---------------------------
@@ -255,6 +316,11 @@ class ApiClient {
     return getNews(channelId: channelId);
   }
 
+  void invalidateNewsCache(String id) {
+    _cache.remove(_key('GET', '/v2/news/$id'));
+    _cache.remove(_key('GET', '/news/$id'));
+  }
+
   Future<Map<String, dynamic>> getNewsDetail(
     String id, {
     String? sinceEtag,
@@ -294,6 +360,22 @@ class ApiClient {
       }
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>> toggleFavoriteNews(String id) async {
+    final resp = await _dio.post('/v2/news/$id/favorite');
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<Map<String, dynamic>> getFavoriteNews({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final resp = await _dio.get(
+      '/v2/news/favorites',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
   }
 
   // -----
@@ -782,5 +864,257 @@ class ApiClient {
       cancelToken: cancelToken,
     );
     return Map<String, dynamic>.from(resp.data as Map);
+  }
+  // ==========================
+  // JOURNEYS
+  // ==========================
+
+  Future<List<Map<String, dynamic>>> getJourneyProgress({
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/journeys/progress/me',
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  Future<Map<String, dynamic>> getJourneyDetail(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/journeys/$id',
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<void> completeJourneyStep(
+    String journeyId,
+    String stepId, {
+    Map<String, dynamic>? data,
+    CancelToken? cancelToken,
+  }) async {
+    await _dio.post(
+      '/journeys/$journeyId/steps/$stepId/complete',
+      data: data,
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> getJourneyStepDetail(
+    String journeyId,
+    String stepId, {
+    CancelToken? cancelToken,
+  }) async {
+    final resp = await _dio.get(
+      '/journeys/$journeyId/steps/$stepId',
+      options: Options(
+        validateStatus: (s) => s != null && (s >= 200 && s < 300),
+      ),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  // ==========================
+  // CHAT (Socket.io Helper / API)
+  // ==========================
+
+  Future<List<Map<String, dynamic>>> getChatConversations(
+      {CancelToken? cancelToken}) async {
+    try {
+      final resp = await _dio.get('/chat/conversations');
+      return List<Map<String, dynamic>>.from(
+        (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+    } catch (e) {
+      debugPrint('[ApiClient] getChatConversations error: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createDirectConversation(String userId) async {
+    final resp = await _dio.post('/chat/conversations', data: {
+      'participantIds': [userId]
+    });
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> getChatMessages(
+      String conversationId) async {
+    final resp = await _dio.get('/chat/conversations/$conversationId/messages');
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  Future<Map<String, dynamic>> getChatUnreadCount() async {
+    try {
+      final resp = await _dio.get('/chat/unread-count');
+      return Map<String, dynamic>.from(resp.data);
+    } catch (e) {
+      debugPrint('Error getting unread count: $e');
+      return {'total': 0, 'byConversation': {}};
+    }
+  }
+
+  Future<String> uploadFileBytes(List<int> bytes, String filename) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+
+    final resp = await _dio.post('/uploads/file',
+        data: formData,
+        options: Options(headers: {
+          'Content-Type': 'multipart/form-data',
+        }));
+    return resp.data['url'] as String;
+  }
+
+  Future<List<Map<String, dynamic>>> getGroups(
+      {CancelToken? cancelToken}) async {
+    final resp = await _dio.get('/groups',
+        queryParameters: {'companyId': companyId},
+        options:
+            Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+        cancelToken: cancelToken);
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+  // ---------------------------
+  // CHAT (API Parity)
+  // ---------------------------
+
+  Future<Map<String, dynamic>> getUnreadCount() async {
+    try {
+      final resp = await _dio.get('/chat/unread-count');
+      return Map<String, dynamic>.from(resp.data as Map);
+    } catch (_) {
+      return {'total': 0, 'byConversation': {}};
+    }
+  }
+
+  Future<String> uploadChatFile(List<int> bytes, String fileName) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+    final resp = await _dio.post('/uploads/chat', data: formData);
+    // Assuming backend returns { url: ... }
+    return resp.data['url'] as String;
+  }
+
+  Future<Map<String, dynamic>> getSocialFeed({
+    int page = 1,
+    int limit = 20,
+    List<String>? channelIds,
+    CancelToken? cancelToken,
+  }) async {
+    final qp = {
+      'page': page,
+      'limit': limit,
+      if (channelIds != null && channelIds.isNotEmpty)
+        'channelIds': channelIds.join(','),
+      'companyId': companyId,
+    };
+    final resp = await _dio.get(
+      '/social/feed',
+      queryParameters: qp,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  // Admin Methods
+  Future<void> promoteParticipant(String conversationId, String userId) async {
+    await _dio.post(
+        '/chat/conversations/$conversationId/participants/$userId/promote');
+  }
+
+  Future<void> removeParticipant(String conversationId, String userId) async {
+    await _dio.post(
+        '/chat/conversations/$conversationId/participants/$userId/remove');
+  }
+
+  Future<void> clearChatHistory(String conversationId) async {
+    await _dio.post('/chat/conversations/$conversationId/clear');
+  }
+
+  Future<void> markChatAsRead(String conversationId) async {
+    await _dio.post('/chat/conversations/$conversationId/mark-read');
+  }
+
+  Future<void> deleteMessage(String messageId,
+      {bool forEveryone = true}) async {
+    final mode = forEveryone ? 'all' : 'me';
+    await _dio.delete('/chat/messages/$messageId?for=$mode');
+  }
+
+  // ==========================
+  // SOCIAL & UPLOADS
+  // ==========================
+
+  Future<Map<String, dynamic>> createSocialPost({
+    required String channelId,
+    required String content,
+    List<Map<String, dynamic>>? media,
+    CancelToken? cancelToken,
+  }) async {
+    final body = {
+      'channelId': channelId,
+      'content': content,
+      if (media != null) 'media': media,
+    };
+    final resp = await _dio.post(
+      '/social/posts',
+      // API expects companyId via header, but just in case query
+      queryParameters: {'companyId': companyId},
+      data: body,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+    return Map<String, dynamic>.from(resp.data as Map);
+  }
+
+  Future<String> uploadFile(
+    String filePath, {
+    String? type, // 'image', 'video'
+    CancelToken? cancelToken,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+
+    final resp = await _dio.post(
+      '/uploads/file',
+      data: formData,
+      options:
+          Options(validateStatus: (s) => s != null && (s >= 200 && s < 300)),
+      cancelToken: cancelToken,
+    );
+
+    // Response expected: { url: "..." }
+    return resp.data['url'] as String;
+  }
+
+  Future<Map<String, dynamic>> getMessageInfo(String messageId) async {
+    final response = await _coalescedGet('/chat/messages/$messageId/info');
+    return response.data;
   }
 }

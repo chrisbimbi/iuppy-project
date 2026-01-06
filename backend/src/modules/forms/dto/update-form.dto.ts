@@ -36,6 +36,7 @@ export interface UpdateFormDto {
   requiresApproval?: boolean;
   allowTranslations?: boolean;
   defaultLocale?: string | null;
+  visibility?: 'public' | 'private' | 'specific_groups' | 'journey_only';
 
   fields?: UpdateFormFieldDto[];
 }

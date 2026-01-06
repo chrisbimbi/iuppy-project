@@ -1,16 +1,25 @@
 import { NewsSettings } from './NewsSettings';
-import { NewsType } from './NewsType';
+
 
 
 export interface News {
   id: string;
   title: string;
   subtitle?: string;
+  mustAcknowledge?: boolean;
+  userState?: {
+    isFavorited?: boolean;
+    myReaction?: string | null;
+    hasViewed?: boolean;
+    hasCommented?: boolean;
+    hasShared?: boolean;
+    hasAcknowledged?: boolean;
+  };
   content: string;
   channelId: string;
   authorId: string;
   companyId: string;
-  type: NewsType;
+  hashtags?: string[];
   isPublished: boolean;
   attachments: string[];
   highlightImages: string[];

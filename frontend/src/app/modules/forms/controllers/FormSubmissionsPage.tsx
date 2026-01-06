@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { FormsApi, TranslatableString } from '../services/api';
 import { Card, Spinner, Alert, Button, Table } from 'react-bootstrap';
+import { useIntl } from 'react-intl';
 import { SubmissionDetailModal } from '../components/SubmissionDetailModal';
 
 type FormInfo = {
@@ -45,6 +46,7 @@ const getTranslation = (
 };
 
 export default function FormSubmissionsPage() {
+  const intl = useIntl();
   const { formId } = useParams<{ formId: string }>();
   const [form, setForm] = useState<FormInfo | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -105,9 +107,9 @@ export default function FormSubmissionsPage() {
     const locale = form.defaultLocale || 'pt-BR';
 
     const columns = [
-      { id: 'user', label: 'Usuário' },
-      { id: 'submittedAt', label: 'Data' },
-      { id: 'status', label: 'Status' },
+      { id: 'user', label: intl.formatMessage({ id: 'FORMS.SUBMISSIONS.TABLE.USER' }) },
+      { id: 'submittedAt', label: intl.formatMessage({ id: 'FORMS.SUBMISSIONS.TABLE.DATE' }) },
+      { id: 'status', label: intl.formatMessage({ id: 'FORMS.SUBMISSIONS.TABLE.STATUS' }) },
     ];
 
     const fieldColumns = (form.fields || [])
@@ -129,11 +131,11 @@ export default function FormSubmissionsPage() {
   };
 
   if (loading && !form) {
-    return <Card><Card.Body><Spinner animation="border" size="sm" /> Carregando envios...</Card.Body></Card>;
+    return <Card><Card.Body><Spinner animation="border" size="sm" /> {intl.formatMessage({ id: 'FORMS.SUBMISSIONS.LOADING' })}</Card.Body></Card>;
   }
 
   if (err) return <Alert variant="danger">{err}</Alert>;
-  if (!form) return <Alert variant="warning">Formulário não encontrado.</Alert>;
+  if (!form) return <Alert variant="warning">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.ERROR.NOT_FOUND' })}</Alert>;
 
   const formTitle = getTranslation(form.title, form.defaultLocale);
 
@@ -143,10 +145,10 @@ export default function FormSubmissionsPage() {
 
         <Card>
           <Card.Header>
-            <h3 className="card-title">Envios de: {formTitle}</h3>
+            <h3 className="card-title">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.TITLE' }, { formTitle })}</h3>
             <div className="card-toolbar">
-              <Link to={`/forms/${formId}/stats`} className="btn btn-sm btn-light me-2">Ver Estatísticas</Link>
-              <Link to="/forms" className="btn btn-sm btn-light-primary">Voltar</Link>
+              <Link to={`/forms/${formId}/stats`} className="btn btn-sm btn-light me-2">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.BUTTON.STATS' })}</Link>
+              <Link to="/forms" className="btn btn-sm btn-light-primary">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.BUTTON.BACK' })}</Link>
             </div>
           </Card.Header>
           <Card.Body className="p-0">
@@ -156,25 +158,25 @@ export default function FormSubmissionsPage() {
                   <thead>
                     <tr>
                       {tableColumns.map(col => <th key={col.id}>{col.label}</th>)}
-                      <th className="text-end">Ações</th>
+                      <th className="text-end">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.TABLE.ACTIONS' })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {submissions.map(sub => (
                       <tr key={sub.submissionId}>
-                        <td>{sub.userName || sub.userId || (sub.external ? sub.externalEmail : 'Anônimo')}</td>
+                        <td>{sub.userName || sub.userId || (sub.external ? sub.externalEmail : intl.formatMessage({ id: 'FORMS.SUBMISSIONS.STATUS.ANONYMOUS' }))}</td>
                         <td>{new Date(sub.submittedAt).toLocaleString()}</td>
                         <td><span className={`badge badge-light-${sub.status === 'approved' ? 'success' : sub.status === 'rejected' ? 'danger' : 'warning'}`}>{sub.status}</span></td>
                         {(form.fields || []).sort((a, b) => a.order - b.order).map(f => (
                           <td key={f.id}>{getAnswerForField(sub, f.id)}</td>
                         ))}
                         <td className="text-end">
-                          <Button variant="primary" size="sm" onClick={() => openDetailModal(sub.submissionId)}>Ver Envio</Button>
+                          <Button variant="primary" size="sm" onClick={() => openDetailModal(sub.submissionId)}>{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.BUTTON.VIEW' })}</Button>
                         </td>
                       </tr>
                     ))}
                     {submissions.length === 0 && (
-                      <tr><td colSpan={tableColumns.length + 1} className="text-center text-muted p-4">Nenhum envio encontrado.</td></tr>
+                      <tr><td colSpan={tableColumns.length + 1} className="text-center text-muted p-4">{intl.formatMessage({ id: 'FORMS.SUBMISSIONS.EMPTY' })}</td></tr>
                     )}
                   </tbody>
                 </table>

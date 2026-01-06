@@ -23,7 +23,7 @@ export class NewSettingsDto {
   @IsEnum(Visibility)
   visibility!: Visibility;
 
-  @ValidateIf(o => o.visibility === Visibility.SPECIFIC)
+  @ValidateIf((o) => o.visibility === Visibility.SPECIFIC)
   @IsArray()
   @ArrayNotEmpty()
   targetAudience?: string[];
@@ -37,14 +37,16 @@ export class NewSettingsDto {
 
   @IsBoolean()
   pushNotification!: boolean;
-  @ValidateIf(o => o.pushNotification)
-  @IsOptional() @IsString()
+  @ValidateIf((o) => o.pushNotification)
+  @IsOptional()
+  @IsString()
   pushTitle?: string;
-  @ValidateIf(o => o.pushNotification)
-  @IsOptional() @IsString()
+  @ValidateIf((o) => o.pushNotification)
+  @IsOptional()
+  @IsString()
   pushContent?: string;
 
-    @IsBoolean()
+  @IsBoolean()
   notifyUsers!: boolean;
 
   @IsBoolean()
@@ -55,36 +57,40 @@ export class NewSettingsDto {
 
   @IsBoolean()
   allowSharing!: boolean;
-  @ValidateIf(o => o.allowSharing)
-  @IsOptional() @IsString()
+  @ValidateIf((o) => o.allowSharing)
+  @IsOptional()
+  @IsString()
   shareUrl?: string;
-  @ValidateIf(o => o.allowSharing)
-  @IsOptional() @IsString()
+  @ValidateIf((o) => o.allowSharing)
+  @IsOptional()
+  @IsString()
   shareText?: string;
 
   @IsBoolean()
   showAuthor!: boolean;
   @IsBoolean()
-  showPublishDate!: boolean;   // se tiver data de publicação visível
+  showPublishDate!: boolean; // se tiver data de publicação visível
   @IsBoolean()
   pinToTop!: boolean;
 
   @IsBoolean()
   schedulePublication!: boolean;
-  @ValidateIf(o => o.schedulePublication)
+  @ValidateIf((o) => o.schedulePublication)
   @IsDateString()
   schedulePublishDate?: string;
 
   @IsBoolean()
   expirePublication!: boolean;
-  @ValidateIf(o => o.expirePublication)
+  @ValidateIf((o) => o.expirePublication)
   @IsDateString()
   expirationDate?: string;
 
   @IsBoolean()
   acknowledgementRequired!: boolean; // “Pedir confirmação do colaborador”
 
-  @IsOptional() @IsInt() @Min(1)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   maxAudienceSize?: number;
 
   @IsBoolean()

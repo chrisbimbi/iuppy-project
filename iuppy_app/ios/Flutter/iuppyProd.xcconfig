@@ -1,0 +1,11 @@
+#include "Generated.xcconfig"
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
+
+FLUTTER_TARGET=lib/main.dart
+ASSET_PREFIX=iuppy
+BUNDLE_DISPLAY_NAME=Iuppy
+BUNDLE_SUFFIX=
+DEEP_LINK_SCHEME=iuppy
+PRODUCT_BUNDLE_IDENTIFIER=com.br.iuppy
+LD_RUNPATH_SEARCH_PATHS=$(inherited) @executable_path/Frameworks
+REVERSED_CLIENT_ID=app-1-643342034012-ios-1b57f26caa858ac8d9f299

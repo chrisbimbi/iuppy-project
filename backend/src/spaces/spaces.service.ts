@@ -7,7 +7,9 @@ import { UpdateSpaceDto } from './dto/update-space.dto';
 
 @Injectable()
 export class SpacesService {
-  constructor(@InjectRepository(SpaceEntity) private repo: Repository<SpaceEntity>) {}
+  constructor(
+    @InjectRepository(SpaceEntity) private repo: Repository<SpaceEntity>,
+  ) {}
 
   findByCompany(companyId: string): Promise<SpaceEntity[]> {
     return this.repo.find({ where: { companyId }, order: { priority: 'ASC' } });

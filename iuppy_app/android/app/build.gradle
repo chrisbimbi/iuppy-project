@@ -22,7 +22,7 @@ if (flutterVersionName == null) { flutterVersionName = "0.1.0" }
 
 android {
     namespace "com.iuppy.app"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 35
 
     // NDK alinhado com os plugins
     ndkVersion "27.0.12077973"
@@ -30,7 +30,7 @@ android {
     defaultConfig {
         applicationId "com.iuppy.app"
         minSdkVersion 24
-        targetSdkVersion flutter.targetSdkVersion
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -45,19 +45,33 @@ android {
 
     flavorDimensions "env"
     productFlavors {
-        dev {
+        nextsalesDev {
             dimension "env"
-            applicationIdSuffix ".dev"
+            applicationId "com.br.iuppy.nextsales.dev"
+            resValue "string", "app_name", "Next Sales DEV"
+            manifestPlaceholders = [ appAuthRedirectScheme: "nextsalesdev" ]
+        }
+        nextsalesProd {
+            dimension "env"
+            applicationId "com.br.iuppy.nextsales"
+            resValue "string", "app_name", "Next Sales"
+            manifestPlaceholders = [ appAuthRedirectScheme: "nextsales" ]
+        }
+  
+        iuppyDev {
+            dimension "env"
+            applicationId "com.iuppy.app.dev"
             resValue "string", "app_name", "Iuppy DEV"
-            // 🔗 scheme do DEV (para deeplinks)
             manifestPlaceholders = [ appAuthRedirectScheme: "iuppydev" ]
         }
-        prod {
+        iuppyProd {
             dimension "env"
+            applicationId "com.iuppy.app"
             resValue "string", "app_name", "Iuppy"
-            // 🔗 scheme de PRODUÇÃO (para deeplinks)
             manifestPlaceholders = [ appAuthRedirectScheme: "iuppy" ]
         }
+  
+
     }
 
     buildTypes {

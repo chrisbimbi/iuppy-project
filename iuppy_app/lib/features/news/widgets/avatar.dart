@@ -14,10 +14,18 @@ class Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasImg = (avatarUrl ?? '').trim().isNotEmpty;
 
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(.20),
-      backgroundImage: hasImg ? NetworkImage(avatarUrl!) : null,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+        color: Theme.of(context).colorScheme.secondary.withOpacity(.20),
+        image: hasImg
+            ? DecorationImage(image: NetworkImage(avatarUrl!), fit: BoxFit.cover)
+            : null,
+      ),
+      alignment: Alignment.center,
       child: hasImg
           ? null
           : Text(
@@ -25,6 +33,7 @@ class Avatar extends StatelessWidget {
               style: TextStyle(
                 fontSize: size * .44,
                 fontWeight: FontWeight.w800,
+                fontFamily: 'Space Mono',
                 color: Theme.of(context).colorScheme.onSecondaryContainer,
               ),
             ),

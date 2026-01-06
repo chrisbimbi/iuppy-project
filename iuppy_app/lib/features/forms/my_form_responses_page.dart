@@ -42,7 +42,7 @@ Color statusColor(String raw, BuildContext ctx) {
       return Colors.blue.shade200;
     case 'submitted':
     default:
-      return Theme.of(ctx).colorScheme.surfaceVariant;
+      return Theme.of(ctx).colorScheme.surfaceContainerHighest;
   }
 }
 
@@ -56,15 +56,17 @@ class MyFormResponsesPage extends ConsumerWidget {
     return asyncMy.when(
       data: (data) {
         final raw = (data['items'] as List? ?? []).cast<Map<String, dynamic>>();
-        if (raw.isEmpty)
-          return Center(child: Text('Nenhuma resposta encontrada'));
+        if (raw.isEmpty) {
+          return const Center(child: Text('Nenhuma resposta encontrada'));
+        }
 
         final Map<String, List<Map<String, dynamic>>> byDay = {};
         for (final it in raw) {
           final submittedStr = it['submittedAt']?.toString();
           DateTime? dt;
-          if (submittedStr != null && submittedStr.isNotEmpty)
+          if (submittedStr != null && submittedStr.isNotEmpty) {
             dt = DateTime.tryParse(submittedStr);
+          }
           dt ??= DateTime.now();
           final dayKey = DateTime(dt.year, dt.month, dt.day).toIso8601String();
           byDay.putIfAbsent(dayKey, () => []).add({...it, '_parsedDate': dt});
@@ -211,8 +213,9 @@ class _SubmissionCardS3 extends ConsumerWidget {
           borderRadius: BorderRadius.circular(14),
           // 🔥 CLIQUE DO CARD: Abre Detalhes
           onTap: () {
-            if (formId != null && subId != null)
+            if (formId != null && subId != null) {
               _openDetails(context, formId, subId);
+            }
           },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
@@ -249,8 +252,9 @@ class _SubmissionCardS3 extends ConsumerWidget {
                 // 🔥 CLIQUE DO ÍCONE: Abre Chat
                 GestureDetector(
                   onTap: () {
-                    if (formId != null && subId != null)
+                    if (formId != null && subId != null) {
                       _openChat(context, ref, formId, subId);
+                    }
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(left: 12.0),

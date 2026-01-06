@@ -17,7 +17,10 @@ export class CommentCounterAdapterV2 {
   }
 
   /** Total de comentários aprovados para a news */
-  async countApprovedForNews(companyId: string, newsId: string): Promise<number> {
+  async countApprovedForNews(
+    companyId: string,
+    newsId: string,
+  ): Promise<number> {
     if (!(await this.hasTable('news_comment'))) return 0;
 
     const hasApproved = await this.hasColumn('news_comment', 'approved');
@@ -46,7 +49,11 @@ export class CommentCounterAdapterV2 {
   }
 
   /** Total de comentários aprovados do usuário X na news */
-  async countApprovedByUserForNews(companyId: string, userId: string, newsId: string): Promise<number> {
+  async countApprovedByUserForNews(
+    companyId: string,
+    userId: string,
+    newsId: string,
+  ): Promise<number> {
     if (!(await this.hasTable('news_comment'))) return 0;
 
     const hasApproved = await this.hasColumn('news_comment', 'approved');

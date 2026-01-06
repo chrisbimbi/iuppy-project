@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { NewsEntity } from './news.entity';
@@ -7,6 +11,8 @@ import { UpdateNewDto } from './dto/update-news.dto';
 import { News } from '@shared/types';
 import { AudienceResolverService } from './audience-resolver.service';
 import { NewsAudienceEntity } from '../v2/interactions/entities/news-audience.entity';
+import { NewsAcknowledgmentEntity } from './entities/news-acknowledgment.entity';
+import { NewsFavoriteEntity } from '../v2/interactions/entities/news-favorite.entity';
 import { PushDeliveryEntity } from '../v2/push/entities/push-delivery.entity';
 import { UserDeviceEntity } from '../notifications/entities/user-device.entity';
 import { AudienceMode } from '@shared/types/NewsSettings';
@@ -16,7 +22,8 @@ import { CommunicationsService } from 'src/notifications/communications.service'
 /** ✅ Templates preferenciais via .env; mantemos fallback p/ legado */
 const NEWS_DEEPLINK_TEMPLATE = process.env.APP_NEWS_DEEPLINK_TEMPLATE || '';
 const NEWS_WEBLINK_TEMPLATE = process.env.APP_NEWS_WEBLINK_TEMPLATE || '';
-const WEB_BASE_LEGACY = process.env.NEWS_WEB_BASE_URL || process.env.WEBAPP_URL || '';
+const WEB_BASE_LEGACY =
+  process.env.NEWS_WEB_BASE_URL || process.env.WEBAPP_URL || '';
 
 type Range = { from?: string; to?: string };
 type Page = { limit?: number; offset?: number; q?: string };
@@ -28,6 +35,10 @@ export class NewsService {
     private readonly newsRepo: Repository<NewsEntity>,
     @InjectRepository(NewsAudienceEntity)
     private readonly newsAudienceRepo: Repository<NewsAudienceEntity>,
+    @InjectRepository(NewsAcknowledgmentEntity)
+    private readonly newsAcknowledgmentRepo: Repository<NewsAcknowledgmentEntity>,
+    @InjectRepository(NewsFavoriteEntity)
+    private readonly newsFavoriteRepo: Repository<NewsFavoriteEntity>,
     @InjectRepository(PushDeliveryEntity)
     private readonly pushDeliveryRepo: Repository<PushDeliveryEntity>,
     @InjectRepository(UserDeviceEntity)
@@ -36,24 +47,39 @@ export class NewsService {
     private readonly interactionEventRepo: Repository<InteractionEventEntity>,
     private readonly audienceResolverService: AudienceResolverService,
     private readonly comm: CommunicationsService,
-  ) {}
+  ) { }
 
   // ----------
   // Helpers
   // ----------
-  private n(v: any, d = 0) { const x = Number(v); return Number.isFinite(x) ? x : d; }
+  private n(v: any, d = 0) {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : d;
+  }
 
   private async tableExists(name: string): Promise<boolean> {
-    const r = await this.newsRepo.manager.query(`SELECT to_regclass($1) IS NOT NULL AS x`, [`public.${name}`]);
+    const r = await this.newsRepo.manager.query(
+      `SELECT to_regclass($1) IS NOT NULL AS x`,
+      [`public.${name}`],
+    );
     return !!r?.[0]?.x;
   }
 
   private rangeWhere(column: string, r?: Range) {
     const clauses: string[] = [];
     const params: any[] = [];
-    if (r?.from) { clauses.push(`${column} >= $${params.length + 1}`); params.push(r.from); }
-    if (r?.to)   { clauses.push(`${column} <= $${params.length + 1}`); params.push(r.to); }
-    return { sql: clauses.length ? ` AND ${clauses.join(' AND ')}` : '', params };
+    if (r?.from) {
+      clauses.push(`${column} >= $${params.length + 1}`);
+      params.push(r.from);
+    }
+    if (r?.to) {
+      clauses.push(`${column} <= $${params.length + 1}`);
+      params.push(r.to);
+    }
+    return {
+      sql: clauses.length ? ` AND ${clauses.join(' AND ')}` : '',
+      params,
+    };
   }
 
   private searchWhere(q?: string) {
@@ -70,31 +96,301 @@ export class NewsService {
   async create(dto: CreateNewDto): Promise<News> {
     const entity = this.newsRepo.create({
       ...dto,
-      attachments: dto.attachments?.map(a => a.url) ?? [],
-      highlightImages: dto.highlightImages?.map(i => i.url) ?? [],
+      attachments: dto.attachments?.map((a) => a.url) ?? [],
+      highlightImages: dto.highlightImages?.map((i) => i.url) ?? [],
+      hashtags: dto.hashtags ?? [],
+      mustAcknowledge: dto.mustAcknowledge ?? false,
+      ai_summary: dto.ai_summary,
+      ai_tags: dto.ai_tags,
     });
     return this.newsRepo.save(entity);
   }
 
-  async findAll(channelId?: string): Promise<News[]> {
-    if (channelId) {
-      return this.newsRepo.find({ where: { channelId } });
+  async getHashtags(companyId: string, q?: string): Promise<string[]> {
+    const query = this.newsRepo
+      .createQueryBuilder('n')
+      .select('DISTINCT UNNEST(n.hashtags)', 'tag')
+      .where('n.companyId = :companyId', { companyId });
+
+    if (q) {
+      query.andWhere('UNNEST(n.hashtags) ILIKE :q', { q: `%${q}%` });
     }
-    return this.newsRepo.find();
+
+    const result = await query.getRawMany();
+    return result.map((r) => r.tag).filter(Boolean).sort();
   }
 
-  async findOne(id: string): Promise<News | null> {
-    return this.newsRepo.findOneBy({ id });
+  async findAll(
+    companyId?: string,
+    channelId?: string,
+    userId?: string,
+    allowedSpaceIds?: string[],
+  ): Promise<News[]> {
+    const qb = this.newsRepo.createQueryBuilder('n');
+
+    // Filter by Company if provided
+    if (companyId) {
+      qb.andWhere('n.companyId = :companyId', { companyId });
+    }
+
+    // Filter by channel if provided
+    if (channelId) {
+      qb.andWhere('n.channelId = :channelId', { channelId });
+    }
+
+    // Filter by Audience (userId)
+    // We join news_audience to ensure the user is allowed to see this news
+    if (userId) {
+      qb.innerJoin('news_audience', 'na', 'na.newsId = n.id');
+      qb.andWhere('na.userId = :userId', { userId });
+    }
+
+    // Filter by Allowed Space IDs (for Scoped Admins)
+    if (allowedSpaceIds && allowedSpaceIds.length > 0) {
+      // Join channel to check spaceIds
+      qb.innerJoin('n.channel', 'c');
+      // Postgres array overlap: c.spaceIds && allowedSpaceIds
+      qb.andWhere('c.spaceIds && :allowedSpaceIds', { allowedSpaceIds });
+    }
+
+    // Order by creation date
+    qb.orderBy('n.createdAt', 'DESC');
+
+    const news = await qb.getMany();
+
+    if (!news.length) return [];
+
+    const ids = news.map((n) => n.id);
+
+    // 1. Reactions
+    const reactions = await this.newsRepo.query(
+      `SELECT "newsId", COUNT(*)::int as c FROM news_reaction WHERE "newsId" = ANY($1) GROUP BY "newsId"`,
+      [ids],
+    );
+    const reactionMap = new Map(reactions.map((r: any) => [r.newsId, Number(r.c)]));
+
+    // 2. Comments
+    const comments = await this.newsRepo.query(
+      `SELECT "newsId", COUNT(*)::int as c FROM news_comment WHERE "newsId" = ANY($1) GROUP BY "newsId"`,
+      [ids],
+    );
+    const commentMap = new Map(comments.map((r: any) => [r.newsId, Number(r.c)]));
+
+    // 3. Shares
+    const shares = await this.newsRepo.query(
+      `SELECT "newsId", COUNT(*)::int as c FROM news_share WHERE "newsId" = ANY($1) GROUP BY "newsId"`,
+      [ids],
+    );
+    const shareMap = new Map(shares.map((r: any) => [r.newsId, Number(r.c)]));
+
+    // 4. Views (Total Opens)
+    // Assuming 'news_interaction_event' table and 'type'='OPEN'
+    // Fallback to 0 if table doesn't exist or query fails
+    let viewMap = new Map<string, number>();
+    try {
+      const views = await this.newsRepo.query(
+        `SELECT "newsId", COUNT(*)::int as c FROM news_interaction_event WHERE "newsId" = ANY($1) AND "type" = 'OPEN' GROUP BY "newsId"`,
+        [ids],
+      );
+      viewMap = new Map(views.map((r: any) => [r.newsId, Number(r.c)]));
+    } catch (e) {
+      // ignore if table missing
+    }
+
+    // 5. Favorites (isFavorited)
+    let favoriteSet = new Set<string>();
+    if (userId) {
+      const favorites = await this.newsFavoriteRepo.find({
+        where: { userId, newsId: In(ids) },
+        select: ['newsId'],
+      });
+      favoriteSet = new Set(favorites.map((f) => f.newsId));
+    }
+
+    // 6. Favorites Total
+    const favoritesTotalRows = await this.newsRepo.query(
+      `SELECT "newsId", COUNT(*)::int as c FROM news_favorite WHERE "newsId" = ANY($1) GROUP BY "newsId"`,
+      [ids],
+    );
+    const favoritesTotalMap = new Map(favoritesTotalRows.map((r: any) => [r.newsId, Number(r.c)]));
+
+    // 7. My Reaction
+    let myReactionMap = new Map<string, string>();
+    let hasViewedSet = new Set<string>();
+    let hasCommentedSet = new Set<string>();
+    let hasSharedSet = new Set<string>();
+
+    if (userId) {
+      // Reactions
+      const myReactions = await this.newsRepo.query(
+        `SELECT "newsId", reaction FROM news_reaction WHERE "newsId" = ANY($1) AND "userId" = $2`,
+        [ids, userId],
+      );
+      myReactionMap = new Map(myReactions.map((r: any) => [r.newsId, String(r.reaction)]));
+
+      // Views (OPEN events)
+      try {
+        const myViews = await this.newsRepo.query(
+          `SELECT DISTINCT "newsId" FROM news_interaction_event WHERE "newsId" = ANY($1) AND "userId" = $2 AND "type" = 'OPEN'`,
+          [ids, userId],
+        );
+        hasViewedSet = new Set(myViews.map((r: any) => r.newsId));
+      } catch (e) { }
+
+      // Comments
+      const myComments = await this.newsRepo.query(
+        `SELECT DISTINCT "newsId" FROM news_comment WHERE "newsId" = ANY($1) AND "userId" = $2`,
+        [ids, userId],
+      );
+      hasCommentedSet = new Set(myComments.map((r: any) => r.newsId));
+
+      // Shares
+      const myShares = await this.newsRepo.query(
+        `SELECT DISTINCT "newsId" FROM news_share WHERE "newsId" = ANY($1) AND "userId" = $2`,
+        [ids, userId],
+      );
+      hasSharedSet = new Set(myShares.map((r: any) => r.newsId));
+    }
+
+    return news.map((n) => {
+      const r = reactionMap.get(n.id) || 0;
+      const c = commentMap.get(n.id) || 0;
+      const s = shareMap.get(n.id) || 0;
+      const v = viewMap.get(n.id) || 0;
+      const f = favoritesTotalMap.get(n.id) || 0;
+      const isFav = favoriteSet.has(n.id);
+      const myReaction = myReactionMap.get(n.id) || null;
+
+      const hasViewed = hasViewedSet.has(n.id);
+      const hasCommented = hasCommentedSet.has(n.id);
+      const hasShared = hasSharedSet.has(n.id);
+
+      return {
+        ...n,
+        reactionsTotal: r,
+        commentsTotal: c,
+        sharesTotal: s,
+        viewsTotal: v,
+        favoritesTotal: f,
+        isFavorited: isFav,
+        metrics: {
+          reactionsTotal: r,
+          commentsTotal: c,
+          sharesTotal: s,
+          viewsTotal: v,
+          favoritesTotal: f,
+        },
+        userState: {
+          isFavorited: isFav,
+          myReaction: myReaction,
+          hasViewed,
+          hasCommented,
+          hasShared,
+        },
+      };
+    });
+  }
+
+  async findOne(id: string, userId?: string): Promise<News | null> {
+    const news = await this.newsRepo.findOneBy({ id });
+    if (!news) return null;
+
+    let myReaction = null;
+    let hasViewed = false;
+    let hasCommented = false;
+    let hasShared = false;
+    let isFavorited = false;
+    let hasAcknowledged = false;
+
+    if (userId) {
+      // Reaction
+      const reaction = await this.newsRepo.query(
+        `SELECT reaction FROM news_reaction WHERE "newsId" = $1 AND "userId" = $2 LIMIT 1`,
+        [id, userId],
+      );
+      if (reaction.length > 0) myReaction = reaction[0].reaction;
+
+      // View
+      const view = await this.newsRepo.query(
+        `SELECT "newsId" FROM news_interaction_event WHERE "newsId" = $1 AND "userId" = $2 AND "type" = 'OPEN' LIMIT 1`,
+        [id, userId],
+      );
+      hasViewed = view.length > 0;
+
+      // Comment
+      const comment = await this.newsRepo.query(
+        `SELECT "newsId" FROM news_comment WHERE "newsId" = $1 AND "userId" = $2 LIMIT 1`,
+        [id, userId],
+      );
+      hasCommented = comment.length > 0;
+
+      // Share
+      const share = await this.newsRepo.query(
+        `SELECT "newsId" FROM news_share WHERE "newsId" = $1 AND "userId" = $2 LIMIT 1`,
+        [id, userId],
+      );
+      hasShared = share.length > 0;
+
+      // Favorite
+      const fav = await this.newsFavoriteRepo.findOneBy({ newsId: id, userId });
+      isFavorited = !!fav;
+
+      // Acknowledgment
+      const ack = await this.newsAcknowledgmentRepo.findOneBy({ newsId: id, userId });
+      hasAcknowledged = !!ack;
+    }
+
+    return {
+      ...news,
+      userState: {
+        ...((news as any).userState || {}),
+        myReaction,
+        hasViewed,
+        hasCommented,
+        hasShared,
+        isFavorited,
+        hasAcknowledged,
+      },
+      isFavorited, // Top-level for backward compatibility
+    } as unknown as News;
+  }
+
+  async acknowledge(newsId: string, userId: string, companyId: string): Promise<void> {
+    const news = await this.newsRepo.findOneBy({ id: newsId, companyId });
+    if (!news) throw new NotFoundException('News not found');
+
+    // Check if acknowledgment is required? 
+    // Maybe we allow acknowledging even if not strictly required, to be safe.
+    // But technically only meaningful if mustAcknowledge is true.
+
+    const exists = await this.newsAcknowledgmentRepo.findOneBy({ newsId, userId });
+    if (exists) return; // already acknowledged
+
+    const ack = this.newsAcknowledgmentRepo.create({
+      companyId,
+      newsId,
+      userId
+    });
+    await this.newsAcknowledgmentRepo.save(ack);
   }
 
   async update(id: string, dto: UpdateNewDto): Promise<News> {
     const toUpdate: any = { ...dto };
     if (dto.attachments) {
-      toUpdate.attachments = dto.attachments.map(a => a.url);
+      toUpdate.attachments = dto.attachments.map((a) => a.url);
     }
     if (dto.highlightImages) {
-      toUpdate.highlightImages = dto.highlightImages.map(i => i.url);
+      toUpdate.highlightImages = dto.highlightImages.map((i) => i.url);
     }
+    if (dto.hashtags) {
+      toUpdate.hashtags = dto.hashtags;
+    }
+    if (dto.mustAcknowledge !== undefined) {
+      toUpdate.mustAcknowledge = dto.mustAcknowledge;
+    }
+    if (dto.ai_summary !== undefined) toUpdate.ai_summary = dto.ai_summary;
+    if (dto.ai_tags !== undefined) toUpdate.ai_tags = dto.ai_tags;
+
     await this.newsRepo.update(id, toUpdate);
     return this.findOne(id) as Promise<News>;
   }
@@ -111,7 +407,12 @@ export class NewsService {
     if (!news) throw new NotFoundException(`News with ID ${newsId} not found.`);
     if (news.isPublished) throw new Error('News is already published.');
 
-    const { audienceMode, audienceSpaceId, audienceChannelIds, audienceGroupIds } = news.settings || {};
+    const {
+      audienceMode,
+      audienceSpaceId,
+      audienceChannelIds,
+      audienceGroupIds,
+    } = news.settings || {};
     if (!audienceMode) throw new Error('Audience mode not set for this news.');
 
     const params: Record<string, any> = {};
@@ -140,8 +441,12 @@ export class NewsService {
     news.publishedAt = new Date();
 
     // 2) Materializar audiência
-    const eligibleUserIds = await this.audienceResolverService.resolve(companyId, audienceMode as AudienceMode, params);
-    const newsAudienceEntities = eligibleUserIds.map(userId =>
+    const eligibleUserIds = await this.audienceResolverService.resolve(
+      companyId,
+      audienceMode as AudienceMode,
+      params,
+    );
+    const newsAudienceEntities = eligibleUserIds.map((userId) =>
       this.newsAudienceRepo.create({
         companyId,
         newsId,
@@ -150,10 +455,14 @@ export class NewsService {
       }),
     );
 
-    await this.newsRepo.manager.transaction(async tx => {
+    await this.newsRepo.manager.transaction(async (tx) => {
       await tx.save(news);
       for (const audienceEntity of newsAudienceEntities) {
-        try { await tx.save(audienceEntity); } catch { /* ignore duplicadas */ }
+        try {
+          await tx.save(audienceEntity);
+        } catch {
+          /* ignore duplicadas */
+        }
       }
     });
 
@@ -161,7 +470,9 @@ export class NewsService {
     const usersWithActiveTokens = await this.userDeviceRepo
       .createQueryBuilder('device')
       .select('DISTINCT device.userId', 'userId')
-      .where('(device.companyId = :companyId OR device.companyId IS NULL)', { companyId })
+      .where('(device.companyId = :companyId OR device.companyId IS NULL)', {
+        companyId,
+      })
       .andWhere('device.userId IN (:...eligibleUserIds)', { eligibleUserIds })
       .andWhere('device.enabled = :enabled', { enabled: true })
       .getRawMany();
@@ -187,14 +498,15 @@ export class NewsService {
   ): Promise<{ sent?: number; requested?: number }> {
     const news = await this.newsRepo.findOneBy({ id: newsId, companyId });
     if (!news) throw new NotFoundException(`News with ID ${newsId} not found.`);
-    if (!news.isPublished) throw new BadRequestException('News must be published to be resent.');
+    if (!news.isPublished)
+      throw new BadRequestException('News must be published to be resent.');
 
     // audiência original
     const originalAudience = await this.newsAudienceRepo.find({
       where: { newsId, companyId },
       select: ['userId'],
     });
-    const originalUserIds = originalAudience.map(na => na.userId);
+    const originalUserIds = originalAudience.map((na) => na.userId);
     if (!originalUserIds.length) return { sent: 0, requested: 0 };
 
     // quem abriu
@@ -202,34 +514,36 @@ export class NewsService {
       where: { newsId, companyId, type: 'OPEN', userId: In(originalUserIds) },
       select: ['userId'],
     });
-    const openedSet = new Set(openedUsers.map(e => e.userId));
+    const openedSet = new Set(openedUsers.map((e) => e.userId));
 
     // alvo: não abertos
-    const targetIds = originalUserIds.filter(id => !openedSet.has(id));
+    const targetIds = originalUserIds.filter((id) => !openedSet.has(id));
     if (!targetIds.length) return { sent: 0, requested: 0 };
 
     // payload do push
     const title =
-      (payload?.pushTitle?.trim()?.length ? payload.pushTitle : (news.settings?.pushTitle ?? news.title))
-      || 'Novo conteúdo';
+      (payload?.pushTitle?.trim()?.length
+        ? payload.pushTitle
+        : (news.settings?.pushTitle ?? news.title)) || 'Novo conteúdo';
     const body =
-      (payload?.pushContent?.trim()?.length ? payload.pushContent : (news.settings?.pushContent ?? news.subtitle))
-      || '';
+      (payload?.pushContent?.trim()?.length
+        ? payload.pushContent
+        : (news.settings?.pushContent ?? news.subtitle)) || '';
     const imageUrl =
-      (Array.isArray(news.highlightImages) && news.highlightImages.length)
+      Array.isArray(news.highlightImages) && news.highlightImages.length
         ? news.highlightImages[0]
         : undefined;
 
     // deeplink/web
-    const deepLinkMobile =
-      (NEWS_DEEPLINK_TEMPLATE ? NEWS_DEEPLINK_TEMPLATE.replace(':id', news.id) : undefined);
+    const deepLinkMobile = NEWS_DEEPLINK_TEMPLATE
+      ? NEWS_DEEPLINK_TEMPLATE.replace(':id', news.id)
+      : undefined;
 
-    const webLink =
-      (NEWS_WEBLINK_TEMPLATE
-        ? NEWS_WEBLINK_TEMPLATE.replace(':id', news.id)
-        : (WEB_BASE_LEGACY
-          ? `${WEB_BASE_LEGACY.replace(/\/+$/, '')}/news/article/${news.id}`
-          : undefined));
+    const webLink = NEWS_WEBLINK_TEMPLATE
+      ? NEWS_WEBLINK_TEMPLATE.replace(':id', news.id)
+      : WEB_BASE_LEGACY
+        ? `${WEB_BASE_LEGACY.replace(/\/+$/, '')}/news/article/${news.id}`
+        : undefined;
 
     const res = await this.comm.sendNewsPush({
       companyId,
@@ -242,13 +556,18 @@ export class NewsService {
       webLink,
     });
 
-    return { sent: res?.success ?? 0, requested: res?.requested ?? targetIds.length };
+    return {
+      sent: res?.success ?? 0,
+      requested: res?.requested ?? targetIds.length,
+    };
   }
 
   async listUnopenedUsers(
     newsId: string,
     companyId: string,
-  ): Promise<Array<{ id: string; name?: string | null; email?: string | null }>> {
+  ): Promise<
+    Array<{ id: string; name?: string | null; email?: string | null }>
+  > {
     const news = await this.newsRepo.findOneBy({ id: newsId, companyId });
     if (!news) throw new NotFoundException('News not found');
 
@@ -256,16 +575,16 @@ export class NewsService {
       where: { newsId, companyId },
       select: ['userId'],
     });
-    const eligibleIds = eligibleRows.map(r => r.userId);
+    const eligibleIds = eligibleRows.map((r) => r.userId);
     if (!eligibleIds.length) return [];
 
     const openedRows = await this.interactionEventRepo.find({
       where: { newsId, companyId, type: 'OPEN', userId: In(eligibleIds) },
       select: ['userId'],
     });
-    const opened = new Set(openedRows.map(r => r.userId));
+    const opened = new Set(openedRows.map((r) => r.userId));
 
-    const unopened = eligibleIds.filter(id => !opened.has(id));
+    const unopened = eligibleIds.filter((id) => !opened.has(id));
     if (!unopened.length) return [];
 
     const users = await this.newsRepo.manager.query(
@@ -273,247 +592,24 @@ export class NewsService {
       [unopened],
     );
 
-    const foundMap = new Map<string, { id: string; name?: string | null; email?: string | null }>();
-    for (const u of users || []) foundMap.set(u.id, { id: u.id, name: u.name ?? null, email: u.email ?? null });
+    const foundMap = new Map<
+      string,
+      { id: string; name?: string | null; email?: string | null }
+    >();
+    for (const u of users || [])
+      foundMap.set(u.id, {
+        id: u.id,
+        name: u.name ?? null,
+        email: u.email ?? null,
+      });
 
-    return unopened.map(id => foundMap.get(id) || ({ id, name: null, email: null }));
+    return unopened.map(
+      (id) => foundMap.get(id) || { id, name: null, email: null },
+    );
   }
 
   // ----------
   // 🔥 NOVOS: Listas por usuário (para modais/exports)
+  // MOVIDO PARA NewsAnalyticsService
   // ----------
-
-  /** Quem ABRIU (com contagem e datas) */
-  async listOpenedUsers(
-    newsId: string,
-    companyId: string,
-    r?: Range,
-    p?: Page,
-  ): Promise<Array<{ id: string; name: string | null; email: string | null; opensCount: number; firstOpenAt: string | null; lastOpenAt: string | null }>> {
-    const range = this.rangeWhere(`e."createdAt"`, r);
-    const limit = Math.max(0, this.n(p?.limit ?? 200));
-    const offset = Math.max(0, this.n(p?.offset ?? 0));
-    const search = this.searchWhere(p?.q);
-
-    const params: any[] = [companyId, newsId, ...range.params];
-    const baseIdx = params.length;
-
-    // search WHERE precisa ser aplicado após o JOIN com usuário
-    const sql =
-      `WITH agg AS (
-         SELECT e."userId" AS "userId",
-                COUNT(*)::int AS "opensCount",
-                MIN(e."createdAt") AS "firstOpenAt",
-                MAX(e."createdAt") AS "lastOpenAt"
-           FROM news_interaction_event e
-          WHERE e."companyId"=$1 AND e."newsId"=$2 AND e."type"='OPEN'${range.sql}
-          GROUP BY e."userId"
-       )
-       SELECT a."userId" AS "id",
-              u."name" AS "name",
-              u."email" AS "email",
-              a."opensCount",
-              a."firstOpenAt",
-              a."lastOpenAt"
-         FROM agg a
-         LEFT JOIN user_entity u ON u."id"=a."userId"
-        ${search.sql}
-        ORDER BY a."lastOpenAt" DESC
-        LIMIT $${baseIdx + search.params.length + 1}
-       OFFSET $${baseIdx + search.params.length + 2}`;
-
-    const rows = await this.newsRepo.manager.query(sql, [...params, ...search.params, limit, offset]);
-    return rows.map((r: any) => ({
-      id: r.id,
-      name: r.name ?? null,
-      email: r.email ?? null,
-      opensCount: this.n(r.openscount),
-      firstOpenAt: r.firstopenat ?? null,
-      lastOpenAt: r.lastopenat ?? null,
-    }));
-  }
-
-  /** Quem deu ACK (se houver) */
-  async listAcknowledgedUsers(
-    newsId: string,
-    companyId: string,
-    r?: Range,
-    p?: Page,
-  ): Promise<Array<{ id: string; name: string | null; email: string | null; ackAt: string | null }>> {
-    const range = this.rangeWhere(`e."createdAt"`, r);
-    const limit = Math.max(0, this.n(p?.limit ?? 200));
-    const offset = Math.max(0, this.n(p?.offset ?? 0));
-    const search = this.searchWhere(p?.q);
-
-    const params: any[] = [companyId, newsId, ...range.params];
-    const baseIdx = params.length;
-
-    const sql =
-      `WITH agg AS (
-         SELECT e."userId" AS "userId",
-                MAX(e."createdAt") AS "ackAt"
-           FROM news_interaction_event e
-          WHERE e."companyId"=$1 AND e."newsId"=$2 AND e."type"='ACK'${range.sql}
-          GROUP BY e."userId"
-       )
-       SELECT a."userId" AS "id",
-              u."name" AS "name",
-              u."email" AS "email",
-              a."ackAt"
-         FROM agg a
-         LEFT JOIN user_entity u ON u."id"=a."userId"
-        ${search.sql}
-        ORDER BY a."ackAt" DESC NULLS LAST
-        LIMIT $${baseIdx + search.params.length + 1}
-       OFFSET $${baseIdx + search.params.length + 2}`;
-
-    const rows = await this.newsRepo.manager.query(sql, [...params, ...search.params, limit, offset]);
-    return rows.map((r: any) => ({
-      id: r.id, name: r.name ?? null, email: r.email ?? null, ackAt: r.ackat ?? null,
-    }));
-  }
-
-  /** Quem REAGIU (contagem e última reação); tolera ausência da tabela */
-  async listReactedUsers(
-    newsId: string,
-    companyId: string,
-    r?: Range,
-    p?: Page,
-  ): Promise<Array<{ id: string; name: string | null; email: string | null; reactionsCount: number; lastReactionAt: string | null }>> {
-    const exists = await this.tableExists('news_reaction');
-    if (!exists) return [];
-    const range = this.rangeWhere(`r."createdAt"`, r);
-    const limit = Math.max(0, this.n(p?.limit ?? 200));
-    const offset = Math.max(0, this.n(p?.offset ?? 0));
-    const search = this.searchWhere(p?.q);
-
-    const params: any[] = [companyId, newsId, ...range.params];
-    const baseIdx = params.length;
-
-    const sql =
-      `WITH agg AS (
-         SELECT r."userId" AS "userId",
-                COUNT(*)::int AS "reactionsCount",
-                MAX(r."createdAt") AS "lastReactionAt"
-           FROM news_reaction r
-          WHERE r."companyId"=$1 AND r."newsId"=$2${range.sql}
-          GROUP BY r."userId"
-       )
-       SELECT a."userId" AS "id",
-              u."name" AS "name",
-              u."email" AS "email",
-              a."reactionsCount",
-              a."lastReactionAt"
-         FROM agg a
-         LEFT JOIN user_entity u ON u."id"=a."userId"
-        ${search.sql}
-        ORDER BY a."lastReactionAt" DESC NULLS LAST
-        LIMIT $${baseIdx + search.params.length + 1}
-       OFFSET $${baseIdx + search.params.length + 2}`;
-
-    const rows = await this.newsRepo.manager.query(sql, [...params, ...search.params, limit, offset]);
-    return rows.map((r: any) => ({
-      id: r.id,
-      name: r.name ?? null,
-      email: r.email ?? null,
-      reactionsCount: this.n(r.reactionscount),
-      lastReactionAt: r.lastreactionat ?? null,
-    }));
-  }
-
-  /** Quem COMENTOU (contagem e última data); tolera ausência da tabela */
-  async listCommentedUsers(
-    newsId: string,
-    companyId: string,
-    r?: Range,
-    p?: Page,
-  ): Promise<Array<{ id: string; name: string | null; email: string | null; commentsCount: number; lastCommentAt: string | null }>> {
-    const exists = await this.tableExists('news_comment');
-    if (!exists) return [];
-    const range = this.rangeWhere(`c."createdAt"`, r);
-    const limit = Math.max(0, this.n(p?.limit ?? 200));
-    const offset = Math.max(0, this.n(p?.offset ?? 0));
-    const search = this.searchWhere(p?.q);
-
-    const params: any[] = [companyId, newsId, ...range.params];
-    const baseIdx = params.length;
-
-    const sql =
-      `WITH agg AS (
-         SELECT c."userId" AS "userId",
-                COUNT(*)::int AS "commentsCount",
-                MAX(c."createdAt") AS "lastCommentAt"
-           FROM news_comment c
-          WHERE c."companyId"=$1 AND c."newsId"=$2${range.sql}
-          GROUP BY c."userId"
-       )
-       SELECT a."userId" AS "id",
-              u."name" AS "name",
-              u."email" AS "email",
-              a."commentsCount",
-              a."lastCommentAt"
-         FROM agg a
-         LEFT JOIN user_entity u ON u."id"=a."userId"
-        ${search.sql}
-        ORDER BY a."lastCommentAt" DESC NULLS LAST
-        LIMIT $${baseIdx + search.params.length + 1}
-       OFFSET $${baseIdx + search.params.length + 2}`;
-
-    const rows = await this.newsRepo.manager.query(sql, [...params, ...search.params, limit, offset]);
-    return rows.map((r: any) => ({
-      id: r.id,
-      name: r.name ?? null,
-      email: r.email ?? null,
-      commentsCount: this.n(r.commentscount),
-      lastCommentAt: r.lastcommentat ?? null,
-    }));
-  }
-
-  /** Quem COMPARTILHOU (contagem e última data); tolera ausência da tabela */
-  async listSharedUsers(
-    newsId: string,
-    companyId: string,
-    r?: Range,
-    p?: Page,
-  ): Promise<Array<{ id: string; name: string | null; email: string | null; sharesCount: number; lastShareAt: string | null }>> {
-    const exists = await this.tableExists('news_share');
-    if (!exists) return [];
-    const range = this.rangeWhere(`s."createdAt"`, r);
-    const limit = Math.max(0, this.n(p?.limit ?? 200));
-    const offset = Math.max(0, this.n(p?.offset ?? 0));
-    const search = this.searchWhere(p?.q);
-
-    const params: any[] = [companyId, newsId, ...range.params];
-    const baseIdx = params.length;
-
-    const sql =
-      `WITH agg AS (
-         SELECT s."userId" AS "userId",
-                COUNT(*)::int AS "sharesCount",
-                MAX(s."createdAt") AS "lastShareAt"
-           FROM news_share s
-          WHERE s."companyId"=$1 AND s."newsId"=$2${range.sql}
-          GROUP BY s."userId"
-       )
-       SELECT a."userId" AS "id",
-              u."name" AS "name",
-              u."email" AS "email",
-              a."sharesCount",
-              a."lastShareAt"
-         FROM agg a
-         LEFT JOIN user_entity u ON u."id"=a."userId"
-        ${search.sql}
-        ORDER BY a."lastShareAt" DESC NULLS LAST
-        LIMIT $${baseIdx + search.params.length + 1}
-       OFFSET $${baseIdx + search.params.length + 2}`;
-
-    const rows = await this.newsRepo.manager.query(sql, [...params, ...search.params, limit, offset]);
-    return rows.map((r: any) => ({
-      id: r.id,
-      name: r.name ?? null,
-      email: r.email ?? null,
-      sharesCount: this.n(r.sharescount),
-      lastShareAt: r.lastshareat ?? null,
-    }));
-  }
 }
