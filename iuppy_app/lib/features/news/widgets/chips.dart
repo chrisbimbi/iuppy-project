@@ -17,9 +17,9 @@ class Pill extends StatelessWidget {
     const double borderThickness = 1.0;
     // Se for outlined, o fundo é mais suave
     final Color backgroundColor =
-        isOutlined ? c.withOpacity(0.05) : c.withOpacity(.12);
+        isOutlined ? c.withValues(alpha: 0.05) : c.withValues(alpha: .12);
     final Color borderColor =
-        isOutlined ? c.withOpacity(.6) : c.withOpacity(.35);
+        isOutlined ? c.withValues(alpha: .6) : c.withValues(alpha: .35);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -54,7 +54,7 @@ class SimpleChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: c.withOpacity(0.1),
+        color: c.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

@@ -26,6 +26,8 @@ type Props = {
   fields: Field[];
   onChange: (fields: Field[]) => void;
   locales: string[];
+  allowedTypes?: Field['type'][];
+  maxFields?: number;
 };
 
 const genId = () => Math.random().toString(36).slice(2, 10);
@@ -37,12 +39,14 @@ const normalizeOptionLabel = (val: any, defaultLocale = 'pt-BR'): TranslatableSt
   return { [defaultLocale]: '' };
 };
 
-export default function FieldEditor({ fields, onChange, locales }: Props) {
+export default function FieldEditor({ fields, onChange, locales, allowedTypes, maxFields }: Props) {
+  // ... (existing state)
   const sorted = React.useMemo(
     () => [...(fields ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [fields],
   );
 
+  // ... (existing commit and helpers)
   const commit = (next: Field[]) => {
     const norm = [...next]
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -51,6 +55,7 @@ export default function FieldEditor({ fields, onChange, locales }: Props) {
   };
 
   const addField = (type: Field['type']) => {
+    if (maxFields && sorted.length >= maxFields) return;
     const next: Field = {
       id: `tmp_${genId()}`,
       type,
@@ -119,6 +124,8 @@ export default function FieldEditor({ fields, onChange, locales }: Props) {
     const opts = (field.options ?? []).filter((o) => o.id !== optId);
     updateField(fieldId, { options: opts });
   };
+
+  const isTypeAllowed = (t: Field['type']) => !allowedTypes || allowedTypes.includes(t);
 
   return (
     <div>
@@ -196,14 +203,14 @@ export default function FieldEditor({ fields, onChange, locales }: Props) {
                   }
                 }}
               >
-                <option value="short_text">Texto curto</option>
-                <option value="long_text">Texto longo</option>
-                <option value="number">Número</option>
-                <option value="date">Data</option>
-                <option value="single_choice">Escolha única</option>
-                <option value="multi_choice">Múltipla escolha</option>
-                <option value="stars">Estrelas</option>
-                <option value="scale">Escala</option>
+                {isTypeAllowed('short_text') && <option value="short_text">Texto curto</option>}
+                {isTypeAllowed('long_text') && <option value="long_text">Texto longo</option>}
+                {isTypeAllowed('number') && <option value="number">Número</option>}
+                {isTypeAllowed('date') && <option value="date">Data</option>}
+                {isTypeAllowed('single_choice') && <option value="single_choice">Escolha única</option>}
+                {isTypeAllowed('multi_choice') && <option value="multi_choice">Múltipla escolha</option>}
+                {isTypeAllowed('stars') && <option value="stars">Estrelas</option>}
+                {isTypeAllowed('scale') && <option value="scale">Escala</option>}
               </select>
             </div>
             <div className="col-md-3 d-flex align-items-end">
@@ -266,16 +273,18 @@ export default function FieldEditor({ fields, onChange, locales }: Props) {
         </div>
       ))}
 
-      <div className="d-flex flex-wrap gap-2 mt-4">
-        <button type="button" className="btn btn-light" onClick={() => addField('short_text')}>+ Texto curto</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('long_text')}>+ Texto longo</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('single_choice')}>+ Escolha única</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('multi_choice')}>+ Múltipla escolha</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('stars')}>+ Estrelas</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('scale')}>+ Escala (NPS)</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('date')}>+ Data</button>
-        <button type="button" className="btn btn-light" onClick={() => addField('number')}>+ Número</button>
-      </div>
+      {(!maxFields || sorted.length < maxFields) && (
+        <div className="d-flex flex-wrap gap-2 mt-4">
+          {isTypeAllowed('short_text') && <button type="button" className="btn btn-light" onClick={() => addField('short_text')}>+ Texto curto</button>}
+          {isTypeAllowed('long_text') && <button type="button" className="btn btn-light" onClick={() => addField('long_text')}>+ Texto longo</button>}
+          {isTypeAllowed('single_choice') && <button type="button" className="btn btn-light" onClick={() => addField('single_choice')}>+ Escolha única</button>}
+          {isTypeAllowed('multi_choice') && <button type="button" className="btn btn-light" onClick={() => addField('multi_choice')}>+ Múltipla escolha</button>}
+          {isTypeAllowed('stars') && <button type="button" className="btn btn-light" onClick={() => addField('stars')}>+ Estrelas</button>}
+          {isTypeAllowed('scale') && <button type="button" className="btn btn-light" onClick={() => addField('scale')}>+ Escala (NPS)</button>}
+          {isTypeAllowed('date') && <button type="button" className="btn btn-light" onClick={() => addField('date')}>+ Data</button>}
+          {isTypeAllowed('number') && <button type="button" className="btn btn-light" onClick={() => addField('number')}>+ Número</button>}
+        </div>
+      )}
     </div>
   );
 }

@@ -110,7 +110,7 @@ class MenuDrawer extends ConsumerWidget {
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               )
@@ -397,7 +397,7 @@ class _PillMenuItem extends StatelessWidget {
     final bgColor = isSelected
         ? (isDestructive
             ? Colors.red.shade50
-            : theme.primaryColor.withOpacity(0.1))
+            : theme.primaryColor.withValues(alpha: 0.1))
         : Colors.transparent;
 
     final contentColor = isSelected
@@ -416,7 +416,7 @@ class _PillMenuItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          splashColor: theme.primaryColor.withOpacity(0.1),
+          splashColor: theme.primaryColor.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -460,21 +460,26 @@ class _NewsTreeState extends ConsumerState<_NewsTree> {
     // 🔥 FIX: Aguarda o perfil do usuário carregar para ter os grupos corretos
     await ref.read(userProfileProvider.future);
 
-    final spaces = await ref.read(spacesRepoProvider).fetchAndCache();
-    final channelMap = <String, List<Map<String, dynamic>>>{};
+    try {
+      final spaces = await ref.read(spacesRepoProvider).fetchAndCache();
+      final channelMap = <String, List<Map<String, dynamic>>>{};
 
-    await Future.wait(spaces.map((s) async {
-      final sid = (s['id'] ?? '').toString();
-      try {
-        final channels =
-            await ref.read(channelsRepoProvider).fetchAndCache(spaceId: sid);
-        channelMap[sid] = channels;
-      } catch (_) {
-        channelMap[sid] = [];
-      }
-    }));
+      await Future.wait(spaces.map((s) async {
+        final sid = (s['id'] ?? '').toString();
+        try {
+          final channels =
+              await ref.read(channelsRepoProvider).fetchAndCache(spaceId: sid);
+          channelMap[sid] = channels;
+        } catch (_) {
+          channelMap[sid] = [];
+        }
+      }));
 
-    return {'spaces': spaces, 'channels': channelMap};
+      return {'spaces': spaces, 'channels': channelMap};
+    } catch (_) {
+      // If backend is down (Connection Refused), return empty to avoid crash
+      return {'spaces': [], 'channels': {}};
+    }
   }
 
   @override
@@ -527,7 +532,7 @@ class _NewsTreeState extends ConsumerState<_NewsTree> {
                         height: 16,
                         child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: theme.primaryColor.withOpacity(0.5))));
+                            color: theme.primaryColor.withValues(alpha: 0.5))));
               }
 
               final spaces = (snap.data?['spaces'] as List?)
@@ -610,7 +615,7 @@ class _NewsTreeState extends ConsumerState<_NewsTree> {
                                   left: 32, right: 12, top: 10, bottom: 10),
                               decoration: BoxDecoration(
                                 color: isChannelActive
-                                    ? activeColor.withOpacity(0.08)
+                                    ? activeColor.withValues(alpha: 0.08)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),

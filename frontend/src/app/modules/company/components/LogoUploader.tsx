@@ -1,13 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react'
 import Cropper from 'react-easy-crop'
-import axios from 'axios'
 import { useIntl } from 'react-intl'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+import { uploadFileToFirebase } from 'src/utils/fileUtils'
 
 type Props = {
     value?: string | null
     onUploaded: (url: string) => void
+    companyId: string
 }
 
 type Area = { x: number; y: number; width: number; height: number }
@@ -43,7 +42,7 @@ async function getCroppedBlob(imageSrc: string, cropAreaPixels: Area): Promise<B
     })
 }
 
-const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
+const LogoUploader: React.FC<Props> = ({ value, onUploaded, companyId }) => {
     const intl = useIntl()
     const inputRef = useRef<HTMLInputElement | null>(null)
     const [localUrl, setLocalUrl] = useState<string | null>(null)
@@ -71,20 +70,20 @@ const LogoUploader: React.FC<Props> = ({ value, onUploaded }) => {
         setError(null)
         try {
             const blob = await getCroppedBlob(localUrl, croppedAreaPixels)
-
             const file = new File([blob], 'logo.png', { type: 'image/png' })
-            const fd = new FormData()
-            fd.append('file', file)
 
-            const { data } = await axios.post<{ url: string }>(`${API_URL}/uploads/logo`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                withCredentials: true,
-            })
+            // Upload to Firebase Storage with company-first path
+            const { url } = await uploadFileToFirebase(
+                file,
+                companyId,
+                'company_logo'
+            )
 
-            onUploaded(data.url)
+            onUploaded(url)
             setLocalUrl(null)
             if (inputRef.current) inputRef.current.value = ''
         } catch (e: any) {
+            console.error('[LogoUploader] Upload error:', e)
             setError(intl.formatMessage({ id: 'COMPANY.LOGO_UPLOADER.ERROR', defaultMessage: 'Falha no upload. Tente novamente.' }))
         } finally {
             setUploading(false)

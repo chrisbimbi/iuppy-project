@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import 'package:iuppy_app/core/providers.dart';
 
 class ChatService {
   final String _baseUrl;
   final String _token;
   final String _userId;
-  IO.Socket? _socket;
+  socket_io.Socket? _socket;
 
   // Stream controllers for real-time events
   final _messageCtrl = StreamController<Map<String, dynamic>>.broadcast();
@@ -25,9 +25,9 @@ class ChatService {
     final uri = '$_baseUrl/chat';
     debugPrint('[ChatService] Connecting to $uri as $_userId');
 
-    _socket = IO.io(
+    _socket = socket_io.io(
         uri,
-        IO.OptionBuilder()
+        socket_io.OptionBuilder()
             .setTransports(['websocket'])
             .setExtraHeaders(
                 {'Authorization': 'Bearer $_token', 'x-user-id': _userId})

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+
 import 'providers/performance_providers.dart';
 
 class GoalsScreen extends HookConsumerWidget {
@@ -11,8 +11,8 @@ class GoalsScreen extends HookConsumerWidget {
     final goalsAsync = ref.watch(myGoalsProvider);
 
     // Animation Controller for "Confetti" simulation (Simple Scaling/Fade)
-    final confettiController =
-        useAnimationController(duration: const Duration(seconds: 2));
+    // final confettiController =
+    //     useAnimationController(duration: const Duration(seconds: 2));
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -75,7 +75,7 @@ class _GoalCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4))
           ]),
@@ -124,12 +124,12 @@ class _GoalCard extends StatelessWidget {
                     decoration: BoxDecoration(
                         gradient: LinearGradient(colors: [
                           _getColor(progress),
-                          _getColor(progress).withOpacity(0.7)
+                          _getColor(progress).withValues(alpha: 0.7)
                         ]),
                         borderRadius: BorderRadius.circular(4),
                         boxShadow: [
                           BoxShadow(
-                              color: _getColor(progress).withOpacity(0.3),
+                              color: _getColor(progress).withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2))
                         ]),

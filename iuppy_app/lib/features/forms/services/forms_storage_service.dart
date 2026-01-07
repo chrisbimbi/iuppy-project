@@ -31,20 +31,19 @@ class FormsStorageService {
   Future<UploadedAttachment> uploadFormFile(
     File file, {
     required String formId,
-    String? companyId,
+    required String companyId, // ✅ REQUIRED for security!
     String? customFileName,
   }) async {
+    if (companyId.isEmpty) {
+      throw ArgumentError('companyId is required for form file uploads');
+    }
+
     final mime = lookupMimeType(file.path) ?? 'application/octet-stream';
     final fileName = customFileName ??
         '${DateTime.now().millisecondsSinceEpoch}${p.extension(file.path)}';
 
-    // você pode mudar esse path pra bater com o CMS
-    final path = [
-      'forms',
-      if (companyId != null && companyId.isNotEmpty) companyId,
-      formId,
-      fileName,
-    ].join('/');
+    // Company-first structure: {companyId}/forms/{formId}/{filename}
+    final path = '$companyId/forms/$formId/$fileName';
 
     final ref = _storage.ref().child(path);
     final task = await ref.putFile(

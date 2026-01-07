@@ -1,0 +1,331 @@
+[debug] [2026-01-06T16:59:36.940Z] ----------------------------------------------------------------------
+[debug] [2026-01-06T16:59:36.942Z] Command:       /Users/christianotavernari/.nvm/versions/node/v22.13.0/bin/node /usr/local/bin/firebase deploy --only functions
+[debug] [2026-01-06T16:59:36.942Z] CLI Version:   13.28.0
+[debug] [2026-01-06T16:59:36.942Z] Platform:      darwin
+[debug] [2026-01-06T16:59:36.942Z] Node Version:  v22.13.0
+[debug] [2026-01-06T16:59:36.943Z] Time:          Tue Jan 06 2026 13:59:36 GMT-0300 (Brasilia Standard Time)
+[debug] [2026-01-06T16:59:36.943Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-01-06T16:59:36.981Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-01-06T16:59:36.981Z] > authorizing via signed-in user (christiano@iuppy.com.br)
+[debug] [2026-01-06T16:59:36.981Z] [iam] checking project iuppy-app for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-01-06T16:59:36.982Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:36.982Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:36.982Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app:testIamPermissions [none]
+[debug] [2026-01-06T16:59:36.982Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app:testIamPermissions x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:36.982Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-06T16:59:37.846Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app:testIamPermissions 200
+[debug] [2026-01-06T16:59:37.846Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-01-06T16:59:37.846Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:37.846Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:37.846Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/iuppy-app/serviceAccounts/iuppy-app@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-01-06T16:59:37.846Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/iuppy-app/serviceAccounts/iuppy-app@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-01-06T16:59:38.255Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/iuppy-app/serviceAccounts/iuppy-app@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-01-06T16:59:38.255Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/iuppy-app/serviceAccounts/iuppy-app@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'iuppy-app'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
+[info] ✔  functions: Finished running predeploy script. 
+[debug] [2026-01-06T16:59:41.245Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.245Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.245Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app [none]
+[debug] [2026-01-06T16:59:41.518Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app 200
+[debug] [2026-01-06T16:59:41.519Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/iuppy-app {"projectNumber":"643342034012","projectId":"iuppy-app","lifecycleState":"ACTIVE","name":"iuppy-app","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-09-16T15:04:30.268483Z","parent":{"type":"organization","id":"974130064488"}}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:41.520Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.520Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.520Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.520Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:41.521Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.521Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:41.521Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.521Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:41.523Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudfunctions.googleapis.com [none]
+[debug] [2026-01-06T16:59:41.523Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:41.545Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/runtimeconfig.googleapis.com [none]
+[debug] [2026-01-06T16:59:41.545Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:41.548Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudbuild.googleapis.com [none]
+[debug] [2026-01-06T16:59:41.548Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudbuild.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:41.550Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/artifactregistry.googleapis.com [none]
+[debug] [2026-01-06T16:59:41.551Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/artifactregistry.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:42.562Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/runtimeconfig.googleapis.com 200
+[debug] [2026-01-06T16:59:42.562Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2026-01-06T16:59:42.564Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudfunctions.googleapis.com 200
+[debug] [2026-01-06T16:59:42.564Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudfunctions.googleapis.com [omitted]
+[info] ✔  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:42.570Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudbuild.googleapis.com 200
+[debug] [2026-01-06T16:59:42.570Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/cloudbuild.googleapis.com [omitted]
+[info] ✔  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:42.571Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/artifactregistry.googleapis.com 200
+[debug] [2026-01-06T16:59:42.571Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/artifactregistry.googleapis.com [omitted]
+[info] ✔  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:42.572Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:42.572Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:42.572Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/iuppy-app/adminSdkConfig [none]
+[debug] [2026-01-06T16:59:43.040Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/iuppy-app/adminSdkConfig 200
+[debug] [2026-01-06T16:59:43.040Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/iuppy-app/adminSdkConfig {"projectId":"iuppy-app","storageBucket":"iuppy-app.firebasestorage.app"}
+[debug] [2026-01-06T16:59:43.040Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:43.040Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:43.040Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/iuppy-app/configs [none]
+[debug] [2026-01-06T16:59:43.619Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/iuppy-app/configs 200
+[debug] [2026-01-06T16:59:43.619Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/iuppy-app/configs {}
+[debug] [2026-01-06T16:59:43.621Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2026-01-06T16:59:44.266Z] > [functions] package.json contents: {
+  "name": "iuppy-video-functions",
+  "scripts": {
+    "lint": "eslint --ext .js,.ts .",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@google-cloud/storage": "^7.7.0",
+    "axios": "^1.6.2",
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.5.0",
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@typescript-eslint/eslint-plugin": "^5.12.0",
+    "@typescript-eslint/parser": "^5.12.0",
+    "eslint": "^8.9.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-import": "^2.25.4",
+    "firebase-functions-test": "^3.1.0",
+    "typescript": "^4.9.0"
+  },
+  "private": true
+}
+[debug] [2026-01-06T16:59:44.266Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2026-01-06T16:59:44.268Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-01-06T16:59:44.274Z] Found firebase-functions binary at '/Users/christianotavernari/Palmezan/iuppy/iuppy-project/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8648
+
+[error] (node:79471) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+[debug] [2026-01-06T16:59:44.752Z] Got response from /__/functions.yaml {"endpoints":{"processVideo":{"platform":"gcfv2","availableMemoryMb":4096,"timeoutSeconds":540,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":"firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com","vpc":null,"cpu":2,"labels":{},"eventTrigger":{"eventType":"google.cloud.storage.object.v1.finalized","eventFilters":{"bucket":"iuppy-app.firebasestorage.app"},"retry":false},"entryPoint":"processVideo"}},"specVersion":"v1alpha1","requiredAPIs":[]}
+[info] i  functions: preparing functions directory for uploading... 
+[info] i  functions: packaged /Users/christianotavernari/Palmezan/iuppy/iuppy-project/functions (114.86 KB) for uploading 
+[debug] [2026-01-06T16:59:48.803Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:48.803Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:48.803Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/iuppy-app/locations/-/functions [none]
+[debug] [2026-01-06T16:59:49.807Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/iuppy-app/locations/-/functions 200
+[debug] [2026-01-06T16:59:49.807Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/iuppy-app/locations/-/functions {}
+[debug] [2026-01-06T16:59:49.807Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:49.807Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:49.807Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-01-06T16:59:51.221Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/-/functions 200
+[debug] [2026-01-06T16:59:51.221Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/-/functions {}
+[debug] [2026-01-06T16:59:51.221Z] Looking up bucket region for the storage event trigger
+[debug] [2026-01-06T16:59:51.221Z] Looking up bucket region for the storage event trigger on bucket iuppy-app.firebasestorage.app
+[debug] [2026-01-06T16:59:51.222Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.222Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.222Z] >>> [apiv2][query] GET https://storage.googleapis.com/storage/v1/b/iuppy-app.firebasestorage.app [none]
+[debug] [2026-01-06T16:59:51.471Z] <<< [apiv2][status] GET https://storage.googleapis.com/storage/v1/b/iuppy-app.firebasestorage.app 200
+[debug] [2026-01-06T16:59:51.471Z] <<< [apiv2][body] GET https://storage.googleapis.com/storage/v1/b/iuppy-app.firebasestorage.app {"kind":"storage#bucket","selfLink":"https://www.googleapis.com/storage/v1/b/iuppy-app.firebasestorage.app","id":"iuppy-app.firebasestorage.app","name":"iuppy-app.firebasestorage.app","projectNumber":"643342034012","generation":"1758035361179676912","metageneration":"1","location":"US-CENTRAL1","storageClass":"REGIONAL","etag":"CAE=","timeCreated":"2025-09-16T15:09:21.357Z","updated":"2025-09-16T15:09:21.357Z","softDeletePolicy":{"retentionDurationSeconds":"604800","effectiveTime":"2025-09-16T15:09:21.357Z"},"iamConfiguration":{"bucketPolicyOnly":{"enabled":true,"lockedTime":"2025-12-15T15:09:21.357Z"},"uniformBucketLevelAccess":{"enabled":true,"lockedTime":"2025-12-15T15:09:21.357Z"},"publicAccessPrevention":"inherited"},"locationType":"region","satisfiesPZI":true}
+[debug] [2026-01-06T16:59:51.471Z] Setting the event trigger region to us-central1 .
+[info] i  functions: ensuring required API run.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  functions: ensuring required API eventarc.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  functions: ensuring required API pubsub.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  functions: ensuring required API storage.googleapis.com is enabled... 
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.472Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:51.472Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/run.googleapis.com [none]
+[debug] [2026-01-06T16:59:51.472Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/run.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:51.473Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/eventarc.googleapis.com [none]
+[debug] [2026-01-06T16:59:51.473Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/eventarc.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:51.474Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/pubsub.googleapis.com [none]
+[debug] [2026-01-06T16:59:51.474Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/pubsub.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:51.474Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/storage.googleapis.com [none]
+[debug] [2026-01-06T16:59:51.474Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/storage.googleapis.com x-goog-quota-user=projects/iuppy-app
+[debug] [2026-01-06T16:59:52.649Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/eventarc.googleapis.com 200
+[debug] [2026-01-06T16:59:52.649Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/eventarc.googleapis.com [omitted]
+[info] ✔  functions: required API eventarc.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:52.652Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/pubsub.googleapis.com 200
+[debug] [2026-01-06T16:59:52.652Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/pubsub.googleapis.com [omitted]
+[info] ✔  functions: required API pubsub.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:52.658Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/storage.googleapis.com 200
+[debug] [2026-01-06T16:59:52.658Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/storage.googleapis.com [omitted]
+[info] ✔  functions: required API storage.googleapis.com is enabled 
+[debug] [2026-01-06T16:59:52.659Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/run.googleapis.com 200
+[debug] [2026-01-06T16:59:52.659Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/iuppy-app/services/run.googleapis.com [omitted]
+[info] ✔  functions: required API run.googleapis.com is enabled 
+[info] i  functions: generating the service identity for pubsub.googleapis.com... 
+[debug] [2026-01-06T16:59:52.660Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:52.660Z] Checked if tokens are valid: true, expires at: 1767720746421
+[info] i  functions: generating the service identity for eventarc.googleapis.com... 
+[debug] [2026-01-06T16:59:52.660Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:52.660Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:52.660Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/pubsub.googleapis.com:generateServiceIdentity [none]
+[debug] [2026-01-06T16:59:52.661Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/eventarc.googleapis.com:generateServiceIdentity [none]
+[debug] [2026-01-06T16:59:52.999Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/pubsub.googleapis.com:generateServiceIdentity 200
+[debug] [2026-01-06T16:59:52.999Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/pubsub.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-643342034012@gcp-sa-pubsub.iam.gserviceaccount.com","uniqueId":"102712847519879755872"}}
+[debug] [2026-01-06T16:59:53.579Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/eventarc.googleapis.com:generateServiceIdentity 200
+[debug] [2026-01-06T16:59:53.580Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1beta1/projects/643342034012/services/eventarc.googleapis.com:generateServiceIdentity {"name":"operations/finished.DONE_OPERATION","done":true,"response":{"@type":"type.googleapis.com/google.api.serviceusage.v1beta1.ServiceIdentity","email":"service-643342034012@gcp-sa-eventarc.iam.gserviceaccount.com","uniqueId":"106499681168773002036"}}
+[debug] [2026-01-06T16:59:53.581Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:53.581Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:53.581Z] >>> [apiv2][query] GET https://storage.googleapis.com/storage/v1/projects/643342034012/serviceAccount [none]
+[debug] [2026-01-06T16:59:54.171Z] <<< [apiv2][status] GET https://storage.googleapis.com/storage/v1/projects/643342034012/serviceAccount 200
+[debug] [2026-01-06T16:59:54.171Z] <<< [apiv2][body] GET https://storage.googleapis.com/storage/v1/projects/643342034012/serviceAccount {"kind":"storage#serviceAccount","email_address":"service-643342034012@gs-project-accounts.iam.gserviceaccount.com"}
+[debug] [2026-01-06T16:59:54.171Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:54.171Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:54.171Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/643342034012:getIamPolicy [none]
+[debug] [2026-01-06T16:59:55.104Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/643342034012:getIamPolicy 200
+[debug] [2026-01-06T16:59:55.104Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/643342034012:getIamPolicy {"version":1,"etag":"BwZHuxeSNS4=","bindings":[{"role":"roles/artifactregistry.serviceAgent","members":["serviceAccount:service-643342034012@gcp-sa-artifactregistry.iam.gserviceaccount.com"]},{"role":"roles/axt.admin","members":["user:christiano@iuppy.com.br"]},{"role":"roles/cloudbuild.builds.builder","members":["serviceAccount:643342034012@cloudbuild.gserviceaccount.com"]},{"role":"roles/cloudbuild.serviceAgent","members":["serviceAccount:service-643342034012@gcp-sa-cloudbuild.iam.gserviceaccount.com"]},{"role":"roles/cloudfunctions.serviceAgent","members":["serviceAccount:service-643342034012@gcf-admin-robot.iam.gserviceaccount.com"]},{"role":"roles/containerregistry.ServiceAgent","members":["serviceAccount:service-643342034012@containerregistry.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:643342034012@cloudservices.gserviceaccount.com"]},{"role":"roles/eventarc.eventReceiver","members":["serviceAccount:643342034012-compute@developer.gserviceaccount.com"]},{"role":"roles/firebase.managementServiceAgent","members":["serviceAccount:service-643342034012@gcp-sa-firebase.iam.gserviceaccount.com"]},{"role":"roles/firebase.sdkAdminServiceAgent","members":["serviceAccount:firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com"]},{"role":"roles/firebaseappcheck.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com"]},{"role":"roles/firebaseauth.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com"]},{"role":"roles/firebasemods.serviceAgent","members":["serviceAccount:service-643342034012@gcp-sa-firebasemods.iam.gserviceaccount.com"]},{"role":"roles/firebasestorage.serviceAgent","members":["serviceAccount:service-643342034012@gcp-sa-firebasestorage.iam.gserviceaccount.com"]},{"role":"roles/iam.serviceAccountTokenCreator","members":["serviceAccount:firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com","serviceAccount:service-643342034012@gcp-sa-pubsub.iam.gserviceaccount.com","user:christiano@iuppy.com.br"]},{"role":"roles/owner","members":["user:christiano@iuppy.com.br"]},{"role":"roles/pubsub.publisher","members":["serviceAccount:service-643342034012@gs-project-accounts.iam.gserviceaccount.com"]},{"role":"roles/run.invoker","members":["serviceAccount:643342034012-compute@developer.gserviceaccount.com"]},{"role":"roles/run.serviceAgent","members":["serviceAccount:service-643342034012@serverless-robot-prod.iam.gserviceaccount.com"]},{"role":"roles/storage.admin","members":["serviceAccount:firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com"]},{"role":"roles/storage.objectViewer","members":["serviceAccount:643342034012-compute@developer.gserviceaccount.com"]}]}
+[debug] [2026-01-06T16:59:55.105Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:55.105Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:55.105Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions:generateUploadUrl [none]
+[debug] [2026-01-06T16:59:55.462Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions:generateUploadUrl 200
+[debug] [2026-01-06T16:59:55.462Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions:generateUploadUrl {"uploadUrl":"https://storage.googleapis.com/gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com/ee869bfc-7030-4582-9b8d-77e00610c0d8.zip?GoogleAccessId=service-643342034012@gcf-admin-robot.iam.gserviceaccount.com&Expires=1767720595&Signature=DQZgZX%2B3%2BXYQvjv6CYqzaHP80ESoKN%2FxRV5rNuDsc05YWxXJpqQPdm7uf8P%2F7CGyC1f4gCYquao98LzpUUaInMfWAn1YOOTmELkT%2BO2pPROLudRAsc%2B%2FMLyp0Owwn520rhZUf2Ve%2BKEFhFCDD0McFxku8Nym6UDLE6Fn703TevsjlU0pvoD%2BGW16G%2BPFwQZdzci7x7%2BV7ob%2B6CusUzY3ljH0LT9nLJnpRlxcwg%2BVY2m%2FJ078aPUMsbP3RUz7Ygn7kntLnTCzlPBvLxzWakmf3apKg2aqYoqxm%2FLmFlChUSb0dPzlqcvHKig14f9k2YXcHDJEoUlowoQfjzf%2FiI4mzQ%3D%3D","storageSource":{"bucket":"gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com","object":"ee869bfc-7030-4582-9b8d-77e00610c0d8.zip"}}
+[debug] [2026-01-06T16:59:55.463Z] >>> [apiv2][query] PUT https://storage.googleapis.com/gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com/ee869bfc-7030-4582-9b8d-77e00610c0d8.zip GoogleAccessId=service-643342034012%40gcf-admin-robot.iam.gserviceaccount.com&Expires=1767720595&Signature=DQZgZX%2B3%2BXYQvjv6CYqzaHP80ESoKN%2FxRV5rNuDsc05YWxXJpqQPdm7uf8P%2F7CGyC1f4gCYquao98LzpUUaInMfWAn1YOOTmELkT%2BO2pPROLudRAsc%2B%2FMLyp0Owwn520rhZUf2Ve%2BKEFhFCDD0McFxku8Nym6UDLE6Fn703TevsjlU0pvoD%2BGW16G%2BPFwQZdzci7x7%2BV7ob%2B6CusUzY3ljH0LT9nLJnpRlxcwg%2BVY2m%2FJ078aPUMsbP3RUz7Ygn7kntLnTCzlPBvLxzWakmf3apKg2aqYoqxm%2FLmFlChUSb0dPzlqcvHKig14f9k2YXcHDJEoUlowoQfjzf%2FiI4mzQ%3D%3D
+[debug] [2026-01-06T16:59:55.464Z] >>> [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com/ee869bfc-7030-4582-9b8d-77e00610c0d8.zip [stream]
+[debug] [2026-01-06T16:59:56.116Z] <<< [apiv2][status] PUT https://storage.googleapis.com/gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com/ee869bfc-7030-4582-9b8d-77e00610c0d8.zip 200
+[debug] [2026-01-06T16:59:56.116Z] <<< [apiv2][body] PUT https://storage.googleapis.com/gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com/ee869bfc-7030-4582-9b8d-77e00610c0d8.zip [omitted]
+[info] ✔  functions: functions folder uploaded successfully 
+[info] i  functions: creating Node.js 20 (2nd Gen) function processVideo(us-central1)... 
+[debug] [2026-01-06T16:59:56.118Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:56.118Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:56.118Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions functionId=processVideo
+[debug] [2026-01-06T16:59:56.118Z] >>> [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions {"name":"projects/iuppy-app/locations/us-central1/functions/processVideo","buildConfig":{"runtime":"nodejs20","entryPoint":"processVideo","source":{"storageSource":{"bucket":"gcf-v2-uploads-643342034012.us-central1.cloudfunctions.appspot.com","object":"ee869bfc-7030-4582-9b8d-77e00610c0d8.zip"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""}},"serviceConfig":{"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"iuppy-app\",\"storageBucket\":\"iuppy-app.firebasestorage.app\"}","GCLOUD_PROJECT":"iuppy-app","EVENTARC_CLOUD_EVENT_SOURCE":"projects/iuppy-app/locations/us-central1/services/processVideo","FUNCTION_SIGNATURE_TYPE":"cloudevent","FUNCTION_TARGET":"processVideo"},"ingressSettings":null,"timeoutSeconds":540,"serviceAccountEmail":"firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com","availableMemory":"4Gi","minInstanceCount":null,"maxInstanceCount":null,"maxInstanceRequestConcurrency":80,"availableCpu":"2","vpcConnector":null,"vpcConnectorEgressSettings":null},"labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"694078510b936920621447b8b563c77ab552f0e6"},"eventTrigger":{"eventType":"google.cloud.storage.object.v1.finalized","retryPolicy":"RETRY_POLICY_DO_NOT_RETRY","serviceAccountEmail":"firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com","eventFilters":[{"attribute":"bucket","value":"iuppy-app.firebasestorage.app"}],"triggerRegion":"us-central1"}}
+[debug] [2026-01-06T16:59:59.154Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions 403
+[debug] [2026-01-06T16:59:59.154Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions {"error":{"code":403,"message":"Validation failed for trigger projects/iuppy-app/locations/us-central1/triggers/processvideo-595518: Permission \"storage.buckets.get\" denied on \"Bucket \\\"iuppy-app.firebasestorage.app\\\" could not be validated. Please verify that the bucket exists and that the Eventarc service account has permission.\"","status":"PERMISSION_DENIED"}}
+[warn] ⚠  functions: Request to https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions?functionId=processVideo had HTTP Error: 403, Validation failed for trigger projects/iuppy-app/locations/us-central1/triggers/processvideo-595518: Permission "storage.buckets.get" denied on "Bucket \"iuppy-app.firebasestorage.app\" could not be validated. Please verify that the bucket exists and that the Eventarc service account has permission." 
+[warn] ⚠  functions:  failed to create function projects/iuppy-app/locations/us-central1/functions/processVideo 
+[error] Failed to create function projects/iuppy-app/locations/us-central1/functions/processVideo
+[debug] [2026-01-06T16:59:59.157Z] Total Function Deployment time: 3038
+[debug] [2026-01-06T16:59:59.157Z] 1 Functions Deployed
+[debug] [2026-01-06T16:59:59.157Z] 1 Functions Errored
+[debug] [2026-01-06T16:59:59.157Z] 0 Function Deployments Aborted
+[debug] [2026-01-06T16:59:59.157Z] Average Function Deployment time: 3038
+[info] 
+[info] Functions deploy had errors with the following functions:
+	processVideo(us-central1)
+[info] i  functions: cleaning up build files... 
+[debug] [2026-01-06T16:59:59.158Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:59.158Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:59.158Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:59.159Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T16:59:59.159Z] >>> [apiv2][query] DELETE https://artifactregistry.googleapis.com/v1beta2/projects/iuppy-app/locations/us-central1/repositories/gcf-artifacts/packages/process_video [none]
+[debug] [2026-01-06T16:59:59.159Z] >>> [apiv2][query] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list [none]
+[debug] [2026-01-06T17:00:00.200Z] <<< [apiv2][status] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list 404
+[debug] [2026-01-06T17:00:00.200Z] <<< [apiv2][body] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list {"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}]}
+[debug] [2026-01-06T17:00:00.201Z] Failed docker command with error  Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found {"name":"FirebaseError","children":[],"context":{"body":{"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}],"error":{"message":"Not Found"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found","status":404}
+[debug] [2026-01-06T17:00:00.202Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T17:00:00.202Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T17:00:00.202Z] >>> [apiv2][query] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list [none]
+[debug] [2026-01-06T17:00:00.231Z] <<< [apiv2][status] DELETE https://artifactregistry.googleapis.com/v1beta2/projects/iuppy-app/locations/us-central1/repositories/gcf-artifacts/packages/process_video 404
+[debug] [2026-01-06T17:00:00.231Z] <<< [apiv2][body] DELETE https://artifactregistry.googleapis.com/v1beta2/projects/iuppy-app/locations/us-central1/repositories/gcf-artifacts/packages/process_video {"error":{"code":404,"message":"Package \"projects/iuppy-app/locations/us-central1/repositories/gcf-artifacts/packages/process_video\" was not found.","status":"NOT_FOUND"}}
+[debug] [2026-01-06T17:00:00.686Z] <<< [apiv2][status] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list 404
+[debug] [2026-01-06T17:00:00.687Z] <<< [apiv2][body] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list {"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}]}
+[debug] [2026-01-06T17:00:00.687Z] Failed docker command with error  Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found {"name":"FirebaseError","children":[],"context":{"body":{"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}],"error":{"message":"Not Found"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found","status":404}
+[debug] [2026-01-06T17:00:00.789Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T17:00:00.789Z] Checked if tokens are valid: true, expires at: 1767720746421
+[debug] [2026-01-06T17:00:00.789Z] >>> [apiv2][query] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list [none]
+[debug] [2026-01-06T17:00:01.132Z] <<< [apiv2][status] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list 404
+[debug] [2026-01-06T17:00:01.132Z] <<< [apiv2][body] GET https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list {"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}]}
+[debug] [2026-01-06T17:00:01.132Z] Failed docker command with error  Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found {"name":"FirebaseError","children":[],"context":{"body":{"errors":[{"code":"NAME_UNKNOWN","message":"Repository \"us.gcr.io\" not found"}],"error":{"message":"Not Found"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://us.gcr.io/v2/iuppy-app/gcf/us-central1/tags/list had HTTP Error: 404, Not Found","status":404}
+[warn] ⚠  functions: Unhandled error cleaning up build images. This could result in a small monthly bill if not corrected. You can attempt to delete these images by redeploying or you can delete them manually at https://console.cloud.google.com/gcr/images/iuppy-app/us/gcf 
+[debug] [2026-01-06T17:00:01.133Z] Functions deploy failed.
+[debug] [2026-01-06T17:00:01.133Z] {
+  "endpoint": {
+    "id": "processVideo",
+    "project": "iuppy-app",
+    "region": "us-central1",
+    "entryPoint": "processVideo",
+    "platform": "gcfv2",
+    "runtime": "nodejs20",
+    "eventTrigger": {
+      "eventType": "google.cloud.storage.object.v1.finalized",
+      "retry": false,
+      "eventFilters": {
+        "bucket": "iuppy-app.firebasestorage.app"
+      },
+      "region": "us-central1"
+    },
+    "labels": {
+      "deployment-tool": "cli-firebase"
+    },
+    "ingressSettings": null,
+    "availableMemoryMb": 4096,
+    "serviceAccount": "firebase-adminsdk-fbsvc@iuppy-app.iam.gserviceaccount.com",
+    "timeoutSeconds": 540,
+    "maxInstances": null,
+    "minInstances": null,
+    "concurrency": 80,
+    "cpu": 2,
+    "vpc": null,
+    "environmentVariables": {
+      "FIREBASE_CONFIG": "{\"projectId\":\"iuppy-app\",\"storageBucket\":\"iuppy-app.firebasestorage.app\"}",
+      "GCLOUD_PROJECT": "iuppy-app",
+      "EVENTARC_CLOUD_EVENT_SOURCE": "projects/iuppy-app/locations/us-central1/services/processVideo"
+    },
+    "codebase": "default",
+    "targetedByOnly": false,
+    "hash": "694078510b936920621447b8b563c77ab552f0e6"
+  },
+  "op": "create",
+  "original": {
+    "name": "FirebaseError",
+    "children": [],
+    "context": {
+      "function": "projects/iuppy-app/locations/us-central1/functions/processVideo"
+    },
+    "exit": 1,
+    "message": "Failed to create function projects/iuppy-app/locations/us-central1/functions/processVideo",
+    "original": {
+      "name": "FirebaseError",
+      "children": [],
+      "context": {
+        "body": {
+          "error": {
+            "code": 403,
+            "message": "Validation failed for trigger projects/iuppy-app/locations/us-central1/triggers/processvideo-595518: Permission \"storage.buckets.get\" denied on \"Bucket \\\"iuppy-app.firebasestorage.app\\\" could not be validated. Please verify that the bucket exists and that the Eventarc service account has permission.\"",
+            "status": "PERMISSION_DENIED"
+          }
+        },
+        "response": {
+          "statusCode": 403
+        }
+      },
+      "exit": 1,
+      "message": "Request to https://cloudfunctions.googleapis.com/v2/projects/iuppy-app/locations/us-central1/functions?functionId=processVideo had HTTP Error: 403, Validation failed for trigger projects/iuppy-app/locations/us-central1/triggers/processvideo-595518: Permission \"storage.buckets.get\" denied on \"Bucket \\\"iuppy-app.firebasestorage.app\\\" could not be validated. Please verify that the bucket exists and that the Eventarc service account has permission.\"",
+      "status": 403
+    },
+    "status": 403,
+    "code": 403
+  }
+}
+[debug] [2026-01-06T17:00:01.141Z] Error: Failed to create function processVideo in region us-central1
+    at /usr/local/lib/node_modules/firebase-tools/lib/deploy/functions/release/fabricator.js:294:27
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Fabricator.createV2Function (/usr/local/lib/node_modules/firebase-tools/lib/deploy/functions/release/fabricator.js:278:30)
+    at async Fabricator.createEndpoint (/usr/local/lib/node_modules/firebase-tools/lib/deploy/functions/release/fabricator.js:137:13)
+    at async handle (/usr/local/lib/node_modules/firebase-tools/lib/deploy/functions/release/fabricator.js:89:17)
+[error] 
+[error] Error: There was an error deploying functions

@@ -167,13 +167,13 @@ class _SpaceChip extends StatelessWidget {
           boxShadow: [
             if (!isSelected)
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
             if (isSelected)
               BoxShadow(
-                color: primaryColor.withOpacity(0.3),
+                color: primaryColor.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iuppy_app/core/providers.dart';
+import 'package:iuppy_app/features/social/services/social_storage_service.dart';
 
 class CreatePostPage extends ConsumerStatefulWidget {
   const CreatePostPage({super.key});
@@ -73,10 +74,15 @@ class _CreatePostPageState extends ConsumerState<CreatePostPage> {
 
     try {
       final List<Map<String, dynamic>> media = [];
+      final storage = ref.read(socialStorageServiceProvider);
+      final tempPostId = DateTime.now().millisecondsSinceEpoch.toString();
 
       // Upload Images
       for (var img in _selectedImages) {
-        final url = await api.uploadFile(img.path);
+        final url = await storage.uploadPostImage(
+          File(img.path),
+          postId: tempPostId,
+        );
         media.add({'type': 'image', 'url': url, 'meta': {}});
       }
 

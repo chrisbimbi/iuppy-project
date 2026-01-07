@@ -14,15 +14,14 @@ void main(List<String> args) async {
   final slug = parser.get('slug');
   final bundleId = parser.get('bundle-id');
   final scheme = parser.get('scheme');
-  final companyKey = parser.get('key');
 
   if (name == null || slug == null || bundleId == null || scheme == null) {
-    print(
+    stdout.writeln(
         '❌ Usage: dart bin/add_client.dart --name="Acme Corp" --slug="acme" --bundle-id="com.acme.app" --scheme="acme_app" [--key="optional_key"]');
     exit(1);
   }
 
-  print('🚀 Generating client: $name ($slug)');
+  stdout.writeln('🚀 Generating client: $name ($slug)');
 
   // 1. Android
   await _updateAndroidGradle(slug, bundleId, name, scheme);
@@ -39,23 +38,24 @@ void main(List<String> args) async {
   // 4. Asset Configs
   await _createAssetConfigs(slug);
 
-  print('\n✅ Client "$slug" added successfully!');
-  print('👉 Next steps:');
-  print('   1. Add icon to assets/icons/$slug.png');
-  print('   2. Add splash to assets/splash/$slug.png');
-  print('   3. Download GoogleService-Info.plist to ios/config/$slug/');
-  print(
+  stdout.writeln('\n✅ Client "$slug" added successfully!');
+  stdout.writeln('👉 Next steps:');
+  stdout.writeln('   1. Add icon to assets/icons/$slug.png');
+  stdout.writeln('   2. Add splash to assets/splash/$slug.png');
+  stdout
+      .writeln('   3. Download GoogleService-Info.plist to ios/config/$slug/');
+  stdout.writeln(
       '   3. Run: flutter pub run flutter_launcher_icons -f flutter_launcher_icons-$slug.yaml');
-  print(
+  stdout.writeln(
       '   4. Run: flutter pub run flutter_native_splash:create --path=flutter_native_splash-$slug.yaml');
-  print('   5. Test: flutter run --flavor ${slug}Dev');
+  stdout.writeln('   5. Test: flutter run --flavor ${slug}Dev');
 }
 
 Future<void> _updateAndroidGradle(
     String slug, String bundleId, String name, String scheme) async {
   final file = File('android/app/build.gradle');
   if (!file.existsSync()) {
-    print('❌ android/app/build.gradle not found!');
+    stdout.writeln('❌ android/app/build.gradle not found!');
     return;
   }
 
@@ -63,7 +63,7 @@ Future<void> _updateAndroidGradle(
 
   // Check if flavor already exists
   if (content.contains('${slug}Dev {')) {
-    print('⚠️ Android flavors for $slug already exist. Skipping.');
+    stdout.writeln('⚠️ Android flavors for $slug already exist. Skipping.');
     return;
   }
 
@@ -116,9 +116,9 @@ Future<void> _updateAndroidGradle(
       content = content.replaceFirst(
           'productFlavors {', 'productFlavors {\n$newFlavors');
       await file.writeAsString(content);
-      print('✅ Android build.gradle updated.');
+      stdout.writeln('✅ Android build.gradle updated.');
     } else {
-      print('❌ Could not find productFlavors block in build.gradle');
+      stdout.writeln('❌ Could not find productFlavors block in build.gradle');
     }
   }
 }
@@ -151,12 +151,12 @@ PRODUCT_BUNDLE_IDENTIFIER=$bundleId
 
   await File('ios/Flutter/${slug}Dev.xcconfig').writeAsString(devConfig);
   await File('ios/Flutter/${slug}Prod.xcconfig').writeAsString(prodConfig);
-  print('✅ iOS xcconfig files created.');
+  stdout.writeln('✅ iOS xcconfig files created.');
 }
 
 Future<void> _runRubyScript(
     String slug, String bundleId, String name, String scheme) async {
-  print('💎 Running ruby script to update Xcode project...');
+  stdout.writeln('💎 Running ruby script to update Xcode project...');
 
   final result = await Process.run(
     'ruby',
@@ -174,24 +174,24 @@ Future<void> _runRubyScript(
   );
 
   if (result.exitCode != 0) {
-    print('❌ Ruby script failed:');
-    print(result.stdout);
-    print(result.stderr);
+    stdout.writeln('❌ Ruby script failed:');
+    stdout.writeln(result.stdout);
+    stdout.writeln(result.stderr);
   } else {
-    print('✅ Xcode Project updated successfully.');
+    stdout.writeln('✅ Xcode Project updated successfully.');
   }
 }
 
 Future<void> _updatePodfile(String slug) async {
   final file = File('ios/Podfile');
   if (!file.existsSync()) {
-    print('❌ ios/Podfile not found!');
+    stdout.writeln('❌ ios/Podfile not found!');
     return;
   }
 
   String content = await file.readAsString();
   if (content.contains("'Debug-${slug}Dev' => :debug")) {
-    print('⚠️ Podfile mappings for $slug already exist. Skipping.');
+    stdout.writeln('⚠️ Podfile mappings for $slug already exist. Skipping.');
     return;
   }
 
@@ -210,9 +210,9 @@ Future<void> _updatePodfile(String slug) async {
     content =
         content.replaceRange(projectBlockEnd, projectBlockEnd, '$insertion\n');
     await file.writeAsString(content);
-    print('✅ ios/Podfile updated with new mappings.');
+    stdout.writeln('✅ ios/Podfile updated with new mappings.');
   } else {
-    print('❌ Could not find project \'Runner\' block in Podfile.');
+    stdout.writeln('❌ Could not find project \'Runner\' block in Podfile.');
   }
 }
 
@@ -236,7 +236,7 @@ flutter_native_splash:
 
   await File('flutter_launcher_icons-$slug.yaml').writeAsString(icons);
   await File('flutter_native_splash-$slug.yaml').writeAsString(splash);
-  print('✅ Asset config files created.');
+  stdout.writeln('✅ Asset config files created.');
 
   // Create placeholders if they don't exist
   Directory('assets/icons').createSync(recursive: true);
@@ -244,7 +244,7 @@ flutter_native_splash:
 
   // 5. Create config directory for GoogleService-Info.plist
   Directory('ios/config/$slug').createSync(recursive: true);
-  print('✅ Created config directory: ios/config/$slug');
+  stdout.writeln('✅ Created config directory: ios/config/$slug');
 }
 
 class _SimpleArgParser {

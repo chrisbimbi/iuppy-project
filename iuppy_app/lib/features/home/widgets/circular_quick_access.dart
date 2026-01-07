@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CircularQuickAccess extends StatelessWidget {
   const CircularQuickAccess({super.key});
@@ -26,7 +27,12 @@ class CircularQuickAccess extends StatelessWidget {
           _QuickAccessButton(
             icon: Icons.camera_alt,
             label: 'Instagram',
-            onTap: () {}, // TODO: Add Instagram link
+            onTap: () async {
+              final url = Uri.parse('https://instagram.com/iuppy_app');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
             borderStyle: _BorderStyle.gradientOrangePink,
           ),
           _QuickAccessButton(

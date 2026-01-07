@@ -35,7 +35,8 @@ Future<void> openWebSheet(BuildContext context, String url,
                   IconButton(
                     tooltip: 'Compartilhar',
                     icon: const Icon(Icons.ios_share_rounded),
-                    onPressed: () => Share.share(url),
+                    onPressed: () =>
+                        SharePlus.instance.share(ShareParams(text: url)),
                   ),
                   IconButton(
                     tooltip: 'Abrir no navegador',

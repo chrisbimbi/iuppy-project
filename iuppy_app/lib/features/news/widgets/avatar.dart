@@ -20,7 +20,7 @@ class Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: Colors.grey.shade300, width: 1),
-        color: Theme.of(context).colorScheme.secondary.withOpacity(.20),
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: .20),
         image: hasImg
             ? DecorationImage(image: NetworkImage(avatarUrl!), fit: BoxFit.cover)
             : null,

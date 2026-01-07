@@ -27,10 +27,7 @@ class _FormRendererState extends State<FormRenderer> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _answers = {};
   final List<PlatformFile> _pendingFiles = [];
-  final List<Map<String, dynamic>> _uploadedAttachments =
-      []; // We might need a way to upload files separately or pass them up
-  final bool _uploading = false;
-  final double _uploadProgress = 0;
+
   final _imagePicker = ImagePicker();
 
   @override
@@ -173,8 +170,7 @@ class _FormRendererState extends State<FormRenderer> {
         );
         break;
       default:
-        final controller =
-            TextEditingController(text: (_answers[fid] as String?) ?? '');
+        // final controller = TextEditingController(text: (_answers[fid] as String?) ?? ''); -> removed unused
         // Only set selection if not read only and focused?
         // Actually, creating a new controller every build is bad for focus.
         // But for this simple renderer, we'll leave it or improve if needed.
@@ -217,7 +213,7 @@ class _FormRendererState extends State<FormRenderer> {
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -277,10 +273,11 @@ class _FormRendererState extends State<FormRenderer> {
     // can be added if needed for embedded forms.
 
     // Check both keys for compatibility
-    print('DEBUG: FormRenderer config: ${widget.formConfig}');
-    print(
+    debugPrint('DEBUG: FormRenderer config: ${widget.formConfig}');
+    debugPrint(
         'DEBUG: attachmentsAllowed: ${widget.formConfig['attachmentsAllowed']}');
-    print('DEBUG: allowAttachments: ${widget.formConfig['allowAttachments']}');
+    debugPrint(
+        'DEBUG: allowAttachments: ${widget.formConfig['allowAttachments']}');
 
     final bool attachmentsAllowed =
         (widget.formConfig['attachmentsAllowed'] == true) ||
@@ -347,7 +344,7 @@ class _FormRendererState extends State<FormRenderer> {
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   elevation: 4,
-                  shadowColor: Colors.black.withOpacity(0.4),
+                  shadowColor: Colors.black.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                 ),
@@ -428,9 +425,11 @@ class _FormRendererState extends State<FormRenderer> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao selecionar arquivos: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar arquivos: $e')),
+        );
+      }
     }
   }
 }

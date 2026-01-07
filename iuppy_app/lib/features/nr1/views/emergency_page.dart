@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/providers.dart'; // envProvider, apiClientProvider
 import '../models/emergency_models.dart';
 
 // State Providers for data fetching
-final emergencyProceduresProvider = FutureProvider<List<Nr1EmergencyProcedure>>((ref) async {
+final emergencyProceduresProvider =
+    FutureProvider<List<Nr1EmergencyProcedure>>((ref) async {
   final api = ref.read(apiClientProvider);
   // Using generic GET request via dio since specific methods might not be in ApiClient yet
   // Ideally, we add getEmergencyProcedures to ApiClient or a dedicated repo.
   final resp = await api.dio.get('/nr1/procedures');
-  final list = (resp.data as List).map((e) => Nr1EmergencyProcedure.fromJson(e)).toList();
+  final list = (resp.data as List)
+      .map((e) => Nr1EmergencyProcedure.fromJson(e))
+      .toList();
   return list;
 });
 
-final emergencyDrillsProvider = FutureProvider<List<Nr1EmergencyDrill>>((ref) async {
+final emergencyDrillsProvider =
+    FutureProvider<List<Nr1EmergencyDrill>>((ref) async {
   final api = ref.read(apiClientProvider);
   final resp = await api.dio.get('/nr1/drills');
-  final list = (resp.data as List).map((e) => Nr1EmergencyDrill.fromJson(e)).toList();
+  final list =
+      (resp.data as List).map((e) => Nr1EmergencyDrill.fromJson(e)).toList();
   return list;
 });
 
@@ -60,8 +67,14 @@ class EmergencyPage extends HookConsumerWidget {
                       style: TextStyle(color: Colors.white)),
                   const SizedBox(height: 15),
                   ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Call functionality
+                      onPressed: () async {
+                        final Uri launchUri = Uri(
+                          scheme: 'tel',
+                          path: '193',
+                        );
+                        if (await canLaunchUrl(launchUri)) {
+                          await launchUrl(launchUri);
+                        }
                       },
                       icon: const Icon(Icons.phone),
                       label: const Text('LIGAR AGORA'),
@@ -90,8 +103,15 @@ class EmergencyPage extends HookConsumerWidget {
                                   title: Text(p.title),
                                   subtitle: Text('Versão: ${p.version}'),
                                   trailing: const Icon(Icons.chevron_right),
-                                  onTap: () {
-                                     // TODO: Open PDF
+                                  onTap: () async {
+                                    // Using mock PDF or real URL if available.
+                                    // Assuming p.pdfUrl exists or using a placeholder
+                                    final url = Uri.parse(
+                                        'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'); // Placeholder
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url,
+                                          mode: LaunchMode.externalApplication);
+                                    }
                                   },
                                 ),
                               ))
@@ -107,7 +127,7 @@ class EmergencyPage extends HookConsumerWidget {
             const SizedBox(height: 10),
 
             drillsAsync.when(
-               data: (data) => data.isEmpty
+              data: (data) => data.isEmpty
                   ? const Text('Nenhum simulado agendado.')
                   : Column(
                       children: data
@@ -116,13 +136,15 @@ class EmergencyPage extends HookConsumerWidget {
                                   leading: const Icon(Icons.run_circle_outlined,
                                       color: Colors.orange),
                                   title: Text(d.location),
-                                  subtitle: Text(d.scheduledDate.toString()), // Formatting simplified
+                                  subtitle: Text(d.scheduledDate
+                                      .toString()), // Formatting simplified
                                   trailing: ElevatedButton(
                                     onPressed: () {
                                       // Mock Check-in
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Simulando Check-in via QR Code...'))
-                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Simulando Check-in via QR Code...')));
                                     },
                                     child: const Text('Check-in'),
                                   ),

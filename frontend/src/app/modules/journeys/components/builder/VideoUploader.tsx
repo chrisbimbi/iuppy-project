@@ -13,9 +13,10 @@ type Props = {
     onChanged: (attachments: VideoAttachment[]) => void
     label?: string
     companyId: string
+    stepId?: string
 }
 
-export const VideoUploader: React.FC<Props> = ({ value = [], onChanged, label, companyId }) => {
+export const VideoUploader: React.FC<Props> = ({ value = [], onChanged, label, companyId, stepId }) => {
     const intl = useIntl()
     const inputRef = useRef<HTMLInputElement | null>(null)
     const [uploading, setUploading] = useState(false)
@@ -47,11 +48,15 @@ export const VideoUploader: React.FC<Props> = ({ value = [], onChanged, label, c
         }
 
         try {
+            // If stepId is present, we use the V2 pipeline (Raw Upload)
+            const kind = stepId ? 'journey_video_raw' : 'attachment'
+
             const { url } = await uploadFileToFirebase(
                 file,
                 companyId,
-                'attachment',
-                (p: UploadProgress) => setProgress(p.percent)
+                kind,
+                (p: UploadProgress) => setProgress(p.percent),
+                stepId // Pass entityId if available
             )
 
             // Replace existing video (Single video logic for now, but array structure kept for consistency)

@@ -437,6 +437,7 @@ export const JourneyBuilderCanvas: FC = () => {
                     onClose={() => setSelectedStepId(null)}
                     onSave={(data) => handleSaveStep(selectedStep.id, data)}
                     onDelete={() => handleDeleteStep(selectedStep.id)}
+                    journeyId={journeyId}
                 />
             )}
 

@@ -135,7 +135,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) {
       final uri = _normalizeDeepLinkUri(state.uri);
       if (uri.path != state.uri.path) {
-        Future.microtask(() => context.go(uri.toString()));
+        Future.microtask(() {
+          if (context.mounted) context.go(uri.toString());
+        });
         return const SizedBox.shrink();
       }
       return Scaffold(

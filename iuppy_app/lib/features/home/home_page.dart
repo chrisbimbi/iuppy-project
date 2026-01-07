@@ -36,7 +36,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   int _navIndex = 0;
   String? _selectedSpaceId;
-  String _query = '';
 
   late final ProviderContainer _c;
   bool _alive = true;
@@ -159,11 +158,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final branding = ref
-        .watch(companySettingsProvider)
-        .maybeWhen(data: (d) => d.branding, orElse: () => null);
-    final name = ref.watch(authControllerProvider).userName ?? 'usuário';
-
     final badges = ref.watch(homeBadgesProvider);
     final hasAnyNews = ref
         .watch(_hasAnyNewsCachedProvider)
@@ -248,7 +242,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: GlassSearchAndSpaces(
                 selectedSpaceId: _selectedSpaceId,
                 onSpaceChanged: (id) => setState(() => _selectedSpaceId = id),
-                onQueryChanged: (q) => setState(() => _query = q),
+                onQueryChanged: (q) {},
                 onSearch: _openSearch,
               ),
             ),
@@ -377,7 +371,7 @@ class _ModuleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

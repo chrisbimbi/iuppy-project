@@ -1041,6 +1041,13 @@ class ApiClient {
   }
 
   // Admin Methods
+  Future<void> addParticipant(String conversationId, String userId) async {
+    await _dio.post(
+      '/chat/conversations/$conversationId/participants',
+      data: {'userId': userId},
+    );
+  }
+
   Future<void> promoteParticipant(String conversationId, String userId) async {
     await _dio.post(
         '/chat/conversations/$conversationId/participants/$userId/promote');

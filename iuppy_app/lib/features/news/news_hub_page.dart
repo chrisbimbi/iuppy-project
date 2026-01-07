@@ -69,7 +69,7 @@ class NewsHubPage extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
                               backgroundColor:
-                                  theme.neonAccent.withOpacity(0.1),
+                                  theme.neonAccent.withValues(alpha: 0.1),
                               borderColor: theme.neonAccent,
                               borderWidth: 1,
                               shadowOffset: 2,

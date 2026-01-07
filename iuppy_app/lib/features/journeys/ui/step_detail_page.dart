@@ -15,6 +15,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:iuppy_app/features/news/widgets/web_sheet.dart';
+import 'package:photo_view/photo_view.dart';
 
 // Hybrid Video Type Enum
 enum VideoSourceType { native, youtube, external }
@@ -164,34 +165,38 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
       final step = await ref
           .read(journeyServiceProvider)
           .getStepDetails(widget.journeyId, widget.stepId);
-      setState(() {
-        _stepData = step;
 
-        // Init Video if needed
-        final mediaType = step['mediaType']?.toString().toUpperCase();
-        final mediaUrl = step['mediaUrl']?.toString();
-        if (mediaType == 'VIDEO' && mediaUrl != null) {
-          _initHybridVideo(mediaUrl);
-        }
+      // 1. Set Data First
+      _stepData = step;
 
-        // Parse Attachments (Legacy 'mediaUrl' + New 'attachments' array)
-        if (step['contentPayload'] != null &&
-            step['contentPayload']['attachments'] != null) {
-          _attachments = List<Map<String, dynamic>>.from(
-              step['contentPayload']['attachments']);
-        } else if (mediaType == 'DOCUMENT' && mediaUrl != null) {
-          // Legacy/Fallback
-          _attachments.add({'name': 'Documento', 'url': mediaUrl});
-        }
-      });
+      // 2. Init Video (if needed) - AWAITING to block UI
+      final mediaType = step['mediaType']?.toString().toUpperCase();
+      final mediaUrl = step['mediaUrl']?.toString();
+
+      if (mediaType == 'VIDEO' && mediaUrl != null) {
+        await _initHybridVideo(mediaUrl);
+      }
+
+      // 3. Parse Attachments
+      if (step['contentPayload'] != null &&
+          step['contentPayload']['attachments'] != null) {
+        _attachments = List<Map<String, dynamic>>.from(
+            step['contentPayload']['attachments']);
+      } else if (mediaType == 'DOCUMENT' && mediaUrl != null) {
+        _attachments.add({'name': 'Documento', 'url': mediaUrl});
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Erro ao carregar detalhes do passo: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Erro ao carregar detalhes do passo: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -377,30 +382,56 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                 if (imageUrl != null &&
                     imageUrl.isNotEmpty &&
                     mediaType != 'VIDEO')
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            backgroundColor: Colors.black,
+                            appBar: AppBar(
+                              backgroundColor: Colors.black,
+                              leading: IconButton(
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ),
+                            body: PhotoView(
+                              imageProvider: NetworkImage(imageUrl),
+                              minScale: PhotoViewComputedScale.contained,
+                              maxScale: PhotoViewComputedScale.covered * 2,
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: 220,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox(
-                                height: 220,
-                                child: Center(
-                                    child: Icon(Icons.broken_image, size: 50))),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.network(
+                          imageUrl,
+                          width: double.infinity,
+                          height: 220,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                                  height: 220,
+                                  child: Center(
+                                      child:
+                                          Icon(Icons.broken_image, size: 50))),
+                        ),
                       ),
                     ),
                   ),
@@ -471,8 +502,8 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                           Text(
                             'Este vídeo está hospedado externamente. Clique abaixo para assistir.',
                             textAlign: TextAlign.center,
-                            style:
-                                TextStyle(color: textPrimary.withOpacity(0.7)),
+                            style: TextStyle(
+                                color: textPrimary.withValues(alpha: 0.7)),
                           ),
                           const SizedBox(height: 24),
                           SizedBox(
@@ -516,7 +547,7 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                         border: Border.all(color: Colors.grey.shade200),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -551,8 +582,8 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: isOpened
-                                        ? Colors.green.withOpacity(0.1)
-                                        : Colors.blue.withOpacity(0.1),
+                                        ? Colors.green.withValues(alpha: 0.1)
+                                        : Colors.blue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(Icons.description_rounded,
@@ -622,7 +653,7 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                         HtmlWidget(
                           htmlContent,
                           textStyle: theme.textTheme.bodyLarge?.copyWith(
-                            color: textPrimary.withOpacity(0.8),
+                            color: textPrimary.withValues(alpha: 0.8),
                             height: 1.6,
                             fontSize: 16,
                           ),
@@ -674,14 +705,14 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: _ackChecked
-                                ? Colors.green.withOpacity(0.1)
+                                ? Colors.green.withValues(alpha: 0.1)
                                 : const Color(
                                     0xFFFFF9C4), // Light Yellow #FFF9C4
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                                 color: _ackChecked
-                                    ? Colors.green.withOpacity(0.3)
-                                    : Colors.orange.withOpacity(0.1)),
+                                    ? Colors.green.withValues(alpha: 0.3)
+                                    : Colors.orange.withValues(alpha: 0.1)),
                           ),
                           child: Row(
                             children: [
@@ -814,7 +845,7 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                   color: background,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -4),
                     ),
@@ -965,10 +996,10 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                   height: 100,
                   padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                   decoration: BoxDecoration(
-                    color: background.withOpacity(0.8),
+                    color: background.withValues(alpha: 0.8),
                     border: Border(
                       bottom: BorderSide(
-                        color: textPrimary.withOpacity(0.05),
+                        color: textPrimary.withValues(alpha: 0.05),
                         width: 1,
                       ),
                     ),
@@ -1034,8 +1065,11 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
             final ext = path.split('.').last;
             final customName = '${formTitle}_${userName}_$dateStr.$ext';
 
+            final companyId = ref.read(envProvider).companyId;
             final uploaded = await storage.uploadFormFile(file,
-                formId: formId, customFileName: customName);
+                formId: formId,
+                companyId: companyId,
+                customFileName: customName);
             uploadedAttachments.add(uploaded.toJson());
           }
         }

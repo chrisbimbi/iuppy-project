@@ -48,7 +48,10 @@ export const Step1: React.FC<StepProps> = ({
   const intl = useIntl()
 
   const imageAccept: Accept = {
-    'image/*': ['.jpeg', '.jpg', '.png', '.gif'],
+    'image/jpeg': ['.jpeg', '.jpg'],
+    'image/png': ['.png'],
+    'image/webp': ['.webp'],
+    'image/gif': ['.gif'],
   }
 
   const attachmentAccept: Accept = {

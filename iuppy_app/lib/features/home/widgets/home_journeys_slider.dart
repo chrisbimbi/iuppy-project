@@ -24,11 +24,10 @@ class HomeJourneysSlider extends ConsumerWidget {
             itemCount: journeys.length,
             itemBuilder: (context, index) {
               final journey = journeys[index];
-              final title = journey['journey']['title'] as String? ?? 'Jornada';
-              final progress = (journey['progress'] as num?)?.toDouble() ?? 0.0;
-              final progressPercent = (progress * 100).toInt();
 
-              final isCompleted = progress >= 1.0;
+              // final progress = (journey['progress'] as num?)?.toDouble() ?? 0.0;
+              // final progressPercent = (progress * 100).toInt();
+              // final isCompleted = progress >= 1.0;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 12, left: 16),

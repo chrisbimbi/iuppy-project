@@ -54,7 +54,9 @@ final notificationsListProvider =
 
     for (final n in newsList) {
       final id = n['id']?.toString() ?? '';
-      if (id.isEmpty) continue;
+      if (id.isEmpty) {
+        continue;
+      }
 
       final isRead = await localNewsStore.isRead(id);
       final dateStr =
@@ -85,7 +87,9 @@ final notificationsListProvider =
 
     for (final f in formsList) {
       final id = f['id']?.toString() ?? '';
-      if (id.isEmpty) continue;
+      if (id.isEmpty) {
+        continue;
+      }
 
       final isRead = seenIds.contains(id);
       final pubStr = f['publishedAt']?.toString() ?? f['createdAt']?.toString();
@@ -145,7 +149,9 @@ final notificationsListProvider =
       if (rawTitle != null) {
         if (rawTitle is String) {
           title = rawTitle;
-        } else if (rawTitle is Map) title = rawTitle['pt-BR'] ?? 'Formulário';
+        } else if (rawTitle is Map) {
+          title = rawTitle['pt-BR'] ?? 'Formulário';
+        }
       }
 
       String subtitle = item['message']?.toString() ?? '';
@@ -196,7 +202,9 @@ final notificationsListProvider =
 
     for (final s in surveys) {
       final id = s['id']?.toString() ?? '';
-      if (id.isEmpty) continue;
+      if (id.isEmpty) {
+        continue;
+      }
 
       final dateStr = s['startsAt']?.toString() ?? s['createdAt']?.toString();
       final date = DateTime.tryParse(dateStr ?? '') ?? DateTime.now();
@@ -204,7 +212,9 @@ final notificationsListProvider =
       final isSubmitted = submittedIds.contains(id);
       final isRead = seenIds.contains(id) || isSubmitted;
 
-      if (isRead && date.isBefore(threeDaysAgo)) continue;
+      if (isRead && date.isBefore(threeDaysAgo)) {
+        continue;
+      }
 
       items.add(NotificationItem(
         id: id,

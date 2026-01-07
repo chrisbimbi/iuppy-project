@@ -82,8 +82,11 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
   Future<void> _share() async {
     final ctrl = ref.read(newsDetailControllerProvider(widget.id));
     final vm = ctrl.vm!;
-    final result = await Share.share(
-      [vm.shareText, vm.deeplink].where((s) => s.isNotEmpty).join('\n\n'),
+    final result = await SharePlus.instance.share(
+      ShareParams(
+          text: [vm.shareText, vm.deeplink]
+              .where((s) => s.isNotEmpty)
+              .join('\n\n')),
     );
     if (result.status == ShareResultStatus.success) {
       await ctrl.trackShareSuccess(target: 'app');
@@ -224,7 +227,6 @@ class _NewsDetailPageState extends ConsumerState<NewsDetailPage> {
         return _UpdatesLayout(
             vm: vm, parent: this, acknowledged: acknowledged, theme: theme);
       case NewsLayoutType.articles:
-      default:
         return _ArticlesLayout(
             vm: vm,
             parent: this,
@@ -255,7 +257,6 @@ class _ArticlesLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context);
-    final thumb = (vm.images.isNotEmpty) ? vm.images.first : null;
 
     return Scaffold(
       backgroundColor: theme.background,
@@ -337,7 +338,7 @@ class _ArticlesLayout extends ConsumerWidget {
                         ),
                       ],
                     )
-                  : Container(color: theme.neonAccent.withOpacity(0.1)),
+                  : Container(color: theme.neonAccent.withValues(alpha: 0.1)),
             ),
             // Ações de compartilhamento na AppBar
             actions: [
@@ -404,7 +405,7 @@ class _ArticlesLayout extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Text(vm.subtitle,
                         style: t.textTheme.titleMedium?.copyWith(
-                            color: theme.textPrimary.withOpacity(0.7))),
+                            color: theme.textPrimary.withValues(alpha: 0.7))),
                   ],
                   const SizedBox(height: 24),
 
@@ -498,7 +499,7 @@ class _UpdatesLayout extends ConsumerWidget {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: theme.background.withOpacity(0.8),
+                color: theme.background.withValues(alpha: 0.8),
                 border: Border(
                   bottom: BorderSide(color: theme.glassBorder),
                 ),
@@ -548,7 +549,7 @@ class _UpdatesLayout extends ConsumerWidget {
                           color: theme.textPrimary)),
                   Text(vm.createdAtStr ?? '',
                       style: t.textTheme.bodySmall?.copyWith(
-                          color: theme.textPrimary.withOpacity(0.6))),
+                          color: theme.textPrimary.withValues(alpha: 0.6))),
                 ],
               ),
             ],
@@ -665,10 +666,10 @@ class _MediaLayout extends ConsumerWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withValues(alpha: 0.3),
                     Colors.transparent,
-                    Colors.black.withOpacity(0.6),
-                    Colors.black.withOpacity(0.9),
+                    Colors.black.withValues(alpha: 0.6),
+                    Colors.black.withValues(alpha: 0.9),
                   ],
                   stops: const [0.0, 0.4, 0.7, 1.0],
                 ),
@@ -717,7 +718,8 @@ class _MediaLayout extends ConsumerWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                        color: Colors.purple.withOpacity(0.2),
+                                        color: Colors.purple
+                                            .withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(4)),
                                     child: Text('#$tag',
                                         style: const TextStyle(
@@ -807,7 +809,7 @@ class _AttachmentsList extends StatelessWidget {
                 border: Border.all(color: Colors.grey.shade200),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -817,7 +819,7 @@ class _AttachmentsList extends StatelessWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.file_present_rounded,
@@ -844,9 +846,10 @@ class _GlassBackBtn extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
       ),
       child: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
@@ -866,9 +869,10 @@ class _GlassFavoriteBtn extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
       ),
       child: IconButton(
         icon: Icon(
@@ -893,9 +897,10 @@ class _GlassShareBtn extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
       ),
       child: IconButton(
         icon: const Icon(Icons.ios_share, color: Colors.white, size: 20),

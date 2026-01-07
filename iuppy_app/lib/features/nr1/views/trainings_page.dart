@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/providers.dart'; // envProvider, apiClientProvider
 import '../models/training_models.dart';
+import 'video_player_page.dart';
 
 final myTrainingsProvider = FutureProvider<List<Nr1Training>>((ref) async {
   final api = ref.read(apiClientProvider);
-  // Using endpoint /nr1/trainings (Catalog) as fallback for now 
+  // Using endpoint /nr1/trainings (Catalog) as fallback for now
   // since /my-sessions joins logic might return session objects wrapped
   final resp = await api.dio.get('/nr1/trainings');
   final list = (resp.data as List).map((e) => Nr1Training.fromJson(e)).toList();
@@ -41,13 +42,27 @@ class TrainingsPage extends HookConsumerWidget {
                         ),
                         ListTile(
                           title: Text(t.title),
-                          subtitle: Text('${t.hours} horas • ${t.type.toUpperCase()}'),
+                          subtitle: Text(
+                              '${t.hours} horas • ${t.type.toUpperCase()}'),
                           trailing: ElevatedButton(
                             onPressed: () {
-                                // TODO: Navigate to player
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Abrindo player...'))
-                                );
+                              final content = t.contents.isNotEmpty
+                                  ? t.contents.first
+                                  : null;
+                              // Mock URL if content is invalid or empty
+                              final url = (content is Map &&
+                                      content['url'] != null)
+                                  ? content['url']
+                                  : 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4';
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => VideoPlayerPage(
+                                          videoUrl: url,
+                                          title: t.title,
+                                        )),
+                              );
                             },
                             child: const Text('Continuar'),
                           ),

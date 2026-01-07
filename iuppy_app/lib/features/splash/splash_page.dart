@@ -81,7 +81,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                 colors: _showLogo
                     ? [
                         Colors.white,
-                        brandColor.withOpacity(0.05)
+                        brandColor.withValues(alpha: 0.05)
                       ] // Gradiente sutil quando carrega
                     : [Colors.white, Colors.white], // Branco puro no início
               ),
@@ -162,7 +162,7 @@ class _LogoOrTitle extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.3), // Cor da marca transparente
+                  color: color.withValues(alpha: 0.3), // Cor da marca transparente
                   blurRadius: 100, // MUITO blur (espalhado)
                   spreadRadius: 30, // Espalha bastante
                 ),
@@ -210,7 +210,7 @@ class _TitleText extends StatelessWidget {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.25),
+                color: color.withValues(alpha: 0.25),
                 blurRadius: 80,
                 spreadRadius: 40,
               ),

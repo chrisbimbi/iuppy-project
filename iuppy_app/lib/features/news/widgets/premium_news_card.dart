@@ -78,13 +78,13 @@ class PremiumNewsCard extends HookConsumerWidget {
     final comments =
         commentsRequireModeration ? approvedComments : totalComments;
 
-    final reactorsSample = ((news['reactorsSample'] as List?) ?? const [])
-        .whereType<Map>()
-        .map((m) => (
-              name: (m['name'] ?? '').toString(),
-              avatar: (m['avatarUrl'] ?? '').toString(),
-            ))
-        .toList();
+    // final reactorsSample = ((news['reactorsSample'] as List?) ?? const [])
+    //     .whereType<Map>()
+    //     .map((m) => (
+    //           name: (m['name'] ?? '').toString(),
+    //           avatar: (m['avatarUrl'] ?? '').toString(),
+    //         ))
+    //     .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -92,7 +92,7 @@ class PremiumNewsCard extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -136,7 +136,7 @@ class PremiumNewsCard extends HookConsumerWidget {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              Colors.black.withOpacity(0.4),
+                              Colors.black.withValues(alpha: 0.4),
                               Colors.transparent,
                             ],
                           ),
@@ -159,7 +159,7 @@ class PremiumNewsCard extends HookConsumerWidget {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                   )
                                 ],
@@ -180,7 +180,7 @@ class PremiumNewsCard extends HookConsumerWidget {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                   )
                                 ],

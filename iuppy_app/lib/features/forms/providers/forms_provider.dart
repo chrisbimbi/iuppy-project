@@ -50,16 +50,6 @@ class _FormsRepo {
     final apiClient = ref.read(apiClientProvider);
     final api = FormsApi(apiClient);
     final userLocale = ref.read(userLocaleProvider);
-    final userGroups = ref.read(userGroupsProvider);
-    final spacesRepo = ref.read(spacesRepoProvider);
-    final cachedSpaces = await spacesRepo.getCached();
-    final spaces = cachedSpaces.isNotEmpty
-        ? cachedSpaces
-        : await spacesRepo.fetchAndCache();
-    final visibleSpaces = spaces
-        .map((s) => (s['id'] ?? '').toString())
-        .where((e) => e.isNotEmpty)
-        .toSet();
 
     final all = await api.list(queryParameters: {
       'locale': userLocale,

@@ -70,7 +70,7 @@ class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin
           ),
           child: Opacity(
               opacity: 0.5 + 0.5 * (0.5 * (1 + _animation.value)).clamp(0.0, 1.0), // Pulse opacity
-              child: Container(color: Colors.white.withOpacity(0.5)),
+              child: Container(color: Colors.white.withValues(alpha: 0.5)),
           ),
         );
       },

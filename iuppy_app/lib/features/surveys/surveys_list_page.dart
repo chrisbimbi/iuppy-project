@@ -20,13 +20,12 @@ class _SurveysListPageState extends ConsumerState<SurveysListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.refresh(surveysListProvider);
+      ref.invalidate(surveysListProvider);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final asyncSurveys = ref.watch(surveysListProvider);
     final newCount = ref
         .watch(newSurveysCountProvider)
         .maybeWhen(data: (v) => v, orElse: () => 0);
@@ -50,7 +49,7 @@ class _SurveysListPageState extends ConsumerState<SurveysListPage> {
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   border: Border(
                     bottom: BorderSide(color: Colors.grey.shade200),
                   ),
@@ -289,7 +288,7 @@ class _SurveyCard extends StatelessWidget {
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

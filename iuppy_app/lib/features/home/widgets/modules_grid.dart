@@ -14,7 +14,6 @@ class CrystallineModulesGrid extends ConsumerWidget {
         );
     final enabled = settings?.enabledModules ?? {};
     final badges = ref.watch(homeBadgesProvider);
-    final primaryColor = Theme.of(context).primaryColor;
 
     final items = <_Module>[
       _Module('surveys', 'Enquetes', Icons.poll_outlined, '/surveys',
@@ -38,7 +37,6 @@ class CrystallineModulesGrid extends ConsumerWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final mod = items[index];
-        final isJourneys = mod.key == 'journeys';
 
         return GestureDetector(
           onTap: () => GoRouter.of(context).push(mod.route),
@@ -48,7 +46,7 @@ class CrystallineModulesGrid extends ConsumerWidget {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

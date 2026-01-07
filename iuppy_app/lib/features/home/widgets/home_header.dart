@@ -30,17 +30,19 @@ class HomeHeader extends ConsumerWidget {
     final userAsync = ref.watch(userProfileProvider);
     final userStats = ref.watch(userStatsProvider);
     final gamification = ref.watch(gamificationServiceProvider);
-    
-    final rawName = userAsync.value?.displayName ?? userAsync.value?.name ?? authState.userName ?? 'Developer Test';
-    final userName = (rawName.toLowerCase() == 'usuário') ? 'Developer Test' : rawName;
+
+    final rawName = userAsync.value?.displayName ??
+        userAsync.value?.name ??
+        authState.userName ??
+        'Developer Test';
+    final userName =
+        (rawName.toLowerCase() == 'usuário') ? 'Developer Test' : rawName;
     final firstName = userName.split(' ').first;
     final initials = _getInitials(userName);
     final primaryColor = Theme.of(context).primaryColor;
 
     final userXP = userStats['xp'] ?? 0;
     final currentLevel = gamification.getLevelFromXP(userXP);
-    final nextLevelXP = gamification.getXPNeededForNextLevel(userXP);
-    final progressToNext = gamification.getProgressToNextLevel(userXP);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -54,7 +56,7 @@ class HomeHeader extends ConsumerWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -102,7 +104,8 @@ class HomeHeader extends ConsumerWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.orange.shade50,
                           borderRadius: BorderRadius.circular(8),
@@ -110,7 +113,8 @@ class HomeHeader extends ConsumerWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.star, size: 14, color: Colors.orange.shade700),
+                            Icon(Icons.star,
+                                size: 14, color: Colors.orange.shade700),
                             const SizedBox(width: 4),
                             Text(
                               'Nível $currentLevel',
@@ -137,7 +141,7 @@ class HomeHeader extends ConsumerWidget {
                 ],
               ),
             ),
-            
+
             // Avatar circle
             GestureDetector(
               onTap: () => GoRouter.of(context).push('/profile'),

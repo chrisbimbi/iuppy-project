@@ -26,7 +26,8 @@ class HtmlContent extends StatelessWidget {
           final src = element.attributes['src'];
           if (src != null && src.isNotEmpty) {
             final parentIsLink = element.parent?.localName == 'a';
-            final linkUrl = parentIsLink ? element.parent?.attributes['href'] : null;
+            final linkUrl =
+                parentIsLink ? element.parent?.attributes['href'] : null;
 
             return GestureDetector(
               onTap: () {
@@ -43,23 +44,28 @@ class HtmlContent extends StatelessWidget {
                             title: const Text('Abrir imagem'),
                             onTap: () {
                               Navigator.pop(ctx);
-                              openImageGalleryDialog(context, [src], initialIndex: 0);
+                              openImageGalleryDialog(context, [src],
+                                  initialIndex: 0);
                             },
                           ),
                           ListTile(
                             leading: const Icon(Icons.link),
                             title: const Text('Abrir link'),
-                            subtitle: Text(linkUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(linkUrl,
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
                             onTap: () async {
                               Navigator.pop(ctx);
                               // Pequeno delay para garantir que o BottomSheet feche
-                              await Future.delayed(const Duration(milliseconds: 200));
-                              
-                              var url = linkUrl.trim();
-                              if (!url.startsWith('http')) {
-                                url = 'https://$url';
+                              await Future.delayed(
+                                  const Duration(milliseconds: 200));
+
+                              if (context.mounted) {
+                                var url = linkUrl.trim();
+                                if (!url.startsWith('http')) {
+                                  url = 'https://$url';
+                                }
+                                openWebSheet(context, url);
                               }
-                              openWebSheet(context, url);
                             },
                           ),
                         ],
@@ -71,7 +77,9 @@ class HtmlContent extends StatelessWidget {
                   openImageGalleryDialog(context, [src], initialIndex: 0);
                 }
               },
-              child: Image.network(src, fit: BoxFit.cover), // Simples por enquanto, ideal seria CachedNetworkImage
+              child: Image.network(src,
+                  fit: BoxFit
+                      .cover), // Simples por enquanto, ideal seria CachedNetworkImage
             );
           }
         }

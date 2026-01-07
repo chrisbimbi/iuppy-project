@@ -240,6 +240,7 @@ const CompanySettingsPage: React.FC = () => {
                                                     <LogoUploader
                                                         value={settings.branding?.logoUrl}
                                                         onUploaded={(url) => handleBrandingChange({ logoUrl: url })}
+                                                        companyId={companyId}
                                                     />
                                                     <div className="form-text mt-2">
                                                         {intl.formatMessage({ id: 'COMPANY.SETTINGS.BRANDING.HINT.LOGO', defaultMessage: 'Dica: você também pode informar uma URL manualmente se preferir.' })}

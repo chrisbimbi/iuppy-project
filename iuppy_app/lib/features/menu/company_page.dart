@@ -33,7 +33,7 @@ class CompanyPage extends ConsumerWidget {
                   ),
 
                 Text(
-                  branding.appTitle ?? 'Empresa',
+                  branding.appTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Space Mono',

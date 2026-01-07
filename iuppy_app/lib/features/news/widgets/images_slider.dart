@@ -68,7 +68,7 @@ class _ImagesSliderState extends State<ImagesSlider> {
                           margin: const EdgeInsets.symmetric(horizontal: 3),
                           decoration: BoxDecoration(
                             color:
-                                Colors.white.withOpacity(selected ? .95 : .55),
+                                Colors.white.withValues(alpha: selected ? .95 : .55),
                             shape: BoxShape.circle,
                           ),
                         );

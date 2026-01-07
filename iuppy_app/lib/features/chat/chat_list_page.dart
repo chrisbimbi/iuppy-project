@@ -101,12 +101,13 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                         debugPrint('Error marking as read: $e');
                       }
 
+                      if (!context.mounted) return;
                       context
                           .push(
                               '/chat/${conv['id']}?title=${Uri.encodeComponent(title)}')
                           .then((_) {
-                        ref.refresh(chatConversationsProvider);
-                        ref.refresh(unreadCountProvider);
+                        ref.invalidate(chatConversationsProvider);
+                        ref.invalidate(unreadCountProvider);
                       });
                     },
                     child: Padding(
@@ -359,8 +360,8 @@ class _UserPickerModalState extends ConsumerState<_UserPickerModal> {
                             if (context.mounted) {
                               await context.push(
                                   '/chat/${conv['id']}?title=${Uri.encodeComponent(user['name'] ?? '')}');
-                              ref.refresh(chatConversationsProvider);
-                              ref.refresh(unreadCountProvider);
+                              ref.invalidate(chatConversationsProvider);
+                              ref.invalidate(unreadCountProvider);
                             }
                           } catch (e) {
                             debugPrint('Create chat error: $e');

@@ -150,7 +150,7 @@ class _NotificationCard extends ConsumerWidget {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: item.isRead ? Colors.white : Colors.blue.shade50.withOpacity(0.2),
+      color: item.isRead ? Colors.white : Colors.blue.shade50.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -340,9 +340,9 @@ class _MiniChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

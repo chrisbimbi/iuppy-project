@@ -82,7 +82,7 @@ class SearchBottomSheet extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final results = ref.watch(searchResultsProvider);
     final notifier = ref.read(searchResultsProvider.notifier);
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
 
     // Trigger initial search if provided
     useEffect(() {
@@ -268,7 +268,15 @@ class SearchBottomSheet extends HookConsumerWidget {
       case 'news':
         context.push('/news/article/${item.id}');
         break;
-      // TODO: Add navigation for other types
+      case 'form':
+        context.push('/forms?formId=${item.id}');
+        break;
+      case 'survey':
+        context.push('/surveys/${item.id}');
+        break;
+      case 'journey':
+        context.push('/journeys/${item.id}');
+        break;
       default:
         break;
     }

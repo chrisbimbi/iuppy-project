@@ -243,7 +243,7 @@ final dioProvider = Provider<Dio>((ref) {
       await ref.read(authControllerProvider.notifier).logout();
 
       final ctx = navKey.currentContext;
-      if (ctx != null) {
+      if (ctx != null && ctx.mounted) {
         ScaffoldMessenger.of(ctx).clearSnackBars();
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
@@ -252,7 +252,7 @@ final dioProvider = Provider<Dio>((ref) {
 
         final router = GoRouter.of(ctx);
         final routeInfo = router.routeInformationProvider.value;
-        final currentLocation = (routeInfo.location ?? '/home');
+        final currentLocation = (routeInfo.uri.toString());
 
         final from = Uri.encodeComponent(currentLocation);
         final target = currentLocation.startsWith('/login')

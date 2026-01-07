@@ -237,7 +237,7 @@ class _ChatInputArea extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.5),
+            .withValues(alpha: 0.5),
         child: Text(
           'Esta conversa foi encerrada pelo RH.',
           textAlign: TextAlign.center,

@@ -621,6 +621,76 @@ export class JourneysService {
     return this.findOne(id);
   }
 
+  async updateStepMedia(
+    stepId: string,
+    mediaUrl: string,
+    thumbnailUrl?: string,
+    metadata?: any,
+    companyId?: string
+  ) {
+    const step = await this.stepRepo.findOne({
+      where: { id: stepId },
+      relations: ['journey', 'journey.company']
+    });
+
+    if (!step) {
+      throw new NotFoundException('Step not found');
+    }
+
+    // Security: Validate companyId if provided
+    if (companyId) {
+      const expectedCompanyId = step.journey.company.id;
+
+      if (companyId !== expectedCompanyId) {
+        this.logger.error(
+          `Company ID mismatch for step ${stepId}! Expected: ${expectedCompanyId}, Got: ${companyId}`
+        );
+        throw new ForbiddenException('Company ID mismatch - security violation');
+      }
+
+      // Additional validation: Extract companyId from Firebase Storage URL
+      const urlCompanyId = this.extractCompanyIdFromUrl(mediaUrl);
+      if (urlCompanyId && urlCompanyId !== expectedCompanyId) {
+        this.logger.error(
+          `URL company mismatch for step ${stepId}! Expected: ${expectedCompanyId}, URL contains: ${urlCompanyId}`
+        );
+        throw new ForbiddenException('Invalid video URL - company mismatch');
+      }
+    }
+
+    step.mediaUrl = mediaUrl;
+
+    step.videoConfig = {
+      ...(step.videoConfig || {}),
+      processed: true,
+      processedAt: new Date(),
+      metadata: metadata,
+      thumbnailUrl: thumbnailUrl  // Store thumbnail in videoConfig
+    };
+
+    return this.stepRepo.save(step);
+  }
+
+  /**
+   * Helper: Extract companyId from Firebase Storage URL
+   * @param url Firebase Storage URL
+   * @returns companyId or null
+   */
+  private extractCompanyIdFromUrl(url: string): string | null {
+    try {
+      // Decode URL to get path: /{companyId}/journeys/steps/...
+      const decodedUrl = decodeURIComponent(url);
+
+      // Match UUID pattern at start of path
+      const match = decodedUrl.match(/\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/journeys\//i);
+
+      return match ? match[1] : null;
+    } catch (e) {
+      this.logger.warn(`Failed to extract companyId from URL: ${url}`);
+      return null;
+    }
+  }
+
   async getProgress(userId: string) {
     try {
       const instances = await this.instanceRepo.find({

@@ -15,8 +15,9 @@ class ModulesPage extends ConsumerWidget {
         );
     final enabled = settings?.enabledModules ?? {};
     final badges = ref.watch(homeBadgesProvider);
-    
-    final journeyProgress = ref.watch(journeyProgressProvider).asData?.value ?? [];
+
+    final journeyProgress =
+        ref.watch(journeyProgressProvider).asData?.value ?? [];
     final hasJourneys = journeyProgress.isNotEmpty;
 
     // Define all possible modules
@@ -46,15 +47,18 @@ class ModulesPage extends ConsumerWidget {
         color: Colors.orange,
       ),
       if (hasJourneys)
+        _ModuleItem(
+          key: 'journeys',
+          label: 'Jornadas',
+          icon: Icons.map_outlined,
+          route: '/journeys',
+          badge: journeyProgress
+              .where((j) => ((j['progress'] as num?)?.toDouble() ?? 0.0) < 1.0)
+              .length, // Incomplete journeys count
+
+          color: Colors.green,
+        ),
       _ModuleItem(
-        key: 'journeys',
-        label: 'Jornadas',
-        icon: Icons.map_outlined,
-        route: '/journeys',
-        badge: 0, // TODO: Add journey badge logic if needed
-        color: Colors.green,
-      ),
-       _ModuleItem(
         key: 'activities', // Placeholder key if Activities is separate
         label: 'Atividades',
         icon: Icons.task_alt,
@@ -73,7 +77,11 @@ class ModulesPage extends ConsumerWidget {
       // Add other modules here as they become available
     ];
 
-    final visibleModules = allModules.where((m) => enabled.contains(m.key) || m.key == 'activities' && enabled.contains('activities')).toList();
+    final visibleModules = allModules
+        .where((m) =>
+            enabled.contains(m.key) ||
+            m.key == 'activities' && enabled.contains('activities'))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -140,7 +148,7 @@ class _ModuleCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: module.color.withOpacity(0.1),
+                      color: module.color.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -166,7 +174,8 @@ class _ModuleCard extends StatelessWidget {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(12),

@@ -18,9 +18,10 @@ type Props = {
     onClose: () => void
     onSave: (data: any) => void
     onDelete: () => void
+    journeyId?: string | null
 }
 
-export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSave, onDelete }) => {
+export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSave, onDelete, journeyId }) => {
     const intl = useIntl()
     const { currentUser } = useAuth()
     const [title, setTitle] = useState(initialData?.title || '')
@@ -194,7 +195,6 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
                             <option value="ARTICLE">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.ARTICLE' })}</option>
                             <option value="FORM">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.FORM' })}</option>
                             <option value="POLL">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.POLL' })}</option>
-                            <option value="VIDEO">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.VIDEO_LEGACY' })}</option>
                         </select>
                     </div>
 
@@ -299,6 +299,7 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
                                                 }
                                             }}
                                             companyId={currentUser?.companyId || ''}
+                                            stepId={stepId}
                                         />
                                     )}
                                 </div>

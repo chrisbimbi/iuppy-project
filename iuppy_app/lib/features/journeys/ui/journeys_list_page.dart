@@ -35,10 +35,10 @@ class JourneysListPage extends ConsumerWidget {
                   height: 100,
                   padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         width: 1,
                       ),
                     ),

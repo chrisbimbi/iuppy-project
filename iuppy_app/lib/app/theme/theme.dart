@@ -6,8 +6,21 @@ class AppThemePair {
   final ThemeData light;
   final ThemeData dark;
 
-  var colors;
-  AppThemePair(this.light, this.dark);
+  final AppThemeColors colors;
+
+  AppThemePair(this.light, this.dark, this.colors);
+}
+
+class AppThemeColors {
+  final Color background;
+  final Color textPrimary;
+  final Color neonAccent;
+
+  const AppThemeColors({
+    required this.background,
+    required this.textPrimary,
+    required this.neonAccent,
+  });
 }
 
 class BrandingColors {
@@ -27,7 +40,7 @@ ThemeData _base(BrandingColors bc, {Brightness brightness = Brightness.light}) {
     seedColor: bc.primary,
     brightness: brightness,
     primary: bc.primary,
-    background: bc.background,
+    // background: bc.background, // Deprecated
   );
   final textTheme = GoogleFonts.interTextTheme().apply(
     bodyColor: bc.textOnBackground,
@@ -40,7 +53,7 @@ ThemeData _base(BrandingColors bc, {Brightness brightness = Brightness.light}) {
     scaffoldBackgroundColor: bc.background,
     appBarTheme: AppBarTheme(
       elevation: 0,
-      backgroundColor: bc.background.withOpacity(isDark ? 0.7 : 0.8),
+      backgroundColor: bc.background.withValues(alpha: isDark ? 0.7 : 0.8),
       foregroundColor: bc.textOnBackground,
       surfaceTintColor: Colors.transparent,
     ),
@@ -83,9 +96,10 @@ class FrostedGlass extends StatelessWidget {
               color: Theme.of(context)
                   .colorScheme
                   .surface
-                  .withOpacity(overlayOpacity),
+                  .withValues(alpha: overlayOpacity),
               border: Border.all(
-                  color: Colors.white.withOpacity(borderOpacity), width: 1),
+                  color: Colors.white.withValues(alpha: borderOpacity),
+                  width: 1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: child,
@@ -100,5 +114,10 @@ AppThemePair buildThemes(BrandingColors bc) {
   return AppThemePair(
     _base(bc, brightness: Brightness.light),
     _base(bc, brightness: Brightness.dark),
+    AppThemeColors(
+      background: bc.background,
+      textPrimary: bc.textOnBackground,
+      neonAccent: bc.primary,
+    ),
   );
 }

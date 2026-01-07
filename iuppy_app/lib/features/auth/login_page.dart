@@ -31,7 +31,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   int _step = 0;
 
   String? _verificationId; // Firebase SMS
-  int? _resendToken;
 
   bool get _isEmailFlow => _identifierCtrl.text.contains('@');
 
@@ -140,7 +139,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         codeSent: (String verificationId, int? resendToken) {
           setState(() {
             _verificationId = verificationId;
-            _resendToken = resendToken;
+
             _step = 3;
             _loading = false;
           });
@@ -193,7 +192,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       // Call Backend with ID + Token
       final api = ref.read(apiClientProvider);
-      final resp = await api.loginById(_identifierCtrl.text.trim(), idToken);
+
+      var rawId = _identifierCtrl.text.trim();
+      // If it's not an email, sanitize (remove common punctuation for CPF)
+      // We only strip . and - to allow alphanumeric matriculas if they exist
+      if (!rawId.contains('@')) {
+        rawId = rawId.replaceAll(RegExp(r'[.\-]'), '');
+      }
+
+      final resp = await api.loginById(rawId, idToken);
       final token = resp['accessToken'];
 
       _finishLogin(token);
@@ -246,7 +253,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),

@@ -47,7 +47,7 @@ class HeaderOval extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: Colors.white.withOpacity(.25),
+                  backgroundColor: Colors.white.withValues(alpha: .25),
                   child: initials.isEmpty
                       ? const Icon(Icons.person, color: Colors.white)
                       : Text(

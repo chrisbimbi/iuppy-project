@@ -104,11 +104,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         if (isAvatar) {
           await api.updateProfile({'avatarUrl': url});
         } else {
-          // TODO: Header update logic? Assuming 'headerUrl' field exists or 'coverUrl'
-          // User mentioned "imagem de capa".
-          // Profile model doesn't show 'headerUrl', maybe customAttributes['coverUrl']?
-          // The UI shows a container.
-          // I will attempt to save to customAttributes['cover']
+          // Saving cover image to customAttributes['cover']
+
           await api.updateProfile({
             'customAttributes': {
               ...(ref.read(userProfileProvider).value?.customAttributes ?? {}),
@@ -275,7 +272,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.5)
+                                Colors.black.withValues(alpha: 0.5)
                               ]))),
                     ),
                     // Avatar

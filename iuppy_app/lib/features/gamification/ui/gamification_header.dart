@@ -31,7 +31,7 @@ class GamificationHeader extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.3),
+            color: Colors.orange.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -58,7 +58,7 @@ class GamificationHeader extends ConsumerWidget {
                   Text(
                     'Nível $currentLevel',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
                       fontFamily: 'Space Mono',
                     ),
@@ -68,7 +68,7 @@ class GamificationHeader extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -92,7 +92,7 @@ class GamificationHeader extends ConsumerWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progressToNext,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 6,
             ),
@@ -101,7 +101,7 @@ class GamificationHeader extends ConsumerWidget {
           Text(
             'Faltam $nextLevelXP XP para o próximo nível',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 12,
             ),
           ),

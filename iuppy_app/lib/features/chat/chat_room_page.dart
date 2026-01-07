@@ -695,7 +695,7 @@ class _VoiceMessageBubbleState extends State<_VoiceMessageBubble> {
                     ? (_position.inMilliseconds / totalDuration.inMilliseconds)
                         .clamp(0.0, 1.0)
                     : 0,
-                backgroundColor: color.withOpacity(0.3),
+                backgroundColor: color.withValues(alpha: 0.3),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),
@@ -1059,7 +1059,7 @@ class _MessageBubble extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 6),
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border(
                                       left: BorderSide(

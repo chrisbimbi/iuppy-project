@@ -21,7 +21,6 @@ class SurveyRenderer extends StatefulWidget {
 
 class _SurveyRendererState extends State<SurveyRenderer> {
   final Map<String, dynamic> _answers = {};
-  bool _dirty = false;
 
   @override
   void initState() {
@@ -58,7 +57,6 @@ class _SurveyRendererState extends State<SurveyRenderer> {
                           ? null
                           : (v) => setState(() {
                                 _answers[qid] = v ?? '';
-                                _dirty = true;
                               }),
                       activeColor:
                           widget.isReadOnly ? Colors.grey : Colors.black,
@@ -85,7 +83,6 @@ class _SurveyRendererState extends State<SurveyRenderer> {
                                   set.remove(opt);
                                 }
                                 _answers[qid] = set;
-                                _dirty = true;
                               }),
                       activeColor:
                           widget.isReadOnly ? Colors.grey : Colors.black,
@@ -112,7 +109,6 @@ class _SurveyRendererState extends State<SurveyRenderer> {
               fillColor: Colors.white),
           onChanged: (v) {
             _answers[qid] = v;
-            _dirty = true;
           },
           validator: (v) => (required && (v == null || v.trim().isEmpty))
               ? 'Obrigatório'
@@ -126,7 +122,6 @@ class _SurveyRendererState extends State<SurveyRenderer> {
                 ? null
                 : (int v) => setState(() {
                       _answers[qid] = v;
-                      _dirty = true;
                     }));
         break;
       case 'nps':
@@ -136,7 +131,6 @@ class _SurveyRendererState extends State<SurveyRenderer> {
                 ? null
                 : (int v) => setState(() {
                       _answers[qid] = v;
-                      _dirty = true;
                     }));
         break;
       default:
@@ -154,7 +148,7 @@ class _SurveyRendererState extends State<SurveyRenderer> {
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -235,7 +229,7 @@ class _SurveyRendererState extends State<SurveyRenderer> {
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shadowColor: Colors.black.withOpacity(0.4),
+                shadowColor: Colors.black.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
               ),

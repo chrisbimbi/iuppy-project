@@ -31,14 +31,14 @@ class JourneyStepCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
             color: isCompleted
-                ? Colors.green.withOpacity(0.3)
+                ? Colors.green.withValues(alpha: 0.3)
                 : Colors.transparent,
             width: 1,
           ),
@@ -53,8 +53,8 @@ class JourneyStepCard extends ConsumerWidget {
                   color: isLocked
                       ? Colors.grey.shade100
                       : (isCompleted
-                          ? Colors.green.withOpacity(0.1)
-                          : primaryColor.withOpacity(0.1)),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : primaryColor.withValues(alpha: 0.1)),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

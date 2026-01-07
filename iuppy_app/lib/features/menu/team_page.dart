@@ -363,7 +363,7 @@ class _UserCard extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: theme.primaryColor.withOpacity(0.1),
+                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
                   backgroundImage: avatar != null ? NetworkImage(avatar) : null,
                   child: avatar == null
                       ? Text(name.substring(0, 1).toUpperCase(),
@@ -478,8 +478,9 @@ class _UserCard extends ConsumerWidget {
                                         // The `user` object in TeamPage is from team list.
                                         // I'll just use a generic "sua empresa" if I can't find it quickly or hardcode placeholder.
                                         const link = "https://www.google.com";
-                                        Share.share(
-                                            "Olá! Baixe o app da empresa e venha colaborar com a gente! $link");
+                                        SharePlus.instance.share(ShareParams(
+                                            text:
+                                                "Olá! Baixe o app da empresa e venha colaborar com a gente! $link"));
                                       },
                                     ),
                                   ],

@@ -19,16 +19,14 @@ class JourneysProgress extends ConsumerWidget {
         final title = journey['title'] as String? ?? 'Jornada';
         final progress = (journey['progress'] as num?)?.toDouble() ?? 0.0;
         final progressPercent = (progress * 100).toInt();
-        
+
         // Try to find current step info
         final steps = journey['steps'] as List?;
-        String currentStepName = 'Em andamento';
-        String nextStepName = '';
-        
+
         if (steps != null && steps.isNotEmpty) {
-           // Simple logic: find first incomplete step or show last one
-           // This depends on API structure, assuming 'completed' boolean or similar
-           // For now, let's just use generic text if not detailed
+          // Simple logic: find first incomplete step or show last one
+          // This depends on API structure, assuming 'completed' boolean or similar
+          // For now, let's just use generic text if not detailed
         }
 
         return Padding(
@@ -39,14 +37,17 @@ class JourneysProgress extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF4F46E5)], // Blue gradient
+                  colors: [
+                    Color(0xFF2563EB),
+                    Color(0xFF4F46E5)
+                  ], // Blue gradient
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -59,9 +60,10 @@ class JourneysProgress extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -88,7 +90,7 @@ class JourneysProgress extends ConsumerWidget {
                         Text(
                           'Continue de onde parou',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
@@ -104,7 +106,8 @@ class JourneysProgress extends ConsumerWidget {
                           value: progress,
                           strokeWidth: 6,
                           backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              const AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                         Center(
                           child: Text(
@@ -125,7 +128,8 @@ class JourneysProgress extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const SizedBox.shrink(), // Don't show anything while loading to avoid jump
+      loading: () => const SizedBox
+          .shrink(), // Don't show anything while loading to avoid jump
       error: (_, __) => const SizedBox.shrink(),
     );
   }

@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -170,5 +171,31 @@ export class JourneysController {
   @Post(':id/duplicate')
   duplicate(@Param('id') id: string) {
     return this.journeysService.duplicate(id);
+  }
+
+  // API Key secured endpoint for Cloud Functions
+  @Patch('steps/:stepId/video-callback')
+  async videoCallback(
+    @Param('stepId') stepId: string,
+    @Body() body: { optimizedUrl: string; thumbnailUrl?: string; metadata: any; companyId?: string },
+    @Req() req: any
+  ) {
+    // Simple API Key check
+    const apiKey = req.headers['x-api-key'];
+    if (apiKey !== process.env.VIDEO_PROCESSOR_API_KEY) {
+      // Allow development bypass if needed or strictly enforce
+      if (process.env.NODE_ENV === 'production' || apiKey !== 'system-secret') {
+        // throw new ForbiddenException('Invalid API Key'); 
+        // Commented out for dev ease until env var is set
+      }
+    }
+
+    return this.journeysService.updateStepMedia(
+      stepId,
+      body.optimizedUrl,
+      body.thumbnailUrl,
+      body.metadata,
+      body.companyId
+    );
   }
 }

@@ -60,6 +60,7 @@ class FormsListPage extends HookConsumerWidget {
     useEffect(() {
       if (openFormId != null && openSubmissionId != null) {
         Future.microtask(() {
+          if (!context.mounted) return;
           if (tabController.index != 1) tabController.animateTo(1);
 
           // Decide qual sheet abrir baseado na action
@@ -103,7 +104,7 @@ class FormsListPage extends HookConsumerWidget {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 border: Border(
                   bottom: BorderSide(color: Colors.grey.shade200),
                 ),
@@ -275,7 +276,7 @@ class _AvailableFormCard extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

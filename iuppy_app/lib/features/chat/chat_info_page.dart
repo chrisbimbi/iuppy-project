@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:iuppy_app/core/providers.dart';
 import 'package:iuppy_app/features/chat/chat_service.dart';
+import 'package:iuppy_app/features/chat/widgets/user_picker.dart';
 
 class ChatInfoPage extends ConsumerWidget {
   final String conversationId;
@@ -64,10 +65,43 @@ class ChatInfoPage extends ConsumerWidget {
                         TextButton.icon(
                             icon: const Icon(Icons.add),
                             label: const Text('Adicionar'),
-                            onPressed: () {
-                              // TODO: Implement Add Participant Picker
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Em breve')));
+                            onPressed: () async {
+                              final existingIds = participants
+                                  .map(
+                                      (p) => p['user']?['id']?.toString() ?? '')
+                                  .toList();
+
+                              final selectedUser = await showDialog(
+                                context: context,
+                                builder: (_) => UserPickerDialog(
+                                  excludeUserIds: existingIds,
+                                  // multiple: false, // For now single add
+                                ),
+                              );
+
+                              if (selectedUser != null && context.mounted) {
+                                try {
+                                  // selectedUser is Map<String, dynamic> from teamListProvider
+                                  final userId = selectedUser['id'];
+                                  await api.addParticipant(
+                                      conversationId, userId);
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                '${selectedUser['name']} adicionado!')));
+                                    ref.invalidate(chatConversationsProvider);
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content:
+                                                Text('Erro ao adicionar: $e')));
+                                  }
+                                }
+                              }
                             })
                     ],
                   ),
@@ -100,10 +134,12 @@ class ChatInfoPage extends ConsumerWidget {
                                   await api.removeParticipant(
                                       conversationId, u['id']);
                                 }
-                                ref.refresh(chatConversationsProvider);
+                                ref.invalidate(chatConversationsProvider);
                               } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Erro: $e')));
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Erro: $e')));
+                                }
                               }
                             },
                             itemBuilder: (context) => [
@@ -144,16 +180,20 @@ class ChatInfoPage extends ConsumerWidget {
                                     child: const Text('Limpar',
                                         style: TextStyle(color: Colors.red)),
                                     onPressed: () async {
-                                      Navigator.pop(ctx);
+                                      if (ctx.mounted) Navigator.pop(ctx);
                                       try {
                                         await api
                                             .clearChatHistory(conversationId);
-                                        Navigator.pop(
-                                            context); // Close info page
+                                        if (context.mounted) {
+                                          Navigator.pop(
+                                              context); // Close info page
+                                        }
                                       } catch (e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(SnackBar(
-                                                content: Text('Erro: $e')));
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text('Erro: $e')));
+                                        }
                                       }
                                     })
                               ]));

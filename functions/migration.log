@@ -1,0 +1,6 @@
+🔄 Migrating to company-first structure
+Company ID: 000c0911-58b3-4c80-84bc-fe015eec1961
+
+📹 Migrating journeys videos...
+   From: gs://iuppy-app.firebasestorage.app/journeys/*
+   To:   gs://iuppy-app.firebasestorage.app/000c0911-58b3-4c80-84bc-fe015eec1961/journeys/steps/*

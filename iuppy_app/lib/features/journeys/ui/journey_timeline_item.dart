@@ -67,7 +67,7 @@ class JourneyTimelineItem extends StatelessWidget {
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: statusColor.withOpacity(0.4),
+                        color: statusColor.withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -108,13 +108,13 @@ class JourneyTimelineItem extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
                       border: isCompleted
-                          ? Border.all(color: Colors.green.withOpacity(0.3))
+                          ? Border.all(color: Colors.green.withValues(alpha: 0.3))
                           : null,
                     ),
                     child: Column(
@@ -137,7 +137,7 @@ class JourneyTimelineItem extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
+                                  color: Colors.orange.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text(

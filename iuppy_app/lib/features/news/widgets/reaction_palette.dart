@@ -23,7 +23,7 @@ class ReactionPalette extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: REACTIONS.map((r) {
+          children: kReactions.map((r) {
             final k = r.kind;
             final selected = currentKind == k;
             return Padding(

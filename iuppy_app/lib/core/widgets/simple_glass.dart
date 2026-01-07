@@ -25,9 +25,9 @@ class SimpleGlass extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: Container(
           decoration: BoxDecoration(
-            color: tint.withOpacity(opacity),
+            color: tint.withValues(alpha: opacity),
             border: Border.all(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               width: 1,
             ),
           ),

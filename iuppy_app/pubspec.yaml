@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_hooks: ^0.20.5
   hooks_riverpod: ^2.5.1
+  flutter_riverpod: ^2.5.1
   dio: ^5.7.0
   dio_cookie_manager: ^3.3.0        # ✅ atualizado (compatível com cookie_jar ^4)
   cookie_jar: ^4.0.8                # ✅ você importa no provider
@@ -71,6 +72,7 @@ flutter:
     - assets/images/
     - assets/anim/
     - assets/reactions_icons/
+    - assets/fonts/
   shaders:
     - shaders/liquid_glass.frag
 

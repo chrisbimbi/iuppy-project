@@ -69,7 +69,8 @@ Future<void> openImageGalleryDialog(
             IconButton(
               tooltip: 'Compartilhar',
               icon: const Icon(Icons.ios_share_rounded),
-              onPressed: () => Share.share(urls[index]),
+              onPressed: () =>
+                  SharePlus.instance.share(ShareParams(text: urls[index])),
             ),
             IconButton(
               tooltip: 'Baixar',

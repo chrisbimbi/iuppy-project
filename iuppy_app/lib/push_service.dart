@@ -49,7 +49,6 @@ class PushService {
   String? _companyId;
   String? _apiBaseUrl;
   String? _locale;
-  String? _appVersion;
 
   String? _pendingDeepLink; // Added buffer for race cond
   void Function(String? link)? _onDeepLink;
@@ -240,7 +239,7 @@ class PushService {
     _userId = userId;
     _companyId = companyId;
     _apiBaseUrl = apiBaseUrl;
-    _appVersion = appVersion;
+
     _locale = locale;
     if (accessToken != null && accessToken.isNotEmpty) {
       _accessToken = accessToken;

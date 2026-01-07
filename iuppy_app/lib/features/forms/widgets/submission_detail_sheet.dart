@@ -376,8 +376,9 @@ class _OptionChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-          color:
-              selected ? Colors.orange[700]!.withOpacity(0.12) : Colors.white,
+          color: selected
+              ? Colors.orange[700]!.withValues(alpha: 0.12)
+              : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
               color: selected ? Colors.orange[700]! : Colors.grey.shade300)),
@@ -401,8 +402,8 @@ class _AttachmentStrip extends StatelessWidget {
             itemCount: attachments.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final att = attachments[index];
-              final path = att['storagePath']?.toString() ?? 'arquivo';
+              // final att = attachments[index];
+              // final path = att['storagePath']?.toString() ?? 'arquivo';
               return Container(
                   width: 78,
                   decoration: BoxDecoration(

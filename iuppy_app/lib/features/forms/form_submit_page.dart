@@ -242,7 +242,7 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -381,8 +381,12 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
     for (int i = 0; i < _pendingFiles.length; i++) {
       final f = _pendingFiles[i];
       final file = File(f.path!);
-      final uploaded =
-          await storage.uploadFormFile(file, formId: widget.formId);
+      final companyId = ref.read(envProvider).companyId;
+      final uploaded = await storage.uploadFormFile(
+        file,
+        formId: widget.formId,
+        companyId: companyId,
+      );
       _uploadedAttachments.add(uploaded.toJson());
       setState(() {
         _uploadProgress = (i + 1) / _pendingFiles.length;
@@ -450,7 +454,7 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       border: Border(
                         bottom: BorderSide(color: Colors.grey.shade200),
                       ),
@@ -570,7 +574,7 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
                           elevation: 4,
-                          shadowColor: Colors.black.withOpacity(0.4),
+                          shadowColor: Colors.black.withValues(alpha: 0.4),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16)),
                         ),

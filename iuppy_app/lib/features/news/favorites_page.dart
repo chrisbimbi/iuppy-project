@@ -114,7 +114,7 @@ class FavoritesPage extends ConsumerWidget {
                   height: 100,
                   padding: const EdgeInsets.fromLTRB(8, 48, 16, 16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     border: Border(
                       bottom: BorderSide(
                         color: Colors.grey.shade200,
