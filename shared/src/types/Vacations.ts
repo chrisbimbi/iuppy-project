@@ -58,4 +58,8 @@ export interface VacationRequest {
     rejectionReason?: string;
     createdAt: string;
     updatedAt: string;
+    user?: {
+        name: string;
+        avatar?: string;
+    }
 }

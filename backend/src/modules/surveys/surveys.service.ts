@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { SurveyEntity } from './entities/survey.entity';
 import { SurveyQuestionEntity } from './entities/survey-question.entity';
 import { SurveyResponseEntity } from './entities/survey-response.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { CreateSurveyDto } from './dto/create-survey.dto';
 import { UpdateSurveyDto } from './dto/update-survey.dto';
@@ -41,6 +42,7 @@ export class SurveysService {
     @InjectRepository(SurveyResponseEntity)
     private responsesRepo: Repository<SurveyResponseEntity>,
     private readonly comms: CommunicationsService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   // --- Helpers de Audiência ---
@@ -405,7 +407,19 @@ export class SurveysService {
   ): Promise<SurveyResponseEntity> {
     const survey = await this.findOne(companyId, dto.surveyId);
     const resp = this.responsesRepo.create({ ...dto, survey });
-    return this.responsesRepo.save(resp);
+    const saved = await this.responsesRepo.save(resp);
+
+    if (saved.userId) {
+      this.eventEmitter.emit('survey.completed', {
+        companyId,
+        surveyId: survey.id,
+        userId: saved.userId,
+        responseId: saved.id,
+        timestamp: new Date(),
+      });
+    }
+
+    return saved;
   }
 
   findResponses(

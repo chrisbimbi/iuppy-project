@@ -58,7 +58,7 @@ export const InlinePollBuilder: React.FC<InlinePollBuilderProps> = ({ value, onC
                 // User said "Poll module 'original'". If original supports only string, then it's single language.
                 // We'll show only pt-BR to avoid confusion, or if the user wants full multi-lang support later we can add.
                 // For now, let's stick to pt-BR as the interface to the simple string.
-                allowedTypes={['single_choice']}
+                // Allow all supported field types for polls, not just single_choice
                 maxFields={1}
             />
         </div>

@@ -88,6 +88,10 @@ export class JourneyStepEntity {
   @Column({ type: 'int', default: 0 })
   orderIndex: number;
 
+  @Column({ type: 'int', nullable: true })
+  xpOverride?: number;
+
+
   @CreateDateColumn()
   createdAt: Date;
 

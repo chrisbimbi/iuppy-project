@@ -25,6 +25,7 @@ const REAL_MODULE_KEYS: ModuleKey[] = [
   'journeys',
   'performance',
   'nr1',
+  'gamification',
 ];
 
 @Injectable()

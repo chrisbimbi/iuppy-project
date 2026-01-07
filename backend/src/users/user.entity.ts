@@ -7,9 +7,11 @@ import {
   UpdateDateColumn,
   Index,
   ManyToMany,
+  OneToMany,
 } from 'typeorm';
 import { Role, User } from '@shared/types';
 import { GroupEntity } from '../groups/group.entity';
+import { UserXPHistoryEntity } from '../modules/gamification/entities/user-xp-history.entity';
 
 @Entity('user_entity')
 export class UserEntity implements User {
@@ -104,6 +106,9 @@ export class UserEntity implements User {
 
   @Column({ type: 'int', default: 0 })
   xp: number;
+
+  @OneToMany(() => UserXPHistoryEntity, (history) => history.user)
+  xpHistory: UserXPHistoryEntity[];
 
   @UpdateDateColumn()
   updatedAt: Date;

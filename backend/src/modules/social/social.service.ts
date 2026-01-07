@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SocialPostEntity } from './entities/social-post.entity';
 import { Channel } from '../../channels/channel.entity';
 import { SocialCommentEntity } from './entities/social-comment.entity';
@@ -22,6 +23,7 @@ export class SocialService {
         private readonly eventRepo: Repository<SocialInteractionEventEntity>,
         @InjectRepository(Channel)
         private readonly channelRepo: Repository<Channel>,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     async createPost(
@@ -40,7 +42,16 @@ export class SocialService {
             status: SocialPostStatus.APPROVED, // For MVP, auto-approve
         });
 
-        return this.postRepo.save(post);
+        const saved = await this.postRepo.save(post);
+
+        // Emit gamification event for post creation
+        this.eventEmitter.emit('post.create', {
+            userId: authorId,
+            postId: saved.id,
+            companyId,
+        });
+
+        return saved;
     }
 
     async getFeed(companyId: string, userId: string, requestedChannelIds: string[], userGroups: string[] = [], page = 1, limit = 20) {
@@ -125,6 +136,15 @@ export class SocialService {
         await this.reactionRepo.save(reaction);
         await this.incrementReactionCount(postId);
         await this.logEvent(companyId, postId, userId, 'LIKE');
+
+        // Emit gamification event
+        this.eventEmitter.emit('post.reaction', {
+            userId,
+            postId,
+            reaction: type,
+            companyId,
+        });
+
         return { action: 'added' };
     }
 
@@ -135,6 +155,15 @@ export class SocialService {
         await this.commentRepo.save(comment);
         await this.incrementCommentCount(postId);
         await this.logEvent(companyId, postId, userId, 'COMMENT');
+
+        // Emit gamification event
+        this.eventEmitter.emit('post.comment', {
+            userId,
+            postId,
+            commentId: comment.id,
+            companyId,
+        });
+
         return comment;
     }
 

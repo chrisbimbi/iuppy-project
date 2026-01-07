@@ -58,6 +58,9 @@ import { OneOnOnePage } from '../modules/performance/views/OneOnOnePage'
 import { MyPDIPage } from '../modules/performance/views/MyPDIPage'
 import { CompanyGoals } from '../modules/performance/views/CompanyGoals'
 import IntegrationsWorkspace from '../modules/integrations/IntegrationsWorkspace'
+import ManualAwardPage from '../modules/gamification/views/ManualAwardPage'
+import GamificationDashboard from '../modules/gamification/views/GamificationDashboard'
+import GamificationSettingsPage from '../modules/gamification/views/GamificationSettingsPage'
 
 const PrivateRoutes: FC = () => {
   return (
@@ -399,6 +402,21 @@ const PrivateRoutes: FC = () => {
               <FormEditPage />
             </RequireModule>
           }
+        />
+
+
+        {/* GAMIFICATION */}
+        <Route
+          path="gamification"
+          element={<GamificationDashboard />}
+        />
+        <Route
+          path="gamification/settings"
+          element={<GamificationSettingsPage />}
+        />
+        <Route
+          path="gamification/manual-award"
+          element={<ManualAwardPage />}
         />
 
         {/* Catch-all */}

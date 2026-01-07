@@ -5,6 +5,7 @@ import { OneOnOne, OneOnOneStatus } from '@shared/types'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 import { useAuth } from '../../../modules/auth/core/Auth'
+import { Content } from '../../../../layout/components/Content'
 
 export function OneOnOnePage() {
     const { currentUser } = useAuth()
@@ -50,7 +51,7 @@ export function OneOnOnePage() {
     if (loading) return <div>Carregando 1:1s...</div>
 
     return (
-        <div className='container py-4'>
+        <Content>
             <div className='d-flex justify-content-between align-items-center mb-4'>
                 <h2>Reuniões 1:1</h2>
                 <button className='btn btn-primary' onClick={scheduleMeeting}>
@@ -92,6 +93,6 @@ export function OneOnOnePage() {
                     </div>
                 ))}
             </div>
-        </div>
+        </Content>
     )
 }

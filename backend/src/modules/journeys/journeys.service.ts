@@ -462,7 +462,7 @@ export class JourneysService {
 
   async create(createJourneyDto: any) {
     const journey = this.journeyRepo.create(createJourneyDto);
-    const saved = await this.journeyRepo.save(journey);
+    const saved = (await this.journeyRepo.save(journey) as unknown) as JourneyEntity;
 
     // If active on creation, sync audience immediately (async)
     if (saved.active) {

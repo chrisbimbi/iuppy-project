@@ -11,13 +11,14 @@ type Props = {
   icon?: string
   fontIcon?: string
   hasBullet?: boolean
+  additionalPaths?: string[]
 }
 
 export const AsideMenuItemWithSub: React.FC<Props & WithChildren> = ({
-  children, to, title, icon, fontIcon, hasBullet
+  children, to, title, icon, fontIcon, hasBullet, additionalPaths = []
 }) => {
   const { pathname } = useLocation()
-  const isActive = pathname.startsWith(to)
+  const isActive = pathname.startsWith(to) || additionalPaths.some(path => pathname.startsWith(path))
   const { config } = useLayout()
   const { aside } = config
 
@@ -28,8 +29,8 @@ export const AsideMenuItemWithSub: React.FC<Props & WithChildren> = ({
       data-kt-menu-placement='right-start'
     >
       <span className='menu-link'>
-        {icon && aside.menuIcon==='svg' && <KTIcon iconName={icon} className='fs-2' />}
-        {fontIcon && aside.menuIcon==='font' && <i className={`bi ${fontIcon} fs-2`}></i>}
+        {icon && aside.menuIcon === 'svg' && <KTIcon iconName={icon} className='fs-2' />}
+        {fontIcon && aside.menuIcon === 'font' && <i className={`bi ${fontIcon} fs-2`}></i>}
         <span className='menu-title'>{title}</span>
         <span className='menu-arrow'></span>
       </span>

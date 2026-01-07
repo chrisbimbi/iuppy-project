@@ -30,7 +30,8 @@ const ALLOWED_KEYS: ModuleKey[] = [
   'chat',
   'social',
   'journeys',
-  'performance'
+  'performance',
+  'gamification',
 ];
 
 @Controller('modules/:companyId/company-modules')

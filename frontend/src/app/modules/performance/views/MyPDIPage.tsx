@@ -4,6 +4,8 @@ import { PDI, PDIStatus } from '@shared/types'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
+import { Content } from '../../../../layout/components/Content'
+
 export function MyPDIPage() {
     const [pdis, setPdis] = useState<PDI[]>([])
     const [loading, setLoading] = useState(true)
@@ -29,7 +31,7 @@ export function MyPDIPage() {
     if (loading) return <div>Carregando PDI...</div>
 
     return (
-        <div className='container py-4'>
+        <Content>
             <div className='d-flex justify-content-between align-items-center mb-4'>
                 <h2>Meu Plano de Desenvolvimento (PDI)</h2>
                 <button className='btn btn-primary'>+ Novo Plano</button>
@@ -60,6 +62,6 @@ export function MyPDIPage() {
                     <p className="mt-3 text-muted">Você ainda não tem itens no seu PDI.</p>
                 </div>
             )}
-        </div>
+        </Content>
     )
 }

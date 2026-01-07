@@ -48,6 +48,9 @@ import { JourneyStepEntity } from 'src/modules/journeys/entities/journey-step.en
 import { UserJourneyInstanceEntity } from 'src/modules/journeys/entities/user-journey-instance.entity';
 import { StepCompletionEntity } from 'src/modules/journeys/entities/step-completion.entity';
 import { ModuleAccessGrantEntity } from 'src/access-control/module-access-grant.entity';
+import { UserXPHistoryEntity } from 'src/modules/gamification/entities/user-xp-history.entity';
+import { BadgeEntity } from 'src/modules/gamification/entities/badge.entity';
+import { UserBadgeEntity } from 'src/modules/gamification/entities/user-badge.entity';
 // **** Integrations
 import { IntegrationProvider } from '../modules/integrations/entities/integration_provider.entity';
 import { IntegrationConnection } from '../modules/integrations/entities/integration_connection.entity';
@@ -126,6 +129,10 @@ export const AppDataSource = new DataSource({
     PDIActionEntity,
     OneOnOneEntity,
 
+    OneOnOneEntity,
+    UserXPHistoryEntity,
+    BadgeEntity,
+    UserBadgeEntity,
   ],
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',

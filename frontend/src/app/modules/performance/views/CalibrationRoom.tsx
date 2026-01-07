@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { calibrateUser } from '../services/performanceService'
+import { Content } from 'src/layout/components/Content'
 
 // Mock Data for initial load
 const initialData = {
@@ -53,49 +54,51 @@ export function CalibrationRoom() {
     }
 
     return (
-        <div className='p-4'>
-            <h2>Sala de Calibração (9-Box)</h2>
-            <DragDropContext onDragEnd={onDragEnd}>
-                <div className='row g-3'>
-                    {initialData.quadrants.map(q => (
-                        <div key={q.id} className='col-4'>
-                            <div className='card h-100 shadow-sm'>
-                                <div className='card-header min-h-40px px-3 py-2'>
-                                    <h6 className='card-title fs-7 m-0'>{q.title}</h6>
+        <Content >
+            <div className='p-4'>
+                <h2>Sala de Calibração (9-Box)</h2>
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <div className='row g-3'>
+                        {initialData.quadrants.map(q => (
+                            <div key={q.id} className='col-4'>
+                                <div className='card h-100 shadow-sm'>
+                                    <div className='card-header min-h-40px px-3 py-2'>
+                                        <h6 className='card-title fs-7 m-0'>{q.title}</h6>
+                                    </div>
+                                    <Droppable droppableId={q.id}>
+                                        {(provided, snapshot) => (
+                                            <div
+                                                ref={provided.innerRef}
+                                                {...provided.droppableProps}
+                                                className={`card-body p-2 ${snapshot.isDraggingOver ? 'bg-light-primary' : ''}`}
+                                                style={{ minHeight: '150px' }}
+                                            >
+                                                {users.filter(u => u.quadrant === q.id).map((u, index) => (
+                                                    <Draggable key={u.id} draggableId={u.id} index={index}>
+                                                        {(provided) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                className='badge badge-light-primary w-100 mb-2 p-3 text-start'
+                                                                style={provided.draggableProps.style}
+                                                            >
+                                                                <i className='fas fa-grip-vertical me-2 text-gray-400'></i>
+                                                                {u.name}
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
                                 </div>
-                                <Droppable droppableId={q.id}>
-                                    {(provided, snapshot) => (
-                                        <div
-                                            ref={provided.innerRef}
-                                            {...provided.droppableProps}
-                                            className={`card-body p-2 ${snapshot.isDraggingOver ? 'bg-light-primary' : ''}`}
-                                            style={{ minHeight: '150px' }}
-                                        >
-                                            {users.filter(u => u.quadrant === q.id).map((u, index) => (
-                                                <Draggable key={u.id} draggableId={u.id} index={index}>
-                                                    {(provided) => (
-                                                        <div
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            {...provided.dragHandleProps}
-                                                            className='badge badge-light-primary w-100 mb-2 p-3 text-start'
-                                                            style={provided.draggableProps.style}
-                                                        >
-                                                            <i className='fas fa-grip-vertical me-2 text-gray-400'></i>
-                                                            {u.name}
-                                                        </div>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                        </div>
-                                    )}
-                                </Droppable>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </DragDropContext>
-        </div>
+                        ))}
+                    </div>
+                </DragDropContext>
+            </div>
+        </Content>
     )
 }

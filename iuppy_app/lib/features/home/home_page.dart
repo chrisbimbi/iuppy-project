@@ -8,7 +8,7 @@ import 'package:iuppy_app/push_service.dart';
 import 'package:iuppy_app/features/chat/chat_service.dart';
 
 import '../../core/providers.dart';
-import '../forms/providers/forms_provider.dart';
+
 import '../menu/menu_drawer.dart';
 
 import '../surveys/survey_providers.dart';
@@ -19,6 +19,7 @@ import 'widgets/news_carousel.dart';
 import 'widgets/home_journeys_slider.dart';
 
 import 'widgets/curved_navbar.dart';
+import 'home_loading_provider.dart';
 
 final _hasAnyNewsCachedProvider = FutureProvider<bool>((ref) async {
   final db = ref.read(dbProvider);
@@ -44,9 +45,44 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     _c = ProviderScope.containerOf(context, listen: false);
+
+    // Register Push Handler one-time
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupPushHandler();
+    });
+  }
+
+  void _setupPushHandler() {
+    PushService.instance.setNotificationRefreshHandler((message) async {
       if (!_alive) return;
-      _bootstrap();
+
+      // Optimized: If chat message, only refresh chat data
+      if (message?.data['type'] == 'chat') {
+        _c.invalidate(unreadCountProvider);
+        try {
+          final chatAsync = await _c.read(unreadCountProvider.future);
+          final total = chatAsync['total'] ?? 0;
+          await PushService.instance.updateBadge(total as int);
+        } catch (e) {
+          debugPrint('Error updating badge for chat push: $e');
+        }
+        return;
+      }
+
+      // Generic Refresh
+      _c.read(homeBootstrapProvider.notifier).refresh();
+
+      // Force refresh chat specifically for non-chat pushes (just in case) or general refresh
+      _c.invalidate(unreadCountProvider);
+
+      // Update App Badge
+      try {
+        final chatAsync = await _c.read(unreadCountProvider.future);
+        final total = chatAsync['total'] ?? 0;
+        await PushService.instance.updateBadge(total as int);
+      } catch (e) {
+        debugPrint('Error updating badge: $e');
+      }
     });
   }
 
@@ -54,97 +90,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   void dispose() {
     _alive = false;
     super.dispose();
-  }
-
-  Future<void> _bootstrap() async {
-    try {
-      await Future.wait([
-        _c.read(spacesRepoProvider).fetchAndCache(),
-        _c.read(channelsRepoProvider).fetchAndCache(),
-        _c.read(companySettingsProvider.future),
-      ]);
-
-      // Register Push Handler for In-App updates
-      // Register Push Handler for In-App updates
-      PushService.instance.setNotificationRefreshHandler((message) async {
-        if (!_alive) return;
-
-        // Optimized: If chat message, only refresh chat data
-        if (message?.data['type'] == 'chat') {
-          _c.invalidate(unreadCountProvider);
-
-          try {
-            final chatAsync = await _c.read(unreadCountProvider.future);
-            final total = chatAsync['total'] ?? 0;
-            await PushService.instance.updateBadge(total as int);
-          } catch (e) {
-            debugPrint('Error updating badge for chat push: $e');
-          }
-          return;
-        }
-
-        await _refreshLatestNewsAndBadges();
-
-        // Force refresh chat specifically for non-chat pushes (just in case) or general refresh
-        _c.invalidate(unreadCountProvider);
-
-        // Update App Badge
-        try {
-          final chatAsync = await _c.read(unreadCountProvider.future);
-          final total = chatAsync['total'] ?? 0;
-          await PushService.instance.updateBadge(total as int);
-        } catch (e) {
-          debugPrint('Error updating badge: $e');
-        }
-      });
-
-      if (!_alive || !mounted) return;
-      await _refreshLatestNewsAndBadges();
-      if (!_alive || !mounted) return;
-      setState(() {});
-    } catch (e, stack) {
-      debugPrint('[HOME] Bootstrap ERROR: $e');
-      debugPrint('[HOME] Stack: $stack');
-    }
-  }
-
-  Future<void> _refreshLatestNewsAndBadges() async {
-    if (!_alive) return;
-    try {
-      // 1. Atualiza News
-      final api = _c.read(apiClientProvider);
-      final remote = await api.getNews();
-      if (!_alive) return;
-      if (remote.isEmpty) {
-        final cachedAll = await _c.read(dbProvider).getNews(limit: 2000);
-        final ids = cachedAll
-            .map((e) => (e['id'] ?? '').toString())
-            .where((id) => id.isNotEmpty)
-            .toList();
-        if (ids.isNotEmpty) {
-          await _c.read(localNewsStoreProvider).markManyRead(ids);
-        }
-      }
-    } catch (_) {}
-
-    await _c.read(newsRepoProvider).homeFeedRemoteFirst(maxItems: 24);
-    if (!_alive) return;
-
-    // 2. Força atualização de Surveys e Forms (Garante Badges)
-    _c.refresh(surveysListProvider); // 🔥 CORREÇÃO: Busca enquetes na hora
-    _c.refresh(formsListProvider);
-    _c.refresh(myFormsSubmissionsProvider);
-    _c.refresh(journeyProgressProvider);
-    _c.refresh(
-        companySettingsProvider); // 🔥 REFRESH SETTINGS (Modules enabled/disabled)
-
-    // 3. Invalida contadores
-    _c.invalidate(unreadCountersProvider);
-    _c.invalidate(formsBadgesProvider);
-    _c.invalidate(newSurveysCountProvider);
-
-    _c.read(feedVersionProvider.notifier).state++;
-    _c.read(feedVersionProvider.notifier).state++;
   }
 
   void _openSearch(String query) {
@@ -158,6 +103,52 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 Watch the Bootstrap Provider
+    final bootstrapState = ref.watch(homeBootstrapProvider);
+
+    // If Loading, show Fake Splash Screen
+    if (bootstrapState == HomeStartupState.loading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Use a standard loader or asset logo if available.
+              // Assuming a simple CircularProgressIndicator for now,
+              // styled to look like a splash.
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Carregando...', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (bootstrapState == HomeStartupState.error) {
+      // Consider showing a retry button
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Erro ao carregar dados.'),
+              TextButton(
+                onPressed: () =>
+                    ref.read(homeBootstrapProvider.notifier).refresh(),
+                child: const Text('Tentar Novamente'),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    // === READY STATE ===
+
     final badges = ref.watch(homeBadgesProvider);
     final hasAnyNews = ref
         .watch(_hasAnyNewsCachedProvider)
@@ -224,9 +215,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await _refreshLatestNewsAndBadges();
-          if (!mounted) return;
-          setState(() {});
+          // Use the bootstrap notifier to refresh everything properly
+          await ref.read(homeBootstrapProvider.notifier).refresh();
         },
         child: ListView(
           children: [

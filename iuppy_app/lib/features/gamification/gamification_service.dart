@@ -1,7 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../core/providers.dart';
 
-/// Gamification Service - Manages XP, Levels, and Badges
 class GamificationService {
+  final Dio _dio;
+
+  GamificationService(this._dio);
+
   // XP thresholds for each level
   static const Map<int, int> levelThresholds = {
     1: 0,
@@ -16,7 +21,25 @@ class GamificationService {
     10: 12000,
   };
 
-  /// Calculate level from XP
+  /// Fetch user stats from API
+  Future<Map<String, dynamic>> fetchUserStats() async {
+    try {
+      final response = await _dio.get('/gamification/stats');
+      return response.data;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error fetching gamification stats: $e');
+      // Fallback to minimal stats if error (prevents UI crash)
+      return {
+        'xp': 0,
+        'currentLevel': 1,
+        'nextLevelXP': 100,
+      };
+    }
+  }
+
+  // --- Utility Methods (Logic Only) ---
+
   int getLevelFromXP(int xp) {
     int level = 1;
     for (final entry in levelThresholds.entries) {
@@ -29,7 +52,6 @@ class GamificationService {
     return level;
   }
 
-  /// Calculate XP progress to next level (0.0 to 1.0)
   double getProgressToNextLevel(int xp) {
     final currentLevel = getLevelFromXP(xp);
     final nextLevel = currentLevel + 1;
@@ -40,13 +62,14 @@ class GamificationService {
 
     final currentThreshold = levelThresholds[currentLevel]!;
     final nextThreshold = levelThresholds[nextLevel]!;
-    final xpInCurrentLevel = xp - currentThreshold;
-    final xpNeededForNextLevel = nextThreshold - currentThreshold;
+    // Prevent division by zero
+    final range = nextThreshold - currentThreshold;
+    if (range == 0) return 1.0;
 
-    return xpInCurrentLevel / xpNeededForNextLevel;
+    final xpInCurrentLevel = xp - currentThreshold;
+    return xpInCurrentLevel / range;
   }
 
-  /// Get XP needed for next level
   int getXPNeededForNextLevel(int xp) {
     final currentLevel = getLevelFromXP(xp);
     final nextLevel = currentLevel + 1;
@@ -58,111 +81,17 @@ class GamificationService {
     final nextThreshold = levelThresholds[nextLevel]!;
     return nextThreshold - xp;
   }
-
-  /// Award XP for completing a journey step
-  int awardStepCompletionXP() {
-    return 10; // Base XP for completing a step
-  }
-
-  /// Award XP for completing a survey
-  int awardSurveyCompletionXP() {
-    return 15;
-  }
-
-  /// Award XP for reading news
-  int awardNewsReadXP() {
-    return 5;
-  }
-
-  /// Check if user has earned a badge
-  List<String> checkBadges(Map<String, dynamic> userStats) {
-    final badges = <String>[];
-
-    // Journey Master - Complete 10 journey steps
-    if ((userStats['journeyStepsCompleted'] ?? 0) >= 10) {
-      badges.add('journey_master');
-    }
-
-    // News Enthusiast - Read 50 news articles
-    if ((userStats['newsRead'] ?? 0) >= 50) {
-      badges.add('news_enthusiast');
-    }
-
-    // Survey Champion - Complete 20 surveys
-    if ((userStats['surveysCompleted'] ?? 0) >= 20) {
-      badges.add('survey_champion');
-    }
-
-    // Early Adopter - First week user
-    if (userStats['isEarlyAdopter'] == true) {
-      badges.add('early_adopter');
-    }
-
-    // Level 5 Achievement
-    if ((userStats['currentLevel'] ?? 1) >= 5) {
-      badges.add('level_5');
-    }
-
-    // Level 10 Achievement (Max Level)
-    if ((userStats['currentLevel'] ?? 1) >= 10) {
-      badges.add('level_10_max');
-    }
-
-    return badges;
-  }
-
-  /// Get badge metadata
-  Map<String, dynamic> getBadgeMetadata(String badgeId) {
-    final badges = {
-      'journey_master': {
-        'name': 'JOURNEY MASTER',
-        'description': 'Complete 10 journey steps',
-        'icon': '🎯',
-      },
-      'news_enthusiast': {
-        'name': 'NEWS ENTHUSIAST',
-        'description': 'Read 50 news articles',
-        'icon': '📰',
-      },
-      'survey_champion': {
-        'name': 'SURVEY CHAMPION',
-        'description': 'Complete 20 surveys',
-        'icon': '📊',
-      },
-      'early_adopter': {
-        'name': 'EARLY ADOPTER',
-        'description': 'Joined in the first week',
-        'icon': '🚀',
-      },
-      'level_5': {
-        'name': 'LEVEL 5',
-        'description': 'Reached Level 5',
-        'icon': '⭐',
-      },
-      'level_10_max': {
-        'name': 'LEVEL 10 MAX',
-        'description': 'Reached Maximum Level',
-        'icon': '👑',
-      },
-    };
-
-    return badges[badgeId] ?? {'name': badgeId, 'description': '', 'icon': '🏆'};
-  }
 }
 
 /// Provider for GamificationService
 final gamificationServiceProvider = Provider<GamificationService>((ref) {
-  return GamificationService();
+  // Use the main dioProvider which has the correct Auth Interceptor
+  final dio = ref.watch(dioProvider);
+  return GamificationService(dio);
 });
 
-/// Mock user stats provider (replace with actual API call)
-final userStatsProvider = StateProvider<Map<String, dynamic>>((ref) {
-  return {
-    'xp': 250,
-    'currentLevel': 3,
-    'journeyStepsCompleted': 5,
-    'newsRead': 20,
-    'surveysCompleted': 8,
-    'isEarlyAdopter': true,
-  };
+/// Real User Stats Provider
+final userStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final service = ref.watch(gamificationServiceProvider);
+  return service.fetchUserStats();
 });

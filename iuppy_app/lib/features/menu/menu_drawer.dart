@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../gamification/gamification_providers.dart';
 import '../../ui/widgets/premium_badge.dart';
 import '../surveys/survey_providers.dart';
 import '../journeys/journey_providers.dart'; // Import Journey Providers
+import 'package:iuppy_app/features/news/widgets/avatar.dart';
 
 class MenuDrawer extends ConsumerWidget {
   const MenuDrawer({super.key});
@@ -116,17 +118,10 @@ class MenuDrawer extends ConsumerWidget {
                               )
                             ],
                           ),
-                          child: CircleAvatar(
-                            radius: 24,
-                            backgroundColor: Colors.grey.shade200,
-                            backgroundImage: (user?.id != null)
-                                ? const NetworkImage(
-                                    'https://i.pravatar.cc/150?img=12')
-                                : null,
-                            child: (user?.id == null)
-                                ? Icon(Icons.person_outline,
-                                    color: Colors.grey.shade500)
-                                : null,
+                          child: Avatar(
+                            user?.avatarUrl,
+                            name: user?.name,
+                            size: 48, // 24 radius * 2
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -273,13 +268,22 @@ class MenuDrawer extends ConsumerWidget {
                     onTap: () => context.push('/favorites'),
                   ),
                   const SizedBox(height: 8),
-                  _PillMenuItem(
-                    icon: Icons
-                        .history, // History usually doesn't have outlined variant distinct enough
-                    label: 'Minhas atividades',
-                    route: '/activities',
-                    currentPath: currentPath,
-                    onTap: () {},
+                  // Conditionally show Minhas Conquistas if gamification is enabled
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final gamificationEnabled =
+                          ref.watch(gamificationEnabledProvider);
+
+                      return gamificationEnabled
+                          ? _PillMenuItem(
+                              icon: Icons.emoji_events_outlined,
+                              label: 'Minhas Conquistas',
+                              route: '/gamification',
+                              currentPath: currentPath,
+                              onTap: () => context.push('/gamification'),
+                            )
+                          : const SizedBox.shrink();
+                    },
                   ),
                   const SizedBox(height: 32),
                   const _SectionLabel('CONTA'),

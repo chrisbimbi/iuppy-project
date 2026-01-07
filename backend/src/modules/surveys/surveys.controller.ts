@@ -163,7 +163,12 @@ export class SurveysController {
   addResponse(
     @Param('companyId') companyId: string,
     @Body() dto: CreateSurveyResponseDto,
+    @Req() req: any,
   ) {
+    // Inject userId from token if not present (critical for Gamification/XP)
+    if (!dto.userId && req.user?.id) {
+      dto.userId = req.user.id;
+    }
     return this.surveysService.addResponse(companyId, dto);
   }
 

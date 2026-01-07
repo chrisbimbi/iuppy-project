@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { get9BoxDistribution, getCompetenciesRadar } from '../services/performanceService';
 import TurnoverRiskWidget from '../components/TurnoverRiskWidget';
+import { Content } from 'src/layout/components/Content';
 
 const PerformanceDashboard: React.FC = () => {
     const [boxData, setBoxData] = useState<any[]>([]);
@@ -25,7 +26,7 @@ const PerformanceDashboard: React.FC = () => {
     };
 
     return (
-        <>
+        <Content>
             <TurnoverRiskWidget />
 
             <div className="row g-5 g-xl-8">
@@ -54,7 +55,7 @@ const PerformanceDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </>
+        </Content>
     );
 };
 

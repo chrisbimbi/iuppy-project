@@ -3,6 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers.dart';
 import '../../gamification/gamification_service.dart';
+import '../../gamification/gamification_providers.dart'
+    as gamification_providers;
+import 'package:iuppy_app/features/news/widgets/avatar.dart';
 
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -14,22 +17,14 @@ class HomeHeader extends ConsumerWidget {
     return 'Boa noite';
   }
 
-  String _getInitials(String? name) {
-    if (name == null || name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length == 1) {
-      return parts[0].substring(0, 1).toUpperCase();
-    }
-    return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1))
-        .toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final userAsync = ref.watch(userProfileProvider);
     final userStats = ref.watch(userStatsProvider);
     final gamification = ref.watch(gamificationServiceProvider);
+    final gamificationEnabled =
+        ref.watch(gamification_providers.gamificationEnabledProvider);
 
     final rawName = userAsync.value?.displayName ??
         userAsync.value?.name ??
@@ -38,10 +33,9 @@ class HomeHeader extends ConsumerWidget {
     final userName =
         (rawName.toLowerCase() == 'usuário') ? 'Developer Test' : rawName;
     final firstName = userName.split(' ').first;
-    final initials = _getInitials(userName);
     final primaryColor = Theme.of(context).primaryColor;
 
-    final userXP = userStats['xp'] ?? 0;
+    final userXP = userStats.value?['xp'] ?? 0;
     final currentLevel = gamification.getLevelFromXP(userXP);
 
     return Padding(
@@ -100,44 +94,45 @@ class HomeHeader extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Gamification Stats
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.shade100),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.star,
-                                size: 14, color: Colors.orange.shade700),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Nível $currentLevel',
-                              style: TextStyle(
-                                color: Colors.orange.shade800,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                  // Gamification Stats - only show if module is enabled
+                  if (gamificationEnabled)
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade100),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.star,
+                                  size: 14, color: Colors.orange.shade700),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Nível $currentLevel',
+                                style: TextStyle(
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$userXP XP',
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                        const SizedBox(width: 8),
+                        Text(
+                          '$userXP XP',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -145,23 +140,10 @@ class HomeHeader extends ConsumerWidget {
             // Avatar circle
             GestureDetector(
               onTap: () => GoRouter.of(context).push('/profile'),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              child: Avatar(
+                userAsync.value?.avatarUrl,
+                name: userName,
+                size: 50,
               ),
             ),
           ],

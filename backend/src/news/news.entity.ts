@@ -69,6 +69,11 @@ export class NewsEntity implements News {
   @Column('jsonb', { nullable: true })
   audienceSnapshotAtPublish?: any;
 
+  // --- GAMIFICATION ---
+  @Column({ type: 'int', nullable: true })
+  xpOverride?: number;
+
+
   // --- AI FEATURES ---
   @Column('float', { array: true, nullable: true })
   embedding?: number[];

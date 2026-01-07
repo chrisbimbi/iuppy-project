@@ -75,13 +75,32 @@ export function AsideMenuMain() {
     return isEnabled('performance') && (isOrgAdmin || canView('performance'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
+  const showGamification = useMemo(() => {
+    if (modsLoading || aclLoading) return false
+    return isEnabled('gamification') && (isOrgAdmin || canView('gamification'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
   return (
     <>
       {/* Dashboard */}
       <AsideMenuItem to="/dashboard" title={t('MENU.DASHBOARD', 'Dashboard')} fontIcon="bi-speedometer2" />
 
       {/* Módulos */}
-      <AsideMenuItemWithSub to="/modules" title={t('MENU.MODULES', 'Módulos')} fontIcon="bi-stack">
+      <AsideMenuItemWithSub
+        to="/modules"
+        title={t('MENU.MODULES', 'Módulos')}
+        fontIcon="bi-stack"
+        additionalPaths={[
+          '/contents',
+          '/forms',
+          '/journeys',
+          '/social-analytics',
+          '/vacations',
+          '/performance',
+          '/gamification',
+          '/channels'
+        ]}
+      >
         {showContents && (
           <AsideMenuItem to="/contents" hasBullet fontIcon="bi-newspaper" title={t('MENU.CONTENTS', 'Conteúdos')} />
         )}
@@ -104,7 +123,13 @@ export function AsideMenuMain() {
         {showPerformance && (
           <AsideMenuItem to="/performance" hasBullet fontIcon="bi-trophy" title={t('MENU.PERFORMANCE', 'Ciclos de Avaliação')} />
         )}
+        {showGamification && (
+          <AsideMenuItem to="/gamification" hasBullet fontIcon="bi-controller" title={t('MENU.GAMIFICATION', 'Gamificação')} />
+        )}
       </AsideMenuItemWithSub>
+
+      {/* GAMIFICATION - Standalone */}
+
 
       {showChannels && (
         <AsideMenuItem to="/channels" fontIcon="bi-chat-left-text" title={t('MENU.CHANNELS', 'Canais')} />

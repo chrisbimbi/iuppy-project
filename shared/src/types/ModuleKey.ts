@@ -19,4 +19,5 @@ export type ModuleKey =
     | 'social'
     | 'journeys'
     | 'performance'
-    | 'nr1';
+    | 'nr1'
+    | 'gamification';

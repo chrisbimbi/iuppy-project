@@ -21,6 +21,7 @@ import '../features/notifications/notifications_page.dart';
 import '../features/journeys/ui/journeys_list_page.dart';
 
 import '../features/journeys/ui/step_detail_page.dart';
+import '../features/gamification/ui/achievements_page.dart';
 import '../features/menu/profile_page.dart';
 import '../features/menu/company_page.dart';
 import '../features/menu/modules_page.dart';
@@ -241,6 +242,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/groups',
         builder: (_, __) => const _Stub(title: 'Grupos'),
+      ),
+      GoRoute(
+        path: '/gamification',
+        builder: (_, __) => const AchievementsPage(),
       ),
 
       // 🔥 CORREÇÃO: Rota de Notificações agora aponta para a página real

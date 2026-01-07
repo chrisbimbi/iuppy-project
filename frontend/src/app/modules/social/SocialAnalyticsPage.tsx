@@ -5,6 +5,7 @@ import { PageTitle } from 'src/layout/core';
 import { api } from 'src/app/api';
 import { KTCard } from 'src/helpers/components/KTCard';
 import WordCloud from 'react-d3-cloud';
+import { Content } from 'src/layout/components/Content';
 
 export const SocialAnalyticsPage: React.FC = () => {
     const intl = useIntl();
@@ -35,7 +36,7 @@ export const SocialAnalyticsPage: React.FC = () => {
     });
 
     return (
-        <>
+        <Content>
             <PageTitle breadcrumbs={[]}>Social Analytics & Dashboard</PageTitle>
 
             {/* KPI Cards */}
@@ -335,6 +336,6 @@ export const SocialAnalyticsPage: React.FC = () => {
                 </div>
             </KTCard>
 
-        </>
+        </Content>
     );
 };

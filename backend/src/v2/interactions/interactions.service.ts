@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   ForbiddenException,
@@ -6,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NewsEntity } from 'src/news/news.entity';
 import { InteractionEventEntity } from './entities/interaction-event.entity';
 import { NewsReactionEntity } from './entities/news-reaction.entity';
@@ -49,6 +51,7 @@ export class InteractionsService {
     @InjectRepository(NewsShareEntity)
     private shares: Repository<NewsShareEntity>,
     private readonly ds: DataSource,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   private async assertNews(companyId: string, newsId: string) {
@@ -109,6 +112,16 @@ export class InteractionsService {
       );
     }
 
+    if (userId) {
+      this.eventEmitter.emit('news.read', {
+        companyId,
+        newsId,
+        userId,
+        origin,
+        timestamp: new Date(),
+      });
+    }
+
     this.logger.debug(
       `[OPEN] company=${companyId} news=${newsId} user=${userId} origin=${origin || 'n/a'}`,
     );
@@ -148,7 +161,17 @@ export class InteractionsService {
       userId: userId || null,
       reaction: reaction as any,
     });
-    return this.reactions.save(row);
+    const saved = await this.reactions.save(row);
+    if (userId) {
+      this.eventEmitter.emit('news.reaction', {
+        companyId,
+        newsId,
+        userId,
+        reaction: reaction,
+        timestamp: new Date(),
+      });
+    }
+    return saved;
   }
 
   async unreact(companyId: string, newsId: string, userId: string) {
@@ -176,7 +199,17 @@ export class InteractionsService {
       approved: !moderate,
       approvedAt: !moderate ? new Date() : null,
     });
-    return this.comments.save(row);
+    const saved = await this.comments.save(row);
+    if (userId) {
+      this.eventEmitter.emit('news.comment', {
+        companyId,
+        newsId,
+        userId,
+        commentId: saved.id,
+        timestamp: new Date(),
+      });
+    }
+    return saved;
   }
 
   async moderateComment(
@@ -211,7 +244,21 @@ export class InteractionsService {
       channel,
       meta,
     });
-    return this.shares.save(row);
+    const saved = await this.shares.save(row);
+
+    // Emit gamification event (only when effectively shared to someone)
+    if (userId) {
+      this.eventEmitter.emit('news.share', {
+        companyId,
+        newsId,
+        userId,
+        shareId: saved.id,
+        channel,
+        timestamp: new Date(),
+      });
+    }
+
+    return saved;
   }
 
   async favorite(companyId: string, newsId: string, userId: string) {

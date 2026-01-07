@@ -8,6 +8,7 @@ import { useIntl } from 'react-intl';
 
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../../auth/core/Auth';
+import { Content } from 'src/layout/components/Content';
 
 const Kebab: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Dropdown>
@@ -246,7 +247,7 @@ export default function FormsListPage() {
   }, [rows, loading, err, sel, selectedIds, nav, companyId, intl]);
 
   return (
-    <div className="container-xxl">
+    <Content>
       <div className="card">
         <div className="card-header align-items-center gap-3 flex-wrap">
           <h3 className="card-title">{intl.formatMessage({ id: 'FORMS.LIST.TITLE' })}</h3>
@@ -303,6 +304,6 @@ export default function FormsListPage() {
 
         {content}
       </div>
-    </div>
+    </Content>
   );
 }
