@@ -71,6 +71,7 @@ interface CreateFormPayload {
   requiresApproval?: boolean;
   allowTranslations?: boolean;
   defaultLocale?: string | null;
+  isNr1?: boolean; // NOVO: Flag para NR1 Digital
   fields: FormFieldPayloadDto[];
 }
 
@@ -94,6 +95,7 @@ interface UpdateFormPayload {
   requiresApproval?: boolean;
   allowTranslations?: boolean;
   defaultLocale?: string | null;
+  isNr1?: boolean; // NOVO
   fields?: FormFieldPayloadDto[];
 }
 
@@ -101,7 +103,7 @@ export const FormsApi = {
   // =============================================
   // S1: CRUD de formulários (Usam withCompanyId)
   // =============================================
-  list: (params?: { status?: string; companyId?: string; template?: string; visibility?: string }) => {
+  list: (params?: { status?: string; companyId?: string; template?: string; visibility?: string; isNr1?: boolean }) => {
     return api
       .get('/forms', { params: withCompanyId(params) })
       .then((r) => r.data);
@@ -121,33 +123,33 @@ export const FormsApi = {
     return api.post('/forms', body, { params: withCompanyId() }).then((r) => r.data);
   },
 
-  update: (formId: string, payload: UpdateFormPayload) => { // TIPO ATUALIZADO
+  update: (formId: string, payload: UpdateFormPayload, companyId?: string) => { // TIPO ATUALIZADO
     return api
-      .patch(`/forms/${formId}`, payload, { params: withCompanyId() })
+      .patch(`/forms/${formId}`, payload, { params: withCompanyId({ companyId }) })
       .then((r) => r.data);
   },
 
-  publish: (formId: string) => {
+  publish: (formId: string, companyId?: string) => {
     return api
-      .post(`/forms/${formId}/publish`, {}, { params: withCompanyId() })
+      .post(`/forms/${formId}/publish`, {}, { params: withCompanyId({ companyId }) })
       .then((r) => r.data);
   },
 
-  unpublish: (formId: string) => {
+  unpublish: (formId: string, companyId?: string) => {
     return api
-      .post(`/forms/${formId}/unpublish`, {}, { params: withCompanyId() })
+      .post(`/forms/${formId}/unpublish`, {}, { params: withCompanyId({ companyId }) })
       .then((r) => r.data);
   },
 
-  duplicate: (formId: string) => {
+  duplicate: (formId: string, companyId?: string) => {
     return api
-      .post(`/forms/${formId}/duplicate`, {}, { params: withCompanyId() })
+      .post(`/forms/${formId}/duplicate`, {}, { params: withCompanyId({ companyId }) })
       .then((r) => r.data);
   },
 
-  removeMany: (ids: string[]) => {
+  removeMany: (ids: string[], companyId?: string) => {
     return api
-      .post('/forms/remove-many', { ids }, { params: withCompanyId() })
+      .post('/forms/remove-many', { ids }, { params: withCompanyId({ companyId }) })
       .then((r) => r.data);
   },
 
@@ -158,10 +160,10 @@ export const FormsApi = {
     return api.get('/forms/segments', { params: withCompanyId({ companyId }) }).then((r) => r.data);
   },
 
-  getSubmissionDetail: (formId: string, submissionId: string) => {
+  getSubmissionDetail: (formId: string, submissionId: string, companyId?: string) => {
     return api
       .get(`/forms/${formId}/submissions/${submissionId}`, {
-        params: withCompanyId(),
+        params: withCompanyId({ companyId }),
       })
       .then((r) => r.data);
   },
@@ -181,10 +183,10 @@ export const FormsApi = {
   // =============================================
   // 🔥 S3+: API de Chat (Usam S1)
   // =============================================
-  getChatHistory: (formId: string, submissionId: string) => {
+  getChatHistory: (formId: string, submissionId: string, companyId?: string) => {
     return api
       .get(`/forms/${formId}/submissions/${submissionId}/chat`, {
-        params: withCompanyId(),
+        params: withCompanyId({ companyId }),
       })
       .then((r) => r.data);
   },
@@ -193,20 +195,21 @@ export const FormsApi = {
     formId: string,
     submissionId: string,
     message: string,
+    companyId?: string,
   ) => {
     // O backend sabe que quem chama a API do CMS é 'rh'
     const payload = { message, actor: 'rh' };
     return api
       .post(`/forms/${formId}/submissions/${submissionId}/chat`, payload, {
-        params: withCompanyId(),
+        params: withCompanyId({ companyId }),
       })
       .then((r) => r.data);
   },
 
-  closeChat: (formId: string, submissionId: string) => {
+  closeChat: (formId: string, submissionId: string, companyId?: string) => {
     return api
       .post(`/forms/${formId}/submissions/${submissionId}/chat/close`, null, {
-        params: withCompanyId(),
+        params: withCompanyId({ companyId }),
       })
       .then((r) => r.data);
   },

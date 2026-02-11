@@ -80,6 +80,9 @@ export class JourneyEntity {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ default: false })
+  isNr1: boolean;
+
   @OneToMany(() => JourneyStepEntity, (step) => step.journey)
   steps: JourneyStepEntity[];
 

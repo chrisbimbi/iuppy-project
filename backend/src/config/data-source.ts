@@ -5,6 +5,8 @@ import 'reflect-metadata';
 import { UserEntity } from '../users/user.entity';
 import { Channel } from '../channels/channel.entity';
 import { SpaceEntity } from '../spaces/space.entity';
+import { UserSpaceEntity } from '../spaces/user-space.entity';
+import { UserDeviceEntity } from '../notifications/entities/user-device.entity';
 import { NewsEntity } from '../news/news.entity';
 import { GroupEntity } from 'src/groups/group.entity';
 import { SurveyEntity } from 'src/modules/surveys/entities/survey.entity';
@@ -51,6 +53,13 @@ import { ModuleAccessGrantEntity } from 'src/access-control/module-access-grant.
 import { UserXPHistoryEntity } from 'src/modules/gamification/entities/user-xp-history.entity';
 import { BadgeEntity } from 'src/modules/gamification/entities/badge.entity';
 import { UserBadgeEntity } from 'src/modules/gamification/entities/user-badge.entity';
+import { FormEntity } from 'src/modules/forms/entities/form.entity';
+import { FormFieldEntity } from 'src/modules/forms/entities/form-field.entity';
+import { FormSubmissionEntity } from 'src/modules/forms/entities/form-submission.entity';
+import { FormSubmissionChatEntity } from 'src/modules/forms/entities/form-submission-chat.entity';
+import { FormBadgeStateEntity } from 'src/modules/forms/entities/form-badge-state.entity';
+import { FormAnswerEntity } from 'src/modules/forms/entities/form-answer.entity';
+import { FormMetricsDailyEntity } from 'src/modules/forms/entities/form-metrics-daily.entity';
 // **** Integrations
 import { IntegrationProvider } from '../modules/integrations/entities/integration_provider.entity';
 import { IntegrationConnection } from '../modules/integrations/entities/integration_connection.entity';
@@ -58,6 +67,14 @@ import { IntegrationRun } from '../modules/integrations/entities/integration_run
 import { IntegrationError } from '../modules/integrations/entities/integration_error.entity';
 import { IdentityLink } from '../modules/integrations/entities/identity_link.entity';
 import { DataLakeSnapshot } from '../modules/integrations/entities/data_lake_snapshot.entity';
+
+// **** NR-1
+import { Nr1RiskRecord } from 'src/modules/nr1/entities/nr1-risk-record.entity';
+import { Nr1RiskCriteria } from 'src/modules/nr1/entities/nr1-risk-criteria.entity';
+import { Nr1RiskType } from 'src/modules/nr1/entities/nr1-risk-type.entity';
+import { Nr1ActionPlan } from 'src/modules/nr1/entities/nr1-action-plan.entity';
+import { Nr1Training } from 'src/modules/nr1/entities/nr1-training.entity';
+import { CompanyEsocialConfigEntity } from 'src/modules/nr1/entities/company-esocial-config.entity';
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV || 'development'}` });
 
@@ -72,6 +89,8 @@ export const AppDataSource = new DataSource({
     UserEntity,
     Channel,
     SpaceEntity,
+    UserSpaceEntity,
+    UserDeviceEntity,
     NewsEntity,
     GroupEntity,
     SurveyEntity,
@@ -97,10 +116,8 @@ export const AppDataSource = new DataSource({
     NewsMetricsDailyEntity,
     UserMetricsDailyEntity,
     NewsAudienceEntity,
-    NewsAudienceEntity,
     NewsFavoriteEntity,
     NewsAcknowledgmentEntity,
-    SearchMetricsDailyEntity,
     SearchMetricsDailyEntity,
     PushDeliveryEntity,
 
@@ -129,12 +146,28 @@ export const AppDataSource = new DataSource({
     PDIActionEntity,
     OneOnOneEntity,
 
-    OneOnOneEntity,
     UserXPHistoryEntity,
     BadgeEntity,
     UserBadgeEntity,
+
+    // **** Forms
+    FormEntity,
+    FormFieldEntity,
+    FormSubmissionEntity,
+    FormSubmissionChatEntity,
+    FormBadgeStateEntity,
+    FormAnswerEntity,
+    FormMetricsDailyEntity,
+
+    // **** NR-1
+    Nr1RiskRecord,
+    Nr1RiskCriteria,
+    Nr1RiskType,
+    Nr1ActionPlan,
+    Nr1Training,
+    CompanyEsocialConfigEntity,
   ],
   migrations: ['src/migrations/*.ts'],
   migrationsTableName: 'migrations',
-  synchronize: false, // <<< DESLIGADO
+  synchronize: true, // ENABLED TEMPORARILY - will auto-create all tables from entities
 });

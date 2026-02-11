@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { Nr1RiskCriteria } from './nr1-risk-criteria.entity';
+import { Nr1RiskType } from './nr1-risk-type.entity';
 
 export enum RiskLevel {
     BAIXO = 'b',
@@ -59,6 +60,12 @@ export class Nr1RiskRecord {
     @Column('text')
     caracterizacao_exposicao: string;
 
+    @Column('int', { default: 0 })
+    probabilidade: number;
+
+    @Column('int', { default: 0 })
+    severidade: number;
+
     @Column({
         type: 'enum',
         enum: RiskLevel,
@@ -71,6 +78,13 @@ export class Nr1RiskRecord {
     @ManyToOne(() => Nr1RiskCriteria, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'criterios_id' })
     criterios: Nr1RiskCriteria;
+
+    @Column('uuid', { nullable: true })
+    risk_type_id: string;
+
+    @ManyToOne(() => Nr1RiskType, { nullable: true })
+    @JoinColumn({ name: 'risk_type_id' })
+    risk_type: Nr1RiskType;
 
     @Column({
         type: 'enum',

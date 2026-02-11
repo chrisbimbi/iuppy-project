@@ -21,10 +21,21 @@ export class SocialAnalyticsService {
         // Simple Engagement Rate: Interactions / Posts (Naive)
         const engagementRate = totalPosts > 0 ? (totalInteractions / totalPosts).toFixed(2) : 0;
 
+        // Group Leaderboards
+        const groupStats = await this.getLeaderboardGroups(companyId, 50); // Get top 50 to find bottom
+        const topGroups = groupStats.topGroupsInteractions.slice(0, 5);
+        const bottomGroups = [...groupStats.topGroupsInteractions].reverse().slice(0, 5); // Warning: Only shows bottom of ACTIVE groups, not groups with 0 interactions.
+
+        // For true "disconnected" groups, we would need to fetch ALL groups and left join. 
+        // For now, "Least Active among Active" is a good start.
+
         return {
             totalPosts,
             totalInteractions,
-            engagementRate
+            engagementRate,
+            topGroups,
+            bottomGroups,
+            topPosters: (await this.getLeaderboardUsers(companyId, 5)).topPosters
         };
     }
 

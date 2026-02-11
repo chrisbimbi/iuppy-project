@@ -13,10 +13,10 @@ type SubmissionDetail = {
   status: string
   external: boolean
   chatStatus: 'open' | 'closed'
-  answers: Array<{ 
-    fieldId: string; 
-    type: string; 
-    value: any; 
+  answers: Array<{
+    fieldId: string;
+    type: string;
+    value: any;
     label: string;
     options?: any[]
   }>
@@ -48,7 +48,7 @@ export const SubmissionDetailModal = ({
   const [err, setErr] = useState<string | null>(null)
   const [replyMsg, setReplyMsg] = useState('')
   const [activeTab, setActiveTab] = useState('answers')
-  
+
   const { currentUser } = useAuth()
   const cmsUserId = currentUser?.id ?? null
 
@@ -56,10 +56,12 @@ export const SubmissionDetailModal = ({
     if (!show || !form) return
     setLoading(true)
     setErr(null)
-    setData(null) 
-    setActiveTab('answers') 
-    
-    FormsApi.getSubmissionDetail(form.id, submissionId)
+    setData(null)
+    setActiveTab('answers')
+
+    const companyId = currentUser?.companyId || window.localStorage.getItem('companyId') || undefined;
+
+    FormsApi.getSubmissionDetail(form.id, submissionId, companyId)
       .then((res: any) => setData(res))
       .catch((e) => setErr(String(e?.message || e)))
       .finally(() => setLoading(false))
@@ -86,12 +88,12 @@ export const SubmissionDetailModal = ({
     onRespond(type, replyMsg)
     setReplyMsg('')
   }
-  
+
   const hasAttachments = (data?.attachments ?? []).length > 0;
-  
+
   // 🔥 CORREÇÃO: Permite ação se requer aprovação E status não é final (aceita replied/submitted/pending)
   // Impede aprovar algo que já está approved/rejected
-  const canApprove = form?.requiresApproval && 
+  const canApprove = form?.requiresApproval &&
     (data?.status === 'pending' || data?.status === 'replied' || data?.status === 'submitted');
 
   return (
@@ -99,7 +101,7 @@ export const SubmissionDetailModal = ({
       <Modal.Header closeButton>
         <Modal.Title>Detalhes da Submissão</Modal.Title>
       </Modal.Header>
-      
+
       {loading && <Modal.Body><div className="d-flex align-items-center gap-2 p-4"><Spinner animation="border" size="sm" /> Carregando...</div></Modal.Body>}
       {err && <Modal.Body><Alert variant="danger">{err}</Alert></Modal.Body>}
 
@@ -123,7 +125,7 @@ export const SubmissionDetailModal = ({
                   {hasAttachments && (
                     <FormAttachmentsModal
                       show={true}
-                      onHide={() => {}}
+                      onHide={() => { }}
                       date={new Date(data.submittedAt).toLocaleDateString()}
                       items={data.attachments.map((att: any) => ({ url: att.storagePath, name: att.storagePath.split('/').pop() ?? 'anexo' }))}
                     />
@@ -132,12 +134,12 @@ export const SubmissionDetailModal = ({
               </Tab>
               <Tab eventKey="chat" title="Discussão (Chat)">
                 <div className="p-4">
-                   <SubmissionChat formId={form!.id} submissionId={submissionId} currentCmsUserId={cmsUserId} />
+                  <SubmissionChat formId={form!.id} submissionId={submissionId} currentCmsUserId={cmsUserId} companyId={currentUser?.companyId} />
                 </div>
               </Tab>
             </Tabs>
           </Modal.Body>
-          
+
           <Modal.Footer>
             <Button variant="secondary" onClick={onHide}>Fechar</Button>
             {canApprove && (
@@ -148,7 +150,7 @@ export const SubmissionDetailModal = ({
                   value={replyMsg}
                   onChange={(e) => setReplyMsg(e.target.value)}
                   placeholder="Mensagem (opcional)..."
-                  style={{width: '250px'}}
+                  style={{ width: '250px' }}
                 />
                 <Button variant="success" onClick={() => handleLegacyRespond('approve')}>Aprovar</Button>
                 <Button variant="danger" onClick={() => handleLegacyRespond('reject')}>Rejeitar</Button>

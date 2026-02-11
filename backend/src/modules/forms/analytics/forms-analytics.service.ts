@@ -54,7 +54,7 @@ export class FormsAnalyticsService implements OnModuleInit {
     user: 'user_entity',
   };
 
-  constructor(private readonly ds: DataSource) {}
+  constructor(private readonly ds: DataSource) { }
 
   async onModuleInit() {
     this.logger.log(
@@ -334,7 +334,7 @@ export class FormsAnalyticsService implements OnModuleInit {
       this.safeQueryOptional(
         `
         SELECT s."userId", COALESCE(u.name, s."userId") AS name, COUNT(*)::int AS submissions
-        FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id::text = s."userId"
+        FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id = s."userId"
         WHERE s."companyId"=$1 ${filters.where}
         GROUP BY s."userId", u.name ORDER BY submissions DESC LIMIT 10
       `,
@@ -379,6 +379,42 @@ export class FormsAnalyticsService implements OnModuleInit {
       topUsers: getResult(8),
     };
   }
+
+  async getDashboardSummary(companyId: string) {
+    const q = { from: undefined, to: undefined }; // Default to last 7 days from normalizeRange
+    const { from, to } = this.normalizeRange(q);
+
+    const sql = `
+      SELECT 
+        (SELECT COUNT(*)::int FROM form WHERE "companyId" = $1) as "totalForms",
+        COALESCE(SUM(submits), 0)::int as "totalSubmissions",
+        COALESCE(SUM("onTimeSubmits"), 0)::int as "onTimeSubmits",
+        COALESCE(AVG(CASE WHEN submits > 0 THEN ("onTimeSubmits"::float / submits) ELSE NULL END), 0) as "avgOnTimeRate"
+      FROM form_metrics_daily
+      WHERE "companyId" = $1 AND "date" >= $2::date AND "date" < ($3::date + INTERVAL '1 day')
+    `;
+    const stats = await this.ds.query(sql, [companyId, from, to]);
+    const main = stats[0] || { totalForms: 0, totalSubmissions: 0, onTimeSubmits: 0, avgOnTimeRate: 0 };
+
+    // Recent trends (last 7 data points)
+    const seriesSql = `
+      SELECT "date", SUM(submits)::int as submits
+      FROM form_metrics_daily
+      WHERE "companyId" = $1
+      GROUP BY "date"
+      ORDER BY "date" DESC
+      LIMIT 7
+    `;
+    const series = await this.ds.query(seriesSql, [companyId]);
+
+    return {
+      totalForms: main.totalForms,
+      totalSubmissions: main.totalSubmissions,
+      onTimeRate: Math.round(main.avgOnTimeRate * 100),
+      trend: series.reverse().map((s: any) => ({ date: s.date, submissions: s.submits }))
+    };
+  }
+
 
   // --- LISTA ---
   async list(companyId: string, q: any) {
@@ -699,7 +735,7 @@ export class FormsAnalyticsService implements OnModuleInit {
     const filters = this.buildFilterWhere(q, 's', 3);
     const params = [companyId, formId, ...filters.params];
     const items = await this.safeQuery(
-      `SELECT s.id AS "submissionId", s."submittedAt", s.status, s."isOnTime", s.external, s."externalEmail", s."fileCount", s."spaceIds", s."groupIds", s."userId", u.name AS "userName", jsonb_agg(jsonb_build_object('fieldId', a."fieldId", 'value', a.value, 'type', a.type)) FILTER (WHERE a.id IS NOT NULL) AS answers FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id::text=s."userId" LEFT JOIN form_answer a ON a."submissionId"=s.id WHERE s."companyId"=$1 AND s."formId"=$2::uuid ${filters.where} GROUP BY s.id, u.name ORDER BY s."submittedAt" DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+      `SELECT s.id AS "submissionId", s."submittedAt", s.status, s."isOnTime", s.external, s."externalEmail", s."fileCount", s."spaceIds", s."groupIds", s."userId", u.name AS "userName", jsonb_agg(jsonb_build_object('fieldId', a."fieldId", 'value', a.value, 'type', a.type)) FILTER (WHERE a.id IS NOT NULL) AS answers FROM form_submission s LEFT JOIN ${this.tableNames.user} u ON u.id=s."userId" LEFT JOIN form_answer a ON a."submissionId"=s.id WHERE s."companyId"=$1 AND s."formId"=$2::uuid ${filters.where} GROUP BY s.id, u.name ORDER BY s."submittedAt" DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
       params,
     );
     const totalRow = await this.safeQuery(
@@ -747,7 +783,7 @@ export class FormsAnalyticsService implements OnModuleInit {
     // 4. Somamos tudo.
 
     const sql = `
-      WITH state AS (
+      WITH badge_state AS (
          SELECT "formId", "lastSeenAt" 
          FROM form_badge_state 
          WHERE "companyId" = $1 AND "cmsUserId" = $2
@@ -756,12 +792,12 @@ export class FormsAnalyticsService implements OnModuleInit {
          SELECT 
             f.id as "formId",
             f.title->>COALESCE(f."defaultLocale", 'pt-BR') as title,
-            COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz) as last_seen,
+            COALESCE(bs."lastSeenAt", '1970-01-01'::timestamptz) as last_seen,
             
             (SELECT COUNT(*) 
              FROM form_submission s 
              WHERE s."formId" = f.id 
-               AND s."createdAt" > COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz)
+               AND s."createdAt" > COALESCE(bs."lastSeenAt", '1970-01-01'::timestamptz)
             )::int as new_subs,
             
             (SELECT COUNT(*) 
@@ -769,11 +805,11 @@ export class FormsAnalyticsService implements OnModuleInit {
              JOIN form_submission s2 ON s2.id = c."submissionId"
              WHERE s2."formId" = f.id
                AND c.actor = 'user'
-               AND c."createdAt" > COALESCE(st."lastSeenAt", '1970-01-01'::timestamptz)
+               AND c."createdAt" > COALESCE(bs."lastSeenAt", '1970-01-01'::timestamptz)
             )::int as new_chats
 
          FROM form f
-         LEFT JOIN state st ON st."formId" = f.id
+         LEFT JOIN badge_state bs ON bs."formId" = f.id
          WHERE f."companyId" = $1 
            AND f.status = 'published'
       )
@@ -787,17 +823,29 @@ export class FormsAnalyticsService implements OnModuleInit {
       ORDER BY "newCount" DESC
     `;
 
-    const rows = await this.ds.query(sql, [companyId, cmsUserId]);
+    try {
+      const rows = await this.ds.query(sql, [companyId, cmsUserId]);
 
-    const totalNew = rows.reduce(
-      (acc: number, r: any) => acc + (r.newCount || 0),
-      0,
-    );
+      const totalNew = rows.reduce(
+        (acc: number, r: any) => acc + (r.newCount || 0),
+        0,
+      );
 
-    return {
-      totalNew,
-      byForm: rows,
-    };
+      return {
+        totalNew,
+        byForm: rows,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch badges for user ${cmsUserId}: ${error.message}`,
+        error.stack,
+      );
+      // Return safe default to avoid blocking the UI
+      return {
+        totalNew: 0,
+        byForm: [],
+      };
+    }
   }
 
   async ackBadges(
@@ -835,14 +883,14 @@ export class FormsAnalyticsService implements OnModuleInit {
           : Promise.resolve(null),
         body.formId
           ? this.submissions(
-              companyId,
-              body.formId,
-              filters,
-              from,
-              to,
-              1,
-              99999,
-            )
+            companyId,
+            body.formId,
+            filters,
+            from,
+            to,
+            1,
+            99999,
+          )
           : Promise.resolve(null),
         body.formId
           ? this.getFieldsStats(companyId, body.formId, filters)
@@ -889,9 +937,9 @@ export class FormsAnalyticsService implements OnModuleInit {
           const row: any = { ...s, userName: s.userName ?? s.userId };
           (s.answers || []).forEach(
             (a: any) =>
-              (row[a.fieldId] = Array.isArray(a.value)
-                ? a.value.join(', ')
-                : a.value),
+            (row[a.fieldId] = Array.isArray(a.value)
+              ? a.value.join(', ')
+              : a.value),
           );
           return row;
         }),

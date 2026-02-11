@@ -46,7 +46,8 @@ class _FormsRepo {
     return true;
   }
 
-  Future<List<Map<String, dynamic>>> listVisible({String? template}) async {
+  Future<List<Map<String, dynamic>>> listVisible(
+      {String? template, bool? isNr1}) async {
     final apiClient = ref.read(apiClientProvider);
     final api = FormsApi(apiClient);
     final userLocale = ref.read(userLocaleProvider);
@@ -55,17 +56,11 @@ class _FormsRepo {
       'locale': userLocale,
       'visibility': 'all', // 🔥 DEBUG: Traz tudo
       if (template != null) 'template': template,
+      if (isNr1 != null) 'isNr1': isNr1,
     });
 
     // 🔥 DEBUG: Removendo filtros locais para ver se chega algo
     return all.toList();
-    /*
-    return all
-        .where((f) => (f['status'] ?? 'draft') == 'published')
-        .where(_matchesSchedule)
-        .where((f) => _matchesAudience(f, userGroups, visibleSpaces))
-        .toList();
-    */
   }
 
   Future<Map<String, dynamic>> mySubmissions() async {
@@ -125,11 +120,12 @@ class _FormsRepo {
 // PROVIDERS DE DADOS
 // ==================================
 
-final formsListProvider =
-    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+final formsListProvider = FutureProvider.family
+    .autoDispose<List<Map<String, dynamic>>, ({bool? isNr1})>(
+        (ref, args) async {
   ref.watch(formsRefreshProvider);
   ref.watch(feedVersionProvider);
-  return ref.read(formsRepoProvider).listVisible();
+  return ref.read(formsRepoProvider).listVisible(isNr1: args.isNr1);
 });
 
 final myFormsSubmissionsProvider =

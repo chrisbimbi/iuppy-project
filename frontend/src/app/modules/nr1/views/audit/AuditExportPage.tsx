@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useIntl } from 'react-intl';
+import { Content } from 'src/layout/components/Content';
 import { PageTitle } from 'src/layout/core';
 
 export default function AuditExportPage() {
@@ -22,7 +23,7 @@ export default function AuditExportPage() {
     };
 
     return (
-        <>
+        <Content>
             <PageTitle>Auditoria & Evidências (ICP-Brasil)</PageTitle>
 
             <div className="card">
@@ -104,6 +105,6 @@ export default function AuditExportPage() {
                     </div>
                 </div>
             </div>
-        </>
+        </Content>
     );
 }

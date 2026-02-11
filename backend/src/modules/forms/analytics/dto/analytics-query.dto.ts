@@ -24,7 +24,14 @@ export class AnalyticsQueryDto {
 
   @IsOptional()
   @IsString()
+  @IsOptional()
+  @IsString()
   status?: string;
+
+  // Necessário pois forbidNonWhitelisted: true está ativo no main.ts
+  @IsOptional()
+  @IsString()
+  companyId?: string;
 
   // Filtros de audiência (S2 Gap)
   @IsOptional()

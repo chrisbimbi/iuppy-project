@@ -140,6 +140,7 @@ export const JourneyList: FC = () => {
                                     <th className='min-w-100px'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.TRIGGER' })}</th>
                                     <th className='min-w-100px'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.START_DATE' })}</th>
                                     <th className='min-w-100px'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.END_DATE' })}</th>
+                                    <th className='min-w-80px text-center'>NR-1</th>
                                     <th className='min-w-80px text-center'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.VIDEO' })}</th>
                                     <th className='min-w-80px text-center'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.ACK' })}</th>
                                     <th className='min-w-80px text-center'>{intl.formatMessage({ id: 'JOURNEYS.LIST.TABLE.POLL' })}</th>
@@ -188,6 +189,13 @@ export const JourneyList: FC = () => {
                                             <span className='text-muted fw-semibold d-block fs-7'>
                                                 {journey.endDate ? new Date(journey.endDate).toLocaleDateString() : '-'}
                                             </span>
+                                        </td>
+                                        <td className='text-center'>
+                                            {journey.isNr1 ? (
+                                                <span className='badge badge-light-success'>NR-1</span>
+                                            ) : (
+                                                <span className='text-muted'>-</span>
+                                            )}
                                         </td>
                                         <td className='text-center'>
                                             {hasStepType(journey, 'VIDEO') ? <i className="bi bi-check-circle-fill text-success"></i> : <span className="text-muted">-</span>}

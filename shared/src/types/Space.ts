@@ -20,4 +20,8 @@ export interface Space {
   /** ← mudou de string para Date */
   createdAt: Date;
   updatedAt: Date;
+
+  /** Relationships */
+  userSpaces?: { userId: string }[];
+  memberIds?: string[];
 }

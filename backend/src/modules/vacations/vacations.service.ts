@@ -226,4 +226,73 @@ export class VacationsService {
         console.log('Running Daily Vacation Balance Check...');
         // await this.notifications.sendPush(...)
     }
+
+    async getDashboardStats(companyId: string) {
+        // 1. Operational Counters
+        const totalRequests = await this.requestRepo.count({ where: { user: { companyId } } });
+        const pendingRequests = await this.requestRepo.count({ where: { user: { companyId }, status: VacationRequestStatus.PENDING } });
+        const approvedRequests = await this.requestRepo.count({ where: { user: { companyId }, status: VacationRequestStatus.APPROVED } });
+
+        // 2. Who is Away NOW?
+        const today = new Date();
+        const awayNow = await this.requestRepo.count({
+            where: {
+                user: { companyId },
+                status: VacationRequestStatus.APPROVED,
+                startDate: LessThanOrEqual(today.toISOString()),
+                endDate: MoreThanOrEqual(today.toISOString())
+            }
+        });
+
+        // 3. Compliance Risk (Balances) & Liability
+        // We need to fetch balances to analyze dates
+        const balances = await this.balanceRepo.find({
+            where: { user: { companyId } },
+            select: ['concessiveLimitDate', 'balanceTotal']
+        });
+
+        let riskOk = 0;
+        let riskWarning = 0;
+        let riskCritical = 0;
+        let totalBalanceDays = 0;
+
+        const warningThreshold = dayjs().add(90, 'day'); // 3 months warning
+        const criticalThreshold = dayjs(); // Today
+
+        balances.forEach(b => {
+            totalBalanceDays += b.balanceTotal;
+            if (!b.concessiveLimitDate) {
+                riskOk++;
+                return;
+            }
+            const limit = dayjs(b.concessiveLimitDate);
+
+            if (limit.isBefore(criticalThreshold)) {
+                riskCritical++;
+            } else if (limit.isBefore(warningThreshold)) {
+                riskWarning++;
+            } else {
+                riskOk++;
+            }
+        });
+
+        // 4. Financial Liability Proxy
+        // Avg Salary Proxy = R$ 5,000.00 (Market Avg)
+        // Cost = (Days / 30) * Salary * 1.33 (1/3 Vacation Bonus)
+        const AVG_SALARY = 5000;
+        const estimatedLiability = (totalBalanceDays / 30) * AVG_SALARY * 1.33;
+
+        return {
+            totalRequests,
+            pendingRequests,
+            approvedRequests,
+            awayNow,
+            riskDistribution: {
+                ok: riskOk,
+                warning: riskWarning,
+                critical: riskCritical
+            },
+            financialLiability: Math.round(estimatedLiability)
+        };
+    }
 }

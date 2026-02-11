@@ -17,8 +17,8 @@ export class GamificationFields1767796273359 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "news_entity" DROP COLUMN "xpOverride"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "xpOverride"`);
+        await queryRunner.query(`ALTER TABLE "news_entity" DROP COLUMN IF EXISTS "xpOverride"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "xpOverride"`);
     }
 
 }

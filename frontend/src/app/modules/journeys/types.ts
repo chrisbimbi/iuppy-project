@@ -32,7 +32,9 @@ export type Journey = {
     gamificationId?: string
     restartPolicy: 'RESUME' | 'RESTART'
     active: boolean
+    isNr1?: boolean
     steps: JourneyStep[]
     createdAt: string
     updatedAt: string
 }
+

@@ -153,6 +153,11 @@ export class JourneysController {
     return this.journeysService.getStepAnalyticsFields(journeyId, stepId);
   }
 
+  @Get(':journeyId/steps/:stepId/quiz-results')
+  getQuizResults(@Param('journeyId') journeyId: string, @Param('stepId') stepId: string) {
+    return this.journeysService.getQuizResults(journeyId, stepId);
+  }
+
   @Post(':journeyId/steps/:stepId/export')
   async exportStepSubmissions(@Param('journeyId') journeyId: string, @Param('stepId') stepId: string, @Res() res: any) {
     return this.journeysService.exportStepSubmissions(journeyId, stepId, res);

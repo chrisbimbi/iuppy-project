@@ -32,5 +32,13 @@ export class CreateSpaceDto {
   @IsOptional()
   @IsArray()
   @IsUUID('all', { each: true })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
   adminIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  memberIds?: string[];
 }

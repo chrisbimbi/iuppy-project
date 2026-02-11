@@ -47,11 +47,9 @@ export class FormSubmissionEntity {
   externalEmail: string | null;
 
   @Column('text', { array: true, nullable: true })
-  @Index({ spatial: true }) // GIN Index
   spaceIds: string[] | null;
 
   @Column('text', { array: true, nullable: true })
-  @Index({ spatial: true }) // GIN Index
   groupIds: string[] | null;
 
   @Column('boolean', { nullable: true })

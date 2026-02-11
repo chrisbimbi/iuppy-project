@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom'
 import { KTIcon } from '../../../../../../..//helpers'
 import { useListView } from '../../core/ListViewProvider'
 import { UsersListFilter } from './UsersListFilter'
 import { useIntl } from 'react-intl'
 
 const UsersListToolbar = () => {
+  const navigate = useNavigate()
   const intl = useIntl()
   const { setItemIdForUpdate } = useListView()
   const openAddUserModal = () => {
@@ -13,6 +15,13 @@ const UsersListToolbar = () => {
   return (
     <div className='d-flex justify-content-end' data-kt-user-table-toolbar='base'>
       <UsersListFilter />
+
+      {/* begin::Integrations */}
+      <button type='button' className='btn btn-light-info me-3' onClick={() => navigate('/company/settings?tab=integrations')}>
+        <KTIcon iconName='technology-2' className='fs-2' />
+        Integração
+      </button>
+      {/* end::Integrations */}
 
       {/* begin::Export */}
       <button type='button' className='btn btn-light-primary me-3'>

@@ -23,6 +23,7 @@ import { SentimentService } from './services/sentiment.service';
     ],
     controllers: [SocialController, SocialAnalyticsController],
     providers: [SocialService, SocialAnalyticsService, SentimentService],
-    exports: [SocialService, SentimentService],
+    exports: [SocialService, SentimentService, SocialAnalyticsService],
+
 })
 export class SocialModule { }

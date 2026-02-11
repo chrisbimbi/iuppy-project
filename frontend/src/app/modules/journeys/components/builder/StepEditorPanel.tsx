@@ -11,6 +11,7 @@ import { FormsApi } from '../../../forms/services/api'
 
 import { InlineFormBuilder } from '../InlineFormBuilder'
 import { InlinePollBuilder } from '../InlinePollBuilder'
+import { InlineQuizBuilder } from '../InlineQuizBuilder'
 
 type Props = {
     stepId: string
@@ -53,6 +54,7 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
     const [linkedFormId, setLinkedFormId] = useState(initialData?.linkedFormId || '')
     const [formConfig, setFormConfig] = useState(initialData?.formConfig || {})
     const [pollConfig, setPollConfig] = useState(initialData?.pollConfig || {})
+    const [quizConfig, setQuizConfig] = useState(initialData?.quizConfig || { passingScore: 70, questions: [] })
 
     // Push Notification Fields
     const [sendPush, setSendPush] = useState(!!initialData?.pushTitle)
@@ -76,6 +78,7 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
         setLinkedFormId(initialData?.linkedFormId || '')
         setFormConfig(initialData?.formConfig || {})
         setPollConfig(initialData?.pollConfig || {})
+        setQuizConfig(initialData?.quizConfig || { passingScore: 70, questions: [] })
 
         setSendPush(!!initialData?.pushTitle)
         setPushTitle(initialData?.pushTitle || '')
@@ -110,6 +113,7 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
             contentType,
             formConfig,
             pollConfig,
+            quizConfig,
             pushTitle: sendPush ? pushTitle : null,
             pushMessage: sendPush ? pushMessage : null
         })
@@ -195,6 +199,7 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
                             <option value="ARTICLE">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.ARTICLE' })}</option>
                             <option value="FORM">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.FORM' })}</option>
                             <option value="POLL">{intl.formatMessage({ id: 'JOURNEYS.EDITOR.TYPE.POLL' })}</option>
+                            <option value="QUIZ">Avaliação (Quiz)</option>
                         </select>
                     </div>
 
@@ -360,6 +365,15 @@ export const StepEditorPanel: FC<Props> = ({ stepId, initialData, onClose, onSav
                             <InlinePollBuilder
                                 value={pollConfig}
                                 onChange={setPollConfig}
+                            />
+                        </div>
+                    )}
+
+                    {contentType === 'QUIZ' && (
+                        <div className='mb-8'>
+                            <InlineQuizBuilder
+                                value={quizConfig}
+                                onChange={setQuizConfig}
                             />
                         </div>
                     )}

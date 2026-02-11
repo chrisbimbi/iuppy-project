@@ -12,10 +12,11 @@ import { spacesService } from 'src/app/modules/spaces/services/spaces.service'
 import { ChannelsService } from 'src/app/modules/channels/services/channels.service'
 import { useGroups } from 'src/app/modules/groups/provider/useGroups'
 import { CompanyModule, CompanySettings, ModuleKey, Role, User } from '@shared/types'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import '../styles/phone-preview.css'
 import LogoUploader from '../components/LogoUploader'
 import UserPermissionsModal from '../components/UserPermissionsModal'
+import IntegrationsWorkspace from '../../integrations/IntegrationsWorkspace'
 
 // labels dos módulos
 const MODULE_LABELS: Record<ModuleKey, string> = {
@@ -37,9 +38,12 @@ const MODULE_LABELS: Record<ModuleKey, string> = {
     social: 'Social Wall',
     chat: 'Chat',
     journeys: 'Jornadas',
+    performance: 'Performance',
+    nr1: 'NR1',
+    gamification: 'Gamification'
 }
 
-type TabKey = 'branding' | 'users' | 'entities' | 'modules'
+type TabKey = 'branding' | 'users' | 'entities' | 'modules' | 'integrations'
 // TABS movido para dentro do componente ou usando useMemo com intl
 
 const defaultBrandingColor = (v?: string, fallback = '#ffffff') => v || fallback
@@ -47,6 +51,7 @@ const defaultBrandingColor = (v?: string, fallback = '#ffffff') => v || fallback
 const CompanySettingsPage: React.FC = () => {
     const { currentUser } = useAuth()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const intl = useIntl()
     const companyId = currentUser?.companyId as string
 
@@ -69,15 +74,22 @@ const CompanySettingsPage: React.FC = () => {
         social: intl.formatMessage({ id: 'COMPANY.MODULES.SOCIAL', defaultMessage: 'Mural Social' }),
         chat: intl.formatMessage({ id: 'COMPANY.MODULES.CHAT', defaultMessage: 'Chat' }),
         journeys: intl.formatMessage({ id: 'COMPANY.MODULES.JOURNEYS', defaultMessage: 'Jornadas' }),
+        performance: 'Performance',
+        nr1: 'NR1',
+        gamification: 'Gamification'
     }
 
     const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
         { key: 'branding', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.BRANDING', defaultMessage: 'Identidade Visual' }), icon: 'bi-palette' },
+        { key: 'integrations', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.INTEGRATIONS', defaultMessage: 'Integrações' }), icon: 'bi-cpu' },
         { key: 'entities', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.ENTITIES', defaultMessage: 'Entidades' }), icon: 'bi-diagram-2' },
         { key: 'modules', label: intl.formatMessage({ id: 'COMPANY.SETTINGS.TAB.MODULES', defaultMessage: 'Módulos' }), icon: 'bi-grid' },
     ]
 
-    const [active, setActive] = useState<TabKey>('branding')
+    const initialTab = searchParams.get('tab') as TabKey | null
+    const [active, setActive] = useState<TabKey>(
+        initialTab && TABS.some(t => t.key === initialTab) ? initialTab : 'branding'
+    )
 
     // Settings
     const [settings, setSettings] = useState<CompanySettings | null>(null)
@@ -408,6 +420,11 @@ const CompanySettingsPage: React.FC = () => {
                             )}
 
 
+
+                            {/* TAB: Integrations */}
+                            {active === 'integrations' && (
+                                <IntegrationsWorkspace />
+                            )}
 
                             {/* TAB: Entities */}
                             {active === 'entities' && (

@@ -27,8 +27,23 @@ export const IntegrationsService = {
         return res.data
     },
 
-    triggerSync: async (connectionId: string, type: 'FULL' | 'DELTA' = 'DELTA') => {
-        const res = await api.post('/integrations/sync', { connectionId, type })
+    triggerSync: async (connectionId: string, type: 'FULL' | 'DELTA' = 'FULL') => {
+        const res = await api.post('/integrations/sync', { connectionId, type: type.toLowerCase() })
+        return res.data
+    },
+
+    discoverSchema: async (connectionId: string) => {
+        const res = await api.post(`/integrations/${connectionId}/discover-schema`)
+        return res.data
+    },
+
+    getConfig: async (connectionId: string) => {
+        const res = await api.get(`/integrations/${connectionId}/config`)
+        return res.data
+    },
+
+    saveConfig: async (connectionId: string, config: { mapping: any, uniqueIdentifier: string }) => {
+        const res = await api.post(`/integrations/${connectionId}/config`, config)
         return res.data
     }
 }

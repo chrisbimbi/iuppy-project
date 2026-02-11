@@ -4,9 +4,9 @@ export class AddPushToJourneySteps1764683906343 implements MigrationInterface {
     name = 'AddPushToJourneySteps1764683906343'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "pushTitle" character varying`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "pushMessage" character varying`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD "notificationsSent" jsonb NOT NULL DEFAULT '[]'`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "pushTitle" character varying`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "pushMessage" character varying`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD COLUMN IF NOT EXISTS "notificationsSent" jsonb NOT NULL DEFAULT '[]'`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]::text[]`);
@@ -22,9 +22,9 @@ export class AddPushToJourneySteps1764683906343 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN "notificationsSent"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "pushMessage"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "pushTitle"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN IF EXISTS "notificationsSent"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "pushMessage"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "pushTitle"`);
     }
 
 }

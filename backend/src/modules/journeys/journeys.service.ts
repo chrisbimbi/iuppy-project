@@ -8,14 +8,14 @@ import {
   Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThanOrEqual, DataSource } from 'typeorm';
+import { Repository, In, LessThanOrEqual, MoreThan, DataSource } from 'typeorm';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import {
   JourneyEntity,
   JourneyTriggerType,
   JourneyRestartPolicy,
 } from './entities/journey.entity';
-import { JourneyStepEntity } from './entities/journey-step.entity';
+import { JourneyStepEntity, StepContentType } from './entities/journey-step.entity';
 import {
   UserJourneyInstanceEntity,
   JourneyInstanceStatus,
@@ -64,10 +64,17 @@ export class JourneysService {
       },
     });
 
+    // Reload user with groups and spaces
+    const fullUser = await this.userRepo.findOne({
+      where: { id: user.id },
+      relations: ['memberOf', 'userSpaces'],
+    });
+    if (!fullUser) return;
+
     for (const journey of onboardingJourneys) {
       // Check target audience rules if any
-      if (this.matchesAudience(user, journey.targetAudience)) {
-        await this.createInstanceIfNotExists(user.id, journey.id);
+      if (this.matchesAudience(fullUser, journey.targetAudience, journey.spaceId)) {
+        await this.createInstanceIfNotExists(fullUser.id, journey.id);
       }
     }
   }
@@ -94,13 +101,13 @@ export class JourneysService {
     // Assuming manageable size for now (<10k).
     const users = await this.userRepo.find({
       where: { companyId },
-      relations: ['memberOf'], // Need groups for audience matching
+      relations: ['memberOf', 'userSpaces'], // Need groups and spaces for audience matching
     });
 
     let enrolledCount = 0;
     for (const user of users) {
       // Check if user matches
-      if (this.matchesAudience(user, journey.targetAudience)) {
+      if (this.matchesAudience(user, journey.targetAudience, journey.spaceId)) {
         // This helper handles checking if instance already exists
         await this.createInstanceIfNotExists(user.id, journey.id);
         enrolledCount++;
@@ -111,8 +118,17 @@ export class JourneysService {
   }
 
   // Helper to check audience rules
-  private matchesAudience(user: UserEntity, audience: any): boolean {
-    if (!audience) return true; // No rules = everyone
+  private matchesAudience(user: UserEntity, audience: any, journeySpaceId?: string): boolean {
+    // 0. Check Space Membership
+    if (journeySpaceId) {
+      // If journey belongs to a space, user MUST be in that space (via UserSpaceEntity)
+      // We assume user.userSpaces is loaded. If not, this might fail or be false negative.
+      // Callers must ensure relations are loaded.
+      const inSpace = user.userSpaces?.some((us) => us.spaceId === journeySpaceId);
+      if (!inSpace) return false;
+    }
+
+    if (!audience) return true; // No rules = everyone (in the space if defined)
 
     // 1. Check Department
     if (audience.department) {
@@ -145,7 +161,7 @@ export class JourneysService {
   async checkJourneysForUser(userId: string) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
-      relations: ['memberOf'], // Load groups
+      relations: ['memberOf', 'userSpaces'], // Load groups and spaces
     });
     if (!user) throw new NotFoundException('User not found');
 
@@ -163,7 +179,7 @@ export class JourneysService {
     const results = [];
 
     for (const journey of onboardingJourneys) {
-      const match = this.matchesAudience(user, journey.targetAudience);
+      const match = this.matchesAudience(user, journey.targetAudience, journey.spaceId);
       this.logger.log('Journey ' + journey.title + ' (' + journey.id + ') match ? ' + match);
 
       if (match) {
@@ -235,7 +251,7 @@ export class JourneysService {
   }
 
   async checkAndUnlockSteps() {
-    this.logger.log('Checking for steps to unlock...');
+    // this.logger.log('Checking for steps to unlock...');
 
     // Find active instances
     const activeInstances = await this.instanceRepo.find({
@@ -404,12 +420,96 @@ export class JourneysService {
       return { message: 'Step already completed', points: 0 };
     }
 
+    // 4.5. Quiz Validation & Scoring
+    let quizScore = null;
+    let quizPassed = true;
+    if (step.contentType === 'QUIZ' && step.quizConfig) {
+      const quizConfig = step.quizConfig;
+      const userAnswers = data?.answers || [];
+
+      if (!quizConfig.questions || quizConfig.questions.length === 0) {
+        throw new BadRequestException('Quiz has no questions configured');
+      }
+
+      // Calculate weighted score
+      let totalWeight = 0;
+      let earnedWeight = 0;
+
+      for (const question of quizConfig.questions) {
+        totalWeight += question.weight || 1;
+
+        // Find user's answer for this question
+        const userAnswer = userAnswers.find((a: any) => a.questionId === question.id);
+        if (!userAnswer) {
+          // Question not answered - counts as wrong
+          continue;
+        }
+
+        // Get correct options
+        const correctOptionIds = question.options
+          .filter((opt: any) => opt.isCorrect)
+          .map((opt: any) => opt.id);
+
+        // Check if user's answer is correct
+        const selectedOptions = userAnswer.selectedOptions || [];
+
+        if (question.type === 'SINGLE_CHOICE') {
+          // For single choice, check if the one selected option is correct
+          if (
+            selectedOptions.length === 1 &&
+            correctOptionIds.includes(selectedOptions[0])
+          ) {
+            earnedWeight += question.weight || 1;
+          }
+        } else if (question.type === 'MULTI_CHOICE') {
+          // For multi choice, ALL correct options must be selected and NO incorrect ones
+          const selectedSet = new Set(selectedOptions);
+          const correctSet = new Set(correctOptionIds);
+
+          const allCorrectSelected = correctOptionIds.every((id: string) =>
+            selectedSet.has(id),
+          );
+          const noIncorrectSelected = selectedOptions.every((id: string) =>
+            correctSet.has(id),
+          );
+
+          if (allCorrectSelected && noIncorrectSelected) {
+            earnedWeight += question.weight || 1;
+          }
+        }
+      }
+
+      // Calculate percentage score
+      quizScore = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 100) : 0;
+      const passingScore = quizConfig.passingScore || 70;
+
+      if (quizScore < passingScore) {
+        quizPassed = false;
+        this.logger.log(
+          `User ${userId} failed quiz ${stepId} with score ${quizScore}% (need ${passingScore}%)`,
+        );
+        throw new BadRequestException(
+          `Quiz score ${quizScore}% is below passing score of ${passingScore}%`,
+        );
+      }
+
+      this.logger.log(
+        `User ${userId} passed quiz ${stepId} with score ${quizScore}% (need ${passingScore}%)`,
+      );
+    }
+
     // 5. Record Completion
+    const completionData = data ? { ...data } : {};
+    if (quizScore !== null) {
+      completionData.quizScore = quizScore;
+      completionData.quizPassed = quizPassed;
+    }
+
     const completion = this.completionRepo.create({
       instanceId: instance.id,
       stepId,
       completedAt: new Date(),
-      data,
+      data: completionData,
     });
     await this.completionRepo.save(completion);
 
@@ -446,7 +546,13 @@ export class JourneysService {
 
     await this.instanceRepo.save(instance);
 
-    return { message: 'Step completed', points: 10 };
+    const responseData: any = { message: 'Step completed', points: 10 };
+    if (quizScore !== null) {
+      responseData.quizScore = quizScore;
+      responseData.quizPassed = quizPassed;
+    }
+
+    return responseData;
   }
 
   // ===== CRUD & Progress =====
@@ -526,6 +632,7 @@ export class JourneysService {
       restartPolicy: updateJourneyDto.restartPolicy,
       active: updateJourneyDto.active,
       gamificationId: updateJourneyDto.gamificationId,
+      isNr1: updateJourneyDto.isNr1,
     });
 
 
@@ -580,6 +687,7 @@ export class JourneysService {
             requireAck: stepDto.requireAck,
             formConfig: stepDto.formConfig,
             pollConfig: stepDto.pollConfig,
+            quizConfig: stepDto.quizConfig,
             contentPayload: stepDto.contentPayload,
             orderIndex: stepDto.orderIndex,
             smartFields: stepDto.smartFields,
@@ -1115,6 +1223,9 @@ export class JourneysService {
       order: { completedAt: 'DESC' },
     });
 
+    // Check if this is a quiz step to include quiz-specific data
+    const isQuiz = step?.contentType === 'QUIZ';
+
     const signedCompletions = await Promise.all(completions.map(async c => {
       const data = { ...c.data };
       if (data) {
@@ -1132,10 +1243,8 @@ export class JourneysService {
               data[key] = { ...val, url };
             } catch (e) {
               console.error('[getStepSubmissions] Error signing URL for path:', val.storagePath || val.path, e);
-              // ignore signing error
             }
           } else if (Array.isArray(val)) {
-            // Handle array of attachments if needed
             const newArr = await Promise.all(val.map(async (item: any) => {
               if (typeof item === 'object' && item !== null && (item.storagePath || item.path)) {
                 try {
@@ -1144,7 +1253,7 @@ export class JourneysService {
                   const file = bucket.file(storagePath);
                   const [url] = await file.getSignedUrl({
                     action: 'read',
-                    expires: Date.now() + 1000 * 60 * 60, // 1 hour
+                    expires: Date.now() + 1000 * 60 * 60,
                   });
                   return { ...item, url };
                 } catch (e) {
@@ -1163,12 +1272,72 @@ export class JourneysService {
         id: c.id,
         userId: c.instance?.userId,
         userName: c.instance?.user?.name || c.instance?.user?.email || 'Unknown User',
+        userEmail: c.instance?.user?.email,
         completedAt: c.completedAt,
         data,
+        // Quiz-specific fields
+        ...(isQuiz && {
+          quizScore: c.data?.quizScore,
+          quizPassed: c.data?.quizPassed,
+          answers: c.data?.answers,
+        }),
       };
     }));
 
     return signedCompletions;
+  }
+
+  async getQuizResults(journeyId: string, stepId: string) {
+    // Verify step is a quiz
+    const step = await this.stepRepo.findOne({
+      where: { id: stepId, journeyId },
+      relations: ['journey']
+    });
+
+    if (!step) {
+      throw new NotFoundException('Step not found');
+    }
+
+    if (step.contentType !== 'QUIZ') {
+      throw new BadRequestException('This step is not a quiz');
+    }
+
+    // Get all submissions
+    const submissions = await this.getStepSubmissions(journeyId, stepId);
+
+    // Calculate summary statistics
+    const totalAttempts = submissions.length;
+    const passedCount = submissions.filter((s) => s.quizPassed).length;
+    const passRate = totalAttempts > 0 ? Math.round((passedCount / totalAttempts) * 100) : 0;
+
+    const scores = submissions.map((s) => s.quizScore || 0);
+    const averageScore = scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0;
+
+    return {
+      step: {
+        id: step.id,
+        title: step.title,
+        passingScore: step.quizConfig?.passingScore || 70,
+        totalQuestions: step.quizConfig?.questions?.length || 0,
+      },
+      summary: {
+        totalAttempts,
+        passedCount,
+        failedCount: totalAttempts - passedCount,
+        passRate,
+        averageScore,
+      },
+      submissions: submissions.map((s) => ({
+        userId: s.userId,
+        userName: s.userName,
+        userEmail: s.userEmail,
+        score: s.quizScore,
+        passed: s.quizPassed,
+        completedAt: s.completedAt,
+      })),
+    };
   }
 
   async exportStepSubmissions(journeyId: string, stepId: string, res: any) {
@@ -1374,5 +1543,96 @@ export class JourneysService {
 
       return stats;
     });
+  }
+
+  async getDashboardStats(companyId: string) {
+    const activeJourneys = await this.journeyRepo.count({ where: { companyId, active: true } });
+    const totalInstances = await this.instanceRepo.count({ where: { companyId } });
+    const completedInstances = await this.instanceRepo.count({ where: { companyId, status: JourneyInstanceStatus.COMPLETED } });
+
+    // Started instances (currentStep > 0)
+    const startedInstances = await this.instanceRepo.count({
+      where: { companyId, currentStep: MoreThan(0) as any }
+    });
+
+    // 1. Calculate Advancing vs Behind and Avg Completion
+    // We need to fetch instances and their journeys to know the expected step
+    const instances = await this.instanceRepo.find({
+      where: { companyId, status: JourneyInstanceStatus.ACTIVE },
+      relations: ['journey', 'journey.steps']
+    });
+
+    let advancing = 0;
+    let behind = 0;
+    let totalProgressPercent = 0;
+    const now = new Date();
+
+    for (const instance of instances) {
+      if (!instance.journey || !instance.journey.steps) continue;
+
+      const totalSteps = instance.journey.steps.length;
+      if (totalSteps === 0) continue;
+
+      // Completion Percent for this instance
+      totalProgressPercent += (instance.currentStep / totalSteps);
+
+      // Expected steps based on delayDays
+      const daysElapsed = Math.floor((now.getTime() - instance.startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const expectedSteps = instance.journey.steps.filter(s => s.delayDays <= daysElapsed).length;
+
+      if (instance.currentStep >= expectedSteps) {
+        advancing++;
+      } else {
+        behind++;
+      }
+    }
+
+    const avgCompletionPercent = totalInstances > 0
+      ? Math.round((totalProgressPercent / totalInstances) * 100)
+      : 0;
+
+    // 2. Average Video Views
+    // Count completions where step is VIDEO
+    const videoCompletions = await this.completionRepo.createQueryBuilder('c')
+      .innerJoin('c.step', 's')
+      .innerJoin('s.journey', 'j')
+      .where('j.companyId = :companyId', { companyId })
+      .andWhere('s.contentType = :type', { type: StepContentType.VIDEO })
+      .getCount();
+
+    const avgVideoViews = startedInstances > 0
+      ? Number((videoCompletions / startedInstances).toFixed(1))
+      : 0;
+
+    // 3. Top 5 Journeys
+    const topJourneysRaw = await this.instanceRepo.createQueryBuilder('i')
+      .select('i.journeyId', 'journeyId')
+      .addSelect('COUNT(i.id)', 'count')
+      .where('i.companyId = :companyId', { companyId })
+      .groupBy('i.journeyId')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    const topJourneys = await Promise.all(topJourneysRaw.map(async (r) => {
+      const journey = await this.journeyRepo.findOneBy({ id: r.journeyId });
+      return {
+        id: r.journeyId,
+        title: journey ? journey.title : 'Unknown',
+        enrollments: Number(r.count)
+      };
+    }));
+
+    return {
+      activeJourneys,
+      totalInstances,
+      startedInstances,
+      completedInstances,
+      advancing,
+      behind,
+      avgCompletionPercent,
+      avgVideoViews,
+      topJourneys
+    };
   }
 }

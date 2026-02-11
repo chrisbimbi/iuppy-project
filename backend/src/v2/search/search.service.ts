@@ -1,92 +1,99 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { TrackSearchDto } from './dto/track-search.dto';
+import { SearchLogEntity } from '../../search/search-log.entity';
+import { UserEntity } from '../../users/user.entity';
 
 @Injectable()
 export class SearchV2Service {
-  constructor(private readonly ds: DataSource) {}
+  constructor(
+    @InjectRepository(SearchLogEntity)
+    private readonly searchLogRepo: Repository<SearchLogEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepo: Repository<UserEntity>,
+    private readonly ds: DataSource // Keep DS for complex queries if needed
+  ) { }
 
   async track(companyId: string, userId: string, dto: TrackSearchDto) {
-    // Tenta gravar em analytics_search_event; se não existir, apenas retorna ok.
     try {
-      await this.ds.query(
-        `INSERT INTO analytics_search_event
-          ("companyId","userId","q","tookMs","results","filters","createdAt")
-         VALUES ($1,$2,$3,$4,$5,$6,now())`,
-        [
-          companyId,
-          userId,
-          dto.q,
-          dto.tookMs ?? null,
-          dto.results ?? null,
-          dto.filters ?? null,
-        ],
-      );
+      // 1. Resolve User Segment (Department or First Group)
+      const user = await this.userRepo.findOne({
+        where: { id: userId },
+        select: ['id', 'department', 'groups']
+      });
+
+      const userGroupId = user?.department || (user?.groups?.length ? user.groups[0] : null);
+
+      // 2. Save Log
+      await this.searchLogRepo.save({
+        companyId,
+        userId,
+        query: dto.q,
+        resultCount: dto.results || 0,
+        userGroupId: userGroupId || undefined,
+        // tookMs metadata is not in entity yet, avoiding for now
+      });
+
       return { ok: true, stored: true };
-    } catch {
-      // fallback: não quebra o fluxo do app
-      return {
-        ok: true,
-        stored: false,
-        note: 'table analytics_search_event missing (no-op)',
-      };
+    } catch (err) {
+      console.error('Error tracking search:', err);
+      return { ok: false, stored: false };
     }
   }
 
   async overview(companyId: string, from?: string, to?: string) {
     try {
-      const range =
-        from && to
-          ? `AND e."createdAt" >= $2 AND e."createdAt" < $3`
-          : from
-            ? `AND e."createdAt" >= $2`
-            : to
-              ? `AND e."createdAt" < $2`
-              : '';
+      const qb = this.searchLogRepo.createQueryBuilder('s')
+        .where('s.companyId = :companyId', { companyId });
 
-      const params: any[] = [companyId];
-      if (from) params.push(from);
-      if (to) params.push(to);
+      if (from) qb.andWhere('s.createdAt >= :from', { from });
+      if (to) qb.andWhere('s.createdAt < :to', { to });
 
-      const rows = await this.ds.query(
-        `SELECT
-           COUNT(*)::int AS "totalSearches",
-           COUNT(DISTINCT e."userId")::int AS "uniqueUsers",
-           AVG(NULLIF(e."tookMs",0))::float AS "avgTookMs"
-         FROM analytics_search_event e
-         WHERE e."companyId" = $1
-           ${range}`,
-        params,
-      );
+      // Aggregate Stats
+      // Note: TypeORM doesn't support multiple counts in one getRawOne easily without selecting raw
+      const rawStats = await qb
+        .select('COUNT(*)', 'totalSearches')
+        .addSelect('COUNT(DISTINCT s.userId)', 'uniqueUsers')
+        .getRawOne();
 
-      const topQueries = await this.ds.query(
-        `SELECT e."q", COUNT(*)::int AS "count"
-           FROM analytics_search_event e
-          WHERE e."companyId" = $1
-            ${range}
-          GROUP BY e."q"
-          ORDER BY COUNT(*) DESC
-          LIMIT 10`,
-        params,
-      );
+      // Top Queries
+      const topQueries = await qb
+        .select('s.query', 'q')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('s.query')
+        .orderBy('count', 'DESC')
+        .limit(10)
+        .getRawMany();
+
+      // Zero Result Queries (New Feature!)
+      const zeroResultQueries = await this.searchLogRepo.createQueryBuilder('s')
+        .select('s.query', 'q')
+        .addSelect('COUNT(*)', 'count')
+        .where('s.companyId = :companyId', { companyId })
+        .andWhere('s.resultCount = 0')
+        .groupBy('s.query')
+        .orderBy('count', 'DESC')
+        .limit(10)
+        .getRawMany();
 
       return {
         from: from ?? null,
         to: to ?? null,
-        totalSearches: Number(rows[0]?.totalSearches || 0),
-        uniqueUsers: Number(rows[0]?.uniqueUsers || 0),
-        avgTookMs: rows[0]?.avgTookMs ? Number(rows[0].avgTookMs) : null,
-        topQueries,
+        totalSearches: Number(rawStats?.totalSearches || 0),
+        uniqueUsers: Number(rawStats?.uniqueUsers || 0),
+        avgTookMs: 0, // Not tracked yet
+        topQueries: topQueries.map(t => ({ q: t.q, count: Number(t.count) })),
+        zeroResultQueries: zeroResultQueries.map(t => ({ q: t.q, count: Number(t.count) }))
       };
-    } catch {
+    } catch (err) {
+      console.error('Error getting search overview:', err);
       return {
-        from: from ?? null,
-        to: to ?? null,
+        from, to,
         totalSearches: 0,
         uniqueUsers: 0,
-        avgTookMs: null,
         topQueries: [],
-        note: 'table analytics_search_event missing (no-op)',
+        zeroResultQueries: []
       };
     }
   }

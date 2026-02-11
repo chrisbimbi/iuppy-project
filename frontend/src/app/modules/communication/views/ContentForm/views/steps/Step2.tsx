@@ -452,6 +452,16 @@ export const Step2: React.FC<Step2Props> = ({
             </label>
           </div>
         </div>
+        <div className="col-md-4">
+          <div className="form-check form-switch form-switch-custom form-switch-solid">
+            <input className="form-check-input" type="checkbox" checked={data.isNr1}
+              onChange={e => setFieldValue('isNr1', e.target.checked)} />
+            <label className="form-check-label">
+              Conteúdo NR-1
+              <span className="form-text text-muted d-block mt-1 fs-8">Marcar como parte do NR-1 Hub</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Push Notification Modal */}
@@ -590,7 +600,7 @@ export const Step2: React.FC<Step2Props> = ({
           </div>
         </div></div>
       </div>
-    </div>
+    </div >
   )
 }
 

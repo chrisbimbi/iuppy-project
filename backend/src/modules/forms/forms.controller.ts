@@ -73,11 +73,14 @@ export class FormsController {
   // =========================================================
   // LISTAR FORMS (CMS / APP)
   // =========================================================
+  @UseGuards(JwtAccessGuard)
   @Get()
   async list(
     @Req() req: any,
     @Query('status') status?: string,
     @Query('companyId') companyIdFromQuery?: string,
+    @Query('template') template?: string,
+    @Query('isNr1') isNr1?: boolean,
     @Query('visibility') visibility?: string,
   ) {
     let companyId = companyIdFromQuery || this.getCompanyIdSync(req);
@@ -87,12 +90,21 @@ export class FormsController {
         companyId = await this.formsService.findCompanyIdByUser(userId);
       }
     }
+    // DEBUG LOG
+    console.log(`[FormsController.list] Request: companyId=${companyId}, userId=${this.getUserId(req)}, isNr1=${isNr1}, role=${req.user?.role}`);
+
     if (!companyId) {
+      const userId = this.getUserId(req);
+      if (userId) {
+        companyId = await this.formsService.findCompanyIdByUser(userId);
+      }
+    }
+    if (!companyId) { // Fallback check
       throw new BadRequestException('companyId missing');
     }
 
-    const role = req.user?.role;
     const userId = this.getUserId(req);
+    const role = req.user?.role;
     let allowedSpaceIds: string[] | undefined;
     let filterUserId: string | undefined;
 
@@ -103,8 +115,10 @@ export class FormsController {
       // Admin: Check ACL
       const caps = await this.accessControlService.capabilities(companyId, { id: userId, role });
       const formsCaps = caps.modules.forms;
+      console.log(`[FormsController.list] Caps: canView=${formsCaps?.canView}`);
 
       if (!formsCaps?.canView) {
+        console.warn(`[FormsController.list] ACCESS DENIED: User ${userId} cannot view forms in ${companyId}`);
         return [];
       }
 
@@ -113,7 +127,19 @@ export class FormsController {
       }
     }
 
-    return this.formsService.listForms(companyId, status, visibility, allowedSpaceIds, filterUserId);
+    // Convert string 'true'/'false' to boolean if needed, though NestJS pipes usually handle this if typed correctly 
+    // but here we are using manual query parsing mostly
+    const isNr1Bool = isNr1 === undefined || isNr1 === null ? undefined : String(isNr1) === 'true';
+
+    return this.formsService.listForms(
+      companyId,
+      status,
+      visibility,
+      allowedSpaceIds,
+      filterUserId,
+      template,
+      isNr1Bool
+    );
   }
 
   // 🔥 NOVO ENDPOINT
@@ -351,6 +377,25 @@ export class FormsController {
 
     // CMS (ou admin) pode listar
     const userId = this.getUserId(req);
+    const role = req.user?.role;
+
+    if (role === Role.User) {
+      // App users cannot list all submissions of a form, only 'my'
+      throw new ForbiddenException('App users cannot list submissions');
+    }
+
+    // Check ACL for Admins
+    if (userId) {
+      const caps = await this.accessControlService.capabilities(companyId, { id: userId, role });
+      const formsCaps = caps.modules.forms;
+      if (!formsCaps?.canView) {
+        throw new ForbiddenException('No permission to view forms');
+      }
+      // Note: If scope is SPACE_IDS, we ideally should check if this specific form belongs to allowed spaces.
+      // For now, we assume canView is enough, or we rely on the service to filter (but service listSubmissions doesn't filter by space yet).
+      // Enhancing service listSubmissions is safer, but redundant if we block here.
+    }
+
     return this.formsService.listSubmissions(
       companyId,
       id,

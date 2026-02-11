@@ -4,15 +4,15 @@ export class AddEmbeddedConfigs1764635343862 implements MigrationInterface {
     name = 'AddEmbeddedConfigs1764635343862'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT "FK_a9d754f2f192c3a472a1c5c452d"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT "FK_04bd41d5b061ba103218802e074"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT "FK_d3adb9ddacf5b72fb5952c73d6d"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT "FK_b72ec776469d448880f05390552"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN "pointsAwarded"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN "createdAt"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "formConfig" jsonb`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "pollConfig" jsonb`);
-        await queryRunner.query(`ALTER TABLE "step_completions" ADD "data" jsonb`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT IF EXISTS "FK_a9d754f2f192c3a472a1c5c452d"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT IF EXISTS "FK_04bd41d5b061ba103218802e074"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT IF EXISTS "FK_d3adb9ddacf5b72fb5952c73d6d"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT IF EXISTS "FK_b72ec776469d448880f05390552"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN IF EXISTS "pointsAwarded"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN IF EXISTS "createdAt"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "formConfig" jsonb`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "pollConfig" jsonb`);
+        await queryRunner.query(`ALTER TABLE "step_completions" ADD COLUMN IF NOT EXISTS "data" jsonb`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]::text[]`);
@@ -20,20 +20,20 @@ export class AddEmbeddedConfigs1764635343862 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "spaceIds" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TABLE "survey" ALTER COLUMN "groupIds" SET DEFAULT ARRAY[]::text[]`);
         await queryRunner.query(`ALTER TYPE "public"."journey_steps_contenttype_enum" RENAME TO "journey_steps_contenttype_enum_old"`);
-        await queryRunner.query(`CREATE TYPE "public"."journey_steps_contenttype_enum" AS ENUM('ARTICLE', 'VIDEO', 'QUIZ', 'POLL', 'FORM')`);
+        await queryRunner.query(`DO $$ BEGIN CREATE TYPE "public"."journey_steps_contenttype_enum" AS ENUM('ARTICLE', 'VIDEO', 'QUIZ', 'POLL', 'FORM'); EXCEPTION WHEN duplicate_object THEN null; END $$;`);
         await queryRunner.query(`ALTER TABLE "journey_steps" ALTER COLUMN "contentType" TYPE "public"."journey_steps_contenttype_enum" USING "contentType"::"text"::"public"."journey_steps_contenttype_enum"`);
         await queryRunner.query(`DROP TYPE "public"."journey_steps_contenttype_enum_old"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "mediaType"`);
-        await queryRunner.query(`CREATE TYPE "public"."journey_steps_mediatype_enum" AS ENUM('NONE', 'IMAGE', 'VIDEO', 'DOCUMENT')`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "mediaType" "public"."journey_steps_mediatype_enum" NOT NULL DEFAULT 'NONE'`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "mediaType"`);
+        await queryRunner.query(`DO $$ BEGIN CREATE TYPE "public"."journey_steps_mediatype_enum" AS ENUM('NONE', 'IMAGE', 'VIDEO', 'DOCUMENT'); EXCEPTION WHEN duplicate_object THEN null; END $$;`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "mediaType" "public"."journey_steps_mediatype_enum" NOT NULL DEFAULT 'NONE'`);
         await queryRunner.query(`ALTER TABLE "journey_steps" ALTER COLUMN "requireAck" SET NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "linkedFormId"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "linkedFormId" character varying`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "linkedPollId"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "linkedPollId" character varying`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "linkedFormId"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "linkedFormId" character varying`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "linkedPollId"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "linkedPollId" character varying`);
         await queryRunner.query(`ALTER TABLE "journeys" ALTER COLUMN "triggerType" SET DEFAULT 'MANUAL'`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN "companyId"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD "companyId" character varying`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN IF EXISTS "companyId"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD COLUMN IF NOT EXISTS "companyId" character varying`);
         // Use static default to avoid join/cast issues
         await queryRunner.query(`UPDATE "user_journey_instances" SET "companyId" = '2af4557f-9259-4eed-818d-1d0ffe0b8982'`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ALTER COLUMN "companyId" SET NOT NULL`);
@@ -41,8 +41,8 @@ export class AddEmbeddedConfigs1764635343862 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ALTER COLUMN "startDate" TYPE TIMESTAMP USING "startDate"::timestamp`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ALTER COLUMN "currentStep" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ALTER COLUMN "completedAt" TYPE TIMESTAMP USING "completedAt"::timestamp`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN "completedAt"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" ADD "completedAt" TIMESTAMP NOT NULL DEFAULT now()`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN IF EXISTS "completedAt"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP NOT NULL DEFAULT now()`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD CONSTRAINT "FK_04bd41d5b061ba103218802e074" FOREIGN KEY ("journeyId") REFERENCES "journeys"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD CONSTRAINT "FK_a9d754f2f192c3a472a1c5c452d" FOREIGN KEY ("userId") REFERENCES "user_entity"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "step_completions" ADD CONSTRAINT "FK_d3adb9ddacf5b72fb5952c73d6d" FOREIGN KEY ("instanceId") REFERENCES "user_journey_instances"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
@@ -50,29 +50,29 @@ export class AddEmbeddedConfigs1764635343862 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT "FK_b72ec776469d448880f05390552"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT "FK_d3adb9ddacf5b72fb5952c73d6d"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT "FK_a9d754f2f192c3a472a1c5c452d"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT "FK_04bd41d5b061ba103218802e074"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN "completedAt"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" ADD "completedAt" TIMESTAMP WITH TIME ZONE NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN "completedAt"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD "completedAt" TIMESTAMP WITH TIME ZONE`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT IF EXISTS "FK_b72ec776469d448880f05390552"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP CONSTRAINT IF EXISTS "FK_d3adb9ddacf5b72fb5952c73d6d"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT IF EXISTS "FK_a9d754f2f192c3a472a1c5c452d"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP CONSTRAINT IF EXISTS "FK_04bd41d5b061ba103218802e074"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN IF EXISTS "completedAt"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP WITH TIME ZONE NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN IF EXISTS "completedAt"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP WITH TIME ZONE`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ALTER COLUMN "currentStep" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN "startDate"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD "startDate" TIMESTAMP WITH TIME ZONE NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN "companyId"`);
-        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD "companyId" uuid`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN IF EXISTS "startDate"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP WITH TIME ZONE NOT NULL`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" DROP COLUMN IF EXISTS "companyId"`);
+        await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD COLUMN IF NOT EXISTS "companyId" uuid`);
         await queryRunner.query(`ALTER TABLE "journeys" ALTER COLUMN "triggerType" SET DEFAULT 'GLOBAL'`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "linkedPollId"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "linkedPollId" uuid`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "linkedFormId"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "linkedFormId" uuid`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "linkedPollId"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "linkedPollId" uuid`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "linkedFormId"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "linkedFormId" uuid`);
         await queryRunner.query(`ALTER TABLE "journey_steps" ALTER COLUMN "requireAck" DROP NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "mediaType"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "mediaType"`);
         await queryRunner.query(`DROP TYPE "public"."journey_steps_mediatype_enum"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" ADD "mediaType" character varying`);
-        await queryRunner.query(`CREATE TYPE "public"."journey_steps_contenttype_enum_old" AS ENUM('ARTICLE', 'VIDEO', 'QUIZ')`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" ADD COLUMN IF NOT EXISTS "mediaType" character varying`);
+        try { await queryRunner.query(`CREATE TYPE "public"."journey_steps_contenttype_enum_old" AS ENUM('ARTICLE', 'VIDEO', 'QUIZ')`); } catch (e) { }
         await queryRunner.query(`ALTER TABLE "journey_steps" ALTER COLUMN "contentType" TYPE "public"."journey_steps_contenttype_enum_old" USING "contentType"::"text"::"public"."journey_steps_contenttype_enum_old"`);
         await queryRunner.query(`DROP TYPE "public"."journey_steps_contenttype_enum"`);
         await queryRunner.query(`ALTER TYPE "public"."journey_steps_contenttype_enum_old" RENAME TO "journey_steps_contenttype_enum"`);
@@ -82,11 +82,11 @@ export class AddEmbeddedConfigs1764635343862 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "user_entity" ALTER COLUMN "groups" SET DEFAULT ARRAY[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "adminIds" SET DEFAULT ARRAY[]`);
         await queryRunner.query(`ALTER TABLE "user_group" ALTER COLUMN "conditions" SET DEFAULT ARRAY[]`);
-        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN "data"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "pollConfig"`);
-        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN "formConfig"`);
-        await queryRunner.query(`ALTER TABLE "step_completions" ADD "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
-        await queryRunner.query(`ALTER TABLE "step_completions" ADD "pointsAwarded" integer NOT NULL DEFAULT '0'`);
+        await queryRunner.query(`ALTER TABLE "step_completions" DROP COLUMN IF EXISTS "data"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "pollConfig"`);
+        await queryRunner.query(`ALTER TABLE "journey_steps" DROP COLUMN IF EXISTS "formConfig"`);
+        await queryRunner.query(`ALTER TABLE "step_completions" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP NOT NULL DEFAULT now()`);
+        await queryRunner.query(`ALTER TABLE "step_completions" ADD COLUMN IF NOT EXISTS "pointsAwarded" integer NOT NULL DEFAULT '0'`);
         await queryRunner.query(`ALTER TABLE "step_completions" ADD CONSTRAINT "FK_b72ec776469d448880f05390552" FOREIGN KEY ("stepId") REFERENCES "journey_steps"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "step_completions" ADD CONSTRAINT "FK_d3adb9ddacf5b72fb5952c73d6d" FOREIGN KEY ("instanceId") REFERENCES "user_journey_instances"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "user_journey_instances" ADD CONSTRAINT "FK_04bd41d5b061ba103218802e074" FOREIGN KEY ("journeyId") REFERENCES "journeys"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);

@@ -37,7 +37,7 @@ final envProvider = Provider<EnvConfig>((ref) {
   var cid = AppEnv.companyId;
   if (cid.isEmpty) {
     debugPrint('⚠️ [EnvProvider] COMPANY_ID is empty! Using fallback.');
-    cid = '000c0911-58b3-4c80-84bc-fe015eec1961';
+    cid = '2af4557f-9259-4eed-818d-1d0ffe0b8982';
   }
 
   return EnvConfig(
@@ -240,26 +240,30 @@ final dioProvider = Provider<Dio>((ref) {
         } catch (_) {}
       }
 
-      await ref.read(authControllerProvider.notifier).logout();
+      try {
+        await ref.read(authControllerProvider.notifier).logout();
 
-      final ctx = navKey.currentContext;
-      if (ctx != null && ctx.mounted) {
-        ScaffoldMessenger.of(ctx).clearSnackBars();
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-              content: Text('Sessão expirada. Faça login novamente.')),
-        );
+        final ctx = navKey.currentContext;
+        if (ctx != null && ctx.mounted) {
+          ScaffoldMessenger.of(ctx).clearSnackBars();
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+                content: Text('Sessão expirada. Faça login novamente.')),
+          );
 
-        final router = GoRouter.of(ctx);
-        final routeInfo = router.routeInformationProvider.value;
-        final currentLocation = (routeInfo.uri.toString());
+          final router = GoRouter.of(ctx);
+          final routeInfo = router.routeInformationProvider.value;
+          final currentLocation = (routeInfo.uri.toString());
 
-        final from = Uri.encodeComponent(currentLocation);
-        final target = currentLocation.startsWith('/login')
-            ? '/login'
-            : '/login?from=$from';
+          final from = Uri.encodeComponent(currentLocation);
+          final target = currentLocation.startsWith('/login')
+              ? '/login'
+              : '/login?from=$from';
 
-        router.go(target);
+          router.go(target);
+        }
+      } catch (e) {
+        debugPrint('[DIO PROVIDER] Logout/Nav exception (race condition): $e');
       }
       return;
     }
@@ -976,7 +980,7 @@ final newFormsCountProvider = FutureProvider.autoDispose<int>((ref) async {
   ref.watch(feedVersionProvider);
   ref.watch(formsSeenVersionProvider);
 
-  final visibleForms = await ref.watch(formsListProvider.future);
+  final visibleForms = await ref.watch(formsListProvider((isNr1: null)).future);
   final seenIds = await ref.read(localFormStoreProvider).getSeenIds();
 
   final now = DateTime.now();

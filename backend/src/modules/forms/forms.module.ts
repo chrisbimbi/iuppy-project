@@ -37,6 +37,7 @@ import { ReminderEventEntity } from './entities/reminder-event.entity';
 import { NotificationEventEntity } from './entities/notification-event.entity';
 // 🔥 S3+: Importa a nova entity
 import { FormSubmissionChatEntity } from './entities/form-submission-chat.entity';
+import { UserSpaceEntity } from '../../spaces/user-space.entity';
 
 // ==================================
 // CORREÇÃO: Importar a nova entidade de Log
@@ -46,6 +47,10 @@ import { FormAuditLogEntity } from './entities/form_audit_log.entity';
 // Dependências
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { AccessControlModule } from 'src/access-control/access-control.module';
+
+// NEW IMPORTS
+import { FormsRiskSyncService } from './forms-risk-sync.service';
+import { Nr1Module } from '../nr1/nr1.module';
 
 @Module({
   imports: [
@@ -63,6 +68,7 @@ import { AccessControlModule } from 'src/access-control/access-control.module';
       ReminderEventEntity,
       NotificationEventEntity,
       FormSubmissionChatEntity, // <-- S3+: Registrada
+      UserSpaceEntity,
       // ==================================
       // CORREÇÃO: Registrar a entidade de Log
       // ==================================
@@ -70,6 +76,7 @@ import { AccessControlModule } from 'src/access-control/access-control.module';
     ]),
     NotificationsModule,
     AccessControlModule,
+    Nr1Module,
   ],
   controllers: [
     FormsController,
@@ -84,6 +91,7 @@ import { AccessControlModule } from 'src/access-control/access-control.module';
     FormsEventsService,
     FormsAnalyticsService,
     FormsRemindersService, // Guards
+    FormsRiskSyncService,
 
     FormsAclGuard, // Crons
 

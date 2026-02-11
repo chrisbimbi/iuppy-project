@@ -1,20 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIntl } from 'react-intl';
 import { PageTitle } from 'src/layout/core';
-import { Button } from 'react-bootstrap';
-// In real app, import charts from apexcharts or similar
+import { Button, Spinner } from 'react-bootstrap';
+import axios from 'axios';
+import { useAuth } from 'src/app/modules/auth';
+import { Content } from 'src/layout/components/Content';
+
+const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:4000';
 
 export default function AnalyticsPage() {
     const intl = useIntl();
+    const { auth } = useAuth();
     const [downloading, setDownloading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<any>({
+        pgr: { totalRisks: 0, criticalRisks: 0, actionPlanProgress: 0 },
+        trainings: { completionRate: 0, averageScore: 0 },
+        drills: { lastDrillDate: '-', participationRate: 0 },
+        esocial: { coverage: 0, pendingErrors: 0 },
+        content: { totalNews: 0, totalForms: 0, totalJourneys: 0 },
+    });
 
-    // Mock Data mimicking backend response
-    const data = {
-        pgr: { totalRisks: 45, criticalRisks: 4, actionPlanProgress: 65 },
-        trainings: { completionRate: 78, averageScore: 8.5 },
-        drills: { lastDrillDate: '2025-11-15', participationRate: 92 },
-        esocial: { coverage: 98, pendingErrors: 3 },
-    };
+    useEffect(() => {
+        // Fetch Real Data
+        async function fetch() {
+            try {
+                // Assuming we use axios directly or a wrapper. 
+                // Using axios for quick implementation if auth wrapper isn't clear context yet.
+                // Assuming auth.api_token is available in useAuth or similar.
+                // Or better, use existing hooks if available. But raw axios is safer for "Phase 3" vs exploring hooks deeply.
+                // Wait, useAuth typically exposes access token?
+                // Step 296 verified token is needed.
+                // frontend/src/app/modules/auth usually has SetupAxios. 
+                // Let's assume axios is intercepted.
+                const res = await axios.get(`${API_URL}/nr1/analytics/dashboard`);
+                setData(res.data);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetch();
+    }, []);
 
     const handleDownload = () => {
         setDownloading(true);
@@ -24,8 +52,10 @@ export default function AnalyticsPage() {
         }, 1500);
     };
 
+    if (loading) return <div className="p-10 text-center"><Spinner animation="border" /></div>;
+
     return (
-        <>
+        <Content>
             <PageTitle>Indicadores & Analytics NR-1</PageTitle>
 
             <div className="card mb-5">
@@ -36,6 +66,34 @@ export default function AnalyticsPage() {
                             {downloading ? <span className="spinner-border spinner-border-sm me-2"></span> : <i className="bi bi-download me-2"></i>}
                             Exportar Relatório Geral (CSV)
                         </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Hub Stats */}
+            <div className="row g-5 g-xl-8 mb-5">
+                <div className="col-xl-4">
+                    <div className="card card-xl-stretch mb-xl-8 bg-light-primary">
+                        <div className="card-body my-3">
+                            <span className="card-title fw-bolder text-primary fs-5 mb-3 d-block">Notícias NR-1</span>
+                            <span className="py-1 d-block text-dark fs-1 fw-bold">{data.content?.totalNews || 0}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-xl-4">
+                    <div className="card card-xl-stretch mb-xl-8 bg-light-success">
+                        <div className="card-body my-3">
+                            <span className="card-title fw-bolder text-success fs-5 mb-3 d-block">Formulários NR-1</span>
+                            <span className="py-1 d-block text-dark fs-1 fw-bold">{data.content?.totalForms || 0}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-xl-4">
+                    <div className="card card-xl-stretch mb-xl-8 bg-light-info">
+                        <div className="card-body my-3">
+                            <span className="card-title fw-bolder text-info fs-5 mb-3 d-block">Jornadas NR-1</span>
+                            <span className="py-1 d-block text-dark fs-1 fw-bold">{data.content?.totalJourneys || 0}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -56,7 +114,7 @@ export default function AnalyticsPage() {
                                     <a href="#" className="fw-bolder text-gray-800 text-hover-primary fs-6">Riscos Críticos</a>
                                     <span className="text-muted fw-bold d-block">Atenção Imediata</span>
                                 </div>
-                                <span className="fw-bolder text-warning py-1">{data.pgr.criticalRisks}</span>
+                                <span className="fw-bolder text-warning py-1">{data.pgr?.criticalRisks || 0}</span>
                             </div>
                             <div className="d-flex align-items-center bg-light-info rounded p-5">
                                 <span className="svg-icon svg-icon-info me-5">
@@ -66,7 +124,7 @@ export default function AnalyticsPage() {
                                     <a href="#" className="fw-bolder text-gray-800 text-hover-primary fs-6">Planos de Ação</a>
                                     <span className="text-muted fw-bold d-block">Conclusão</span>
                                 </div>
-                                <span className="fw-bolder text-info py-1">{data.pgr.actionPlanProgress}%</span>
+                                <span className="fw-bolder text-info py-1">{data.pgr?.actionPlanProgress || 0}%</span>
                             </div>
                         </div>
                     </div>
@@ -84,26 +142,26 @@ export default function AnalyticsPage() {
                                     <span className="text-gray-800 fw-bolder d-block fs-6">Taxa de Conclusão (Treinamentos)</span>
                                     <span className="text-muted fw-bold d-block mt-1">Meta: 100%</span>
                                 </div>
-                                <span className="fw-bolder text-primary fs-3">{data.trainings.completionRate}%</span>
+                                <span className="fw-bolder text-primary fs-3">{data.trainings?.completionRate || 0}%</span>
                             </div>
                             <div className="d-flex align-items-center mb-8">
                                 <div className="flex-grow-1">
                                     <span className="text-gray-800 fw-bolder d-block fs-6">Média nas Provas</span>
                                 </div>
-                                <span className="fw-bolder text-success fs-3">{data.trainings.averageScore} / 10</span>
+                                <span className="fw-bolder text-success fs-3">{data.trainings?.averageScore || 0}%</span>
                             </div>
                             <div className="separator separator-dashed my-4"></div>
                             <div className="d-flex align-items-center">
                                 <div className="flex-grow-1">
                                     <span className="text-gray-800 fw-bolder d-block fs-6">Último Simulado</span>
-                                    <span className="text-muted fw-bold d-block mt-1">{data.drills.lastDrillDate}</span>
+                                    <span className="text-muted fw-bold d-block mt-1">{data.drills?.lastDrillDate || '-'}</span>
                                 </div>
-                                <span className="badge badge-light-success">{data.drills.participationRate}% Presença</span>
+                                <span className="badge badge-light-success">{data.drills?.participationRate || 0}% Presença</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </>
+        </Content>
     );
 }

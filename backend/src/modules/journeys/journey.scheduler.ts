@@ -6,8 +6,9 @@ import { JourneysService } from './journeys.service';
 export class JourneyScheduler {
   constructor(private readonly journeysService: JourneysService) { }
 
-  @Cron(CronExpression.EVERY_MINUTE)
-  async handleDailyUnlock() {
-    await this.journeysService.checkAndUnlockSteps();
-  }
+  // Temporarily disabled to diagnose HTTP crash
+  // @Cron(CronExpression.EVERY_MINUTE)
+  // async handleDailyUnlock() {
+  //   await this.journeysService.checkAndUnlockSteps();
+  // }
 }

@@ -351,7 +351,7 @@ export class NewsV2Controller {
     const companyId = req.user.companyId as string;
     const userId = (req.user.id || req.user.sub) as string;
 
-    const result = await this.news.ack(companyId, id, userId);
+    const result = await this.news.ack(companyId, id, userId, _body?.meta);
 
     if (this.metricsDaily?.onEvent) {
       this.metricsDaily.onEvent(companyId, id, userId, 'ACK');

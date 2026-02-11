@@ -9,6 +9,9 @@ export class PerformanceCycleEntity implements PerformanceCycle {
     @Column()
     name!: string;
 
+    @Column()
+    companyId!: string;
+
     @Column({ type: 'date' })
     startDate!: string;
 

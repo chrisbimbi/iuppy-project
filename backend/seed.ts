@@ -13,6 +13,7 @@ import { CompanyEntity } from './src/companies/company.entity';
 import { Role } from '../shared/src/types/Role';
 import { GroupEntity } from './src/groups/group.entity';
 import * as argon2 from 'argon2';
+import { CompanyModuleEntity } from './src/modules/company-modules/company-module.entity';
 
 const API = process.env.API_URL || 'http://api:3000';
 
@@ -65,6 +66,18 @@ async function seed() {
         await companyRepo.save(company);
         const cid = company.id;
         console.log(`🏢 Company created: ${company.name} (${cid})`);
+
+        // 3.1) Ativa Módulos
+        const companyModuleRepo = AppDataSource.getRepository(CompanyModuleEntity); // Importar CompanyModuleEntity no topo!
+        const modules = ['news', 'surveys', 'forms', 'spaces', 'journeys', 'performance', 'gamification'];
+        const moduleEntities = modules.map(key => companyModuleRepo.create({
+            companyId: cid,
+            key,
+            enabled: true,
+            config: {}
+        }));
+        await companyModuleRepo.save(moduleEntities);
+        console.log('📦 Modules enabled:', modules.join(', '));
 
         // 4) Cria Grupos Básicos
         const groupRepo = AppDataSource.getRepository(GroupEntity);
@@ -169,7 +182,7 @@ async function seed() {
             channelId: channelComunicados.id,
             authorId: admin.id,
             companyId: cid,
-            type: 'ANNOUNCEMENT' as any,
+            // type: 'ANNOUNCEMENT' as any, // removed
             isPublished: true,
             publishedAt: new Date(),
             attachments: [],
@@ -191,7 +204,7 @@ async function seed() {
             channelId: channelTech.id,
             authorId: admin.id,
             companyId: cid,
-            type: 'UPDATE' as any,
+            // type: 'UPDATE' as any, // removed
             isPublished: true,
             publishedAt: new Date(),
             attachments: [],

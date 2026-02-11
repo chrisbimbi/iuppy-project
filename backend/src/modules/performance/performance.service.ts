@@ -12,7 +12,7 @@ import { CalibrateUserDto } from './dto/calibrate-user.dto';
 import { OneOnOneEntity } from './entities/one-on-one.entity';
 import { PDIEntity } from './entities/pdi.entity';
 import { PDIActionEntity } from './entities/pdi-action.entity';
-import { AssessmentStatus } from '@shared/types';
+import { AssessmentStatus, PerformanceCycleStatus } from '@shared/types';
 import { CommunicationsService } from '../../notifications/communications.service';
 
 @Injectable()
@@ -193,5 +193,49 @@ export class PerformanceService {
     async completeOneOnOne(id: string) {
         await this.oneOnOneRepo.update(id, { status: 'COMPLETED' });
         return { success: true };
+    }
+
+    async getDashboardStats(companyId: string) {
+        // 1. Active Cycles
+        const activeCycles = await this.cycleRepo.find({ where: { companyId, status: PerformanceCycleStatus.ACTIVE } });
+        const activeCycleId = activeCycles.length > 0 ? activeCycles[0].id : null;
+
+        // 2. Goal Stats
+        const totalGoals = await this.goalRepo.count({ where: { user: { companyId } } });
+
+        // 3. 9-Box Distribution (Simplified Aggregation)
+        // We need users who have BOTH goals (X-axis) and received assessments (Y-axis) in the active cycle.
+        // For performance, we'll iterate active users or just fetch cached calibration results if available.
+        // Here we will do a live aggregation which is heavy but accurate.
+
+        const nineBoxDistribution = {
+            'Low-Low': 0, 'Low-Medium': 0, 'Low-High': 0,
+            'Medium-Low': 0, 'Medium-Medium': 0, 'Medium-High': 0,
+            'High-Low': 0, 'High-Medium': 0, 'High-High': 0
+        };
+
+        if (activeCycleId) {
+            // Find all users who have forms in this cycle
+            const forms = await this.formRepo.find({
+                where: { cycleId: activeCycleId },
+                select: ['targetUserId']
+            });
+            const uniqueUsers = [...new Set(forms.map(f => f.targetUserId))];
+
+            for (const userId of uniqueUsers) {
+                try {
+                    const box = await this.calculate9Box(userId, activeCycleId);
+                    if (nineBoxDistribution[box.quadrant] !== undefined) {
+                        nineBoxDistribution[box.quadrant]++;
+                    }
+                } catch (e) { }
+            }
+        }
+
+        return {
+            activeCycles: activeCycles.length,
+            totalGoals,
+            nineBoxDistribution
+        };
     }
 }

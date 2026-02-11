@@ -28,6 +28,12 @@ const TEMPLATES = [
         title: 'Direito de Recusa',
         description: 'Registro formal de recusa ao trabalho por risco grave e iminente.',
         icon: 'bi-shield-x'
+    },
+    {
+        id: 'nr1_risk_reporting',
+        title: 'Sincronizar com Inventário (GRO)',
+        description: 'Cria automaticamente um Risco no Inventário ao ser enviado.',
+        icon: 'bi-arrow-repeat'
     }
 ];
 
@@ -55,6 +61,14 @@ export default function FormTemplatesModal({ show, onHide, onCreated, companyId 
                     { type: 'text', label: { 'pt-BR': 'Local exato' }, required: true, order: 1 },
                     { type: 'textarea', label: { 'pt-BR': 'O que aconteceu? (Descrição)' }, required: true, order: 2 },
                     { type: 'file', label: { 'pt-BR': 'Foto da ocorrência' }, required: false, order: 3 }
+                ];
+            } else if (templateId === 'nr1_risk_reporting') {
+                fields = [
+                    { type: 'text', label: { 'pt-BR': 'Processo' }, required: true, order: 0 },
+                    { type: 'text', label: { 'pt-BR': 'Ambiente' }, required: true, order: 1 },
+                    { type: 'text', label: { 'pt-BR': 'Perigo' }, required: true, order: 2 },
+                    { type: 'select', label: { 'pt-BR': 'Probabilidade (1-5)' }, required: true, options: { items: ['1', '2', '3', '4', '5'] }, order: 3 },
+                    { type: 'select', label: { 'pt-BR': 'Severidade (1-5)' }, required: true, options: { items: ['1', '2', '3', '4', '5'] }, order: 4 }
                 ];
             }
 

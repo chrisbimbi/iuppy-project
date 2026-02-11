@@ -69,9 +69,9 @@ export class GamificationAnalyticsService {
         const averageXPPerUser = usersWithXP > 0 ? Math.round(totalXPDistributed / usersWithXP) : 0;
 
         return {
-            totalXPDistributed,
+            totalXP: totalXPDistributed,
             activeUsers,
-            averageXPPerUser,
+            avgXP: averageXPPerUser,
             totalActions,
         };
     }

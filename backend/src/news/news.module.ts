@@ -8,6 +8,7 @@ import { NewsAudienceController } from './news-audience.controller';
 import { NewsEntity } from './news.entity';
 import { CompanyEntity } from '../companies/company.entity';
 import { SpaceEntity } from '../spaces/space.entity';
+import { UserSpaceEntity } from '../spaces/user-space.entity';
 import { Channel } from '../channels/channel.entity';
 import { GroupEntity } from '../groups/group.entity';
 import { UserEntity } from '../users/user.entity';
@@ -39,6 +40,7 @@ import { AccessControlModule } from 'src/access-control/access-control.module';
       UserDeviceEntity,
       CompanyEntity,
       SpaceEntity,
+      UserSpaceEntity,
       Channel,
       GroupEntity,
       UserEntity,

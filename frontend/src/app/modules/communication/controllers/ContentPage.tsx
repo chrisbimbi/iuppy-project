@@ -81,13 +81,7 @@ const ContentPage: React.FC = () => {
   const [enrichedItems, setEnrichedItems] = useState<any[]>([])
   const [metricsLoading, setMetricsLoading] = useState(false)
 
-  // Efeitos de inicialização
-  useEffect(() => {
-    if (formRef.current) setFormModal(new Modal(formRef.current))
-    if (deleteRef.current) setDeleteModal(new Modal(deleteRef.current))
-    MenuComponent.reinitialization()
-    DrawerComponent.bootstrap()
-  }, [])
+
 
   // Sync URL Params
   useEffect(() => {
@@ -111,6 +105,14 @@ const ContentPage: React.FC = () => {
     if (!visibleSpaces.length) { setSpaceId(null); return }
     if (!spaceId || !visibleSpaces.some((s) => s.id === spaceId)) setSpaceId(visibleSpaces[0].id)
   }, [visibleSpaces, spaceId, aclLoading])
+
+  // Efeitos de inicialização (Movido para após visibleSpaces ser declarado)
+  useEffect(() => {
+    if (formRef.current) setFormModal(new Modal(formRef.current))
+    if (deleteRef.current) setDeleteModal(new Modal(deleteRef.current))
+    MenuComponent.reinitialization()
+    DrawerComponent.bootstrap()
+  }, [aclLoading, visibleSpaces])
 
   // Load Channels
   useEffect(() => {

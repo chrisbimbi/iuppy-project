@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { News, NewsSettings } from '@shared/types';
 
@@ -21,7 +22,7 @@ export class NewsEntity implements News {
   @Column()
   authorId!: string;
 
-  @Column()
+  @Column({ nullable: true })
   channelId!: string;
 
   @ManyToOne(() => Channel)
@@ -33,6 +34,9 @@ export class NewsEntity implements News {
 
   @Column({ default: false })
   mustAcknowledge!: boolean;
+
+  @Column({ default: false })
+  isNr1!: boolean;
 
   @Column()
   title!: string;
@@ -68,6 +72,9 @@ export class NewsEntity implements News {
   /** Usado para "snapshot" de audiência no momento da publicação (jsonb ou null) */
   @Column('jsonb', { nullable: true })
   audienceSnapshotAtPublish?: any;
+
+  @DeleteDateColumn()
+  deletedAt?: Date;
 
   // --- GAMIFICATION ---
   @Column({ type: 'int', nullable: true })

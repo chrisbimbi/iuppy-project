@@ -1,7 +1,7 @@
 export interface GamificationAnalyticsOverview {
-    totalXPDistributed: number;
+    totalXP: number;
+    avgXP: number;
     activeUsers: number; // Users who gained XP in last 30 days
-    averageXPPerUser: number;
     totalActions: number;
 }
 

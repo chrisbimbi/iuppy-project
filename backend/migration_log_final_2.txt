@@ -1,0 +1,75 @@
+
+> backend@0.0.1 migration:run
+> ts-node -r tsconfig-paths/register -r reflect-metadata ./node_modules/typeorm/cli.js migration:run -d src/config/data-source.ts
+
+[90m[4mquery:[24m[39m [94mSELECT[0m [95mversion[0m[37m([0m[37m)[0m
+[90m[4mquery:[24m[39m [94mSELECT[0m [37m*[0m [94mFROM[0m [95mcurrent_schema[0m[37m([0m[37m)[0m
+[90m[4mquery:[24m[39m [94mCREATE[0m [37mEXTENSION[0m [94mIF[0m [94mNOT[0m [94mEXISTS[0m [37m"uuid-ossp"[0m
+[90m[4mquery:[24m[39m [94mSELECT[0m [37m*[0m [94mFROM[0m [37m"information_schema"[0m[37m.[0m[37m"tables"[0m [94mWHERE[0m [37m"table_schema"[0m [37m=[0m [37m'public'[0m [94mAND[0m [37m"table_name"[0m [37m=[0m [37m'migrations'[0m
+[90m[4mquery:[24m[39m [94mSELECT[0m [37m*[0m [94mFROM[0m [37m"migrations"[0m [37m"migrations"[0m [94mORDER BY[0m [37m"id"[0m [94mDESC[0m
+[4m34 migrations are already loaded in the database.[24m
+[4m34 migrations were found in the source code.[24m
+[4mAddQuizConfigToJourneySteps1767985773911 is the last executed migration. It was executed on Fri Jan 09 2026 16:09:33 GMT-0300 (Brasilia Standard Time).[24m
+[4m1 migrations are new migrations must be executed.[24m
+[90m[4mquery:[24m[39m [37mSTART[0m [37mTRANSACTION[0m
+[90m[4mquery:[24m[39m [37mDO[0m [37m$[0m[37m$[0m [94mBEGIN[0m [94mIF[0m [94mEXISTS[0m[37m([0m[94mSELECT[0m [37m*[0m [94mFROM[0m [37minformation_schema[0m[37m.[0m[37mcolumns[0m [94mWHERE[0m [37mtable_name[0m[37m=[0m[37m'nr1_risk_criteria'[0m [94mAND[0m [37mcolumn_name[0m[37m=[0m[37m'versao'[0m[37m)[0m [94mTHEN[0m [94mALTER[0m [94mTABLE[0m [37m"nr1_risk_criteria"[0m [37mRENAME[0m [94mCOLUMN[0m [37m"versao"[0m [94mTO[0m [37m"version"[0m[37m;[0m [94mEND[0m [94mIF[0m[37m;[0m [94mEND[0m [37m$[0m[37m$[0m[37m;[0m
+[4m[31mquery failed:[39m[24m [37mDO[0m [37m$[0m[37m$[0m [94mBEGIN[0m [94mIF[0m [94mEXISTS[0m[37m([0m[94mSELECT[0m [37m*[0m [94mFROM[0m [37minformation_schema[0m[37m.[0m[37mcolumns[0m [94mWHERE[0m [37mtable_name[0m[37m=[0m[37m'nr1_risk_criteria'[0m [94mAND[0m [37mcolumn_name[0m[37m=[0m[37m'versao'[0m[37m)[0m [94mTHEN[0m [94mALTER[0m [94mTABLE[0m [37m"nr1_risk_criteria"[0m [37mRENAME[0m [94mCOLUMN[0m [37m"versao"[0m [94mTO[0m [37m"version"[0m[37m;[0m [94mEND[0m [94mIF[0m[37m;[0m [94mEND[0m [37m$[0m[37m$[0m[37m;[0m
+[4m[31merror:[39m[24m error: column "version" of relation "nr1_risk_criteria" already exists
+[4mMigration "AddIsNr1ToJourneyAndForm1768836309437" failed, error: column "version" of relation "nr1_risk_criteria" already exists[24m
+[90m[4mquery:[24m[39m [37mROLLBACK[0m
+[30m[41mError during migration run:[49m[39m
+QueryFailedError: column "version" of relation "nr1_risk_criteria" already exists
+    at PostgresQueryRunner.query (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/typeorm/src/driver/postgres/PostgresQueryRunner.ts:328:19)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async AddIsNr1ToJourneyAndForm1768836309437.up (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/src/migrations/1768836309437-AddIsNr1ToJourneyAndForm.ts:7:9)
+    at async MigrationExecutor.executePendingMigrations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/migration/MigrationExecutor.ts:336:17)
+    at async DataSource.runMigrations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/data-source/DataSource.ts:403:13)
+    at async Object.handler (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/commands/MigrationRunCommand.ts:76:13) {
+  query: `DO $$ BEGIN IF EXISTS(SELECT * FROM information_schema.columns WHERE table_name='nr1_risk_criteria' AND column_name='versao') THEN ALTER TABLE "nr1_risk_criteria" RENAME COLUMN "versao" TO "version"; END IF; END $$;`,
+  parameters: undefined,
+  driverError: error: column "version" of relation "nr1_risk_criteria" already exists
+      at /Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/pg/lib/client.js:545:17
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async PostgresQueryRunner.query (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/typeorm/src/driver/postgres/PostgresQueryRunner.ts:257:25)
+      at async AddIsNr1ToJourneyAndForm1768836309437.up (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/src/migrations/1768836309437-AddIsNr1ToJourneyAndForm.ts:7:9)
+      at async MigrationExecutor.executePendingMigrations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/migration/MigrationExecutor.ts:336:17)
+      at async DataSource.runMigrations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/data-source/DataSource.ts:403:13)
+      at async Object.handler (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/commands/MigrationRunCommand.ts:76:13) {
+    length: 288,
+    severity: 'ERROR',
+    code: '42701',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'SQL statement "ALTER TABLE "nr1_risk_criteria" RENAME COLUMN "versao" TO "version""\n' +
+      'PL/pgSQL function inline_code_block line 1 at SQL statement',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'tablecmds.c',
+    line: '6814',
+    routine: 'check_for_column_name_collision'
+  },
+  length: 288,
+  severity: 'ERROR',
+  code: '42701',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'SQL statement "ALTER TABLE "nr1_risk_criteria" RENAME COLUMN "versao" TO "version""\n' +
+    'PL/pgSQL function inline_code_block line 1 at SQL statement',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'tablecmds.c',
+  line: '6814',
+  routine: 'check_for_column_name_collision'
+}

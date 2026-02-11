@@ -600,18 +600,179 @@ export class AnalyticsV2Service {
       }
     });
 
-    return {
-      openRate30d: sumBase ? sumOpen / sumBase : 0,
-      ackRate30d: sumBase ? sumAck / sumBase : 0,
-      reactionsPerBase: sumBase ? sumReact / sumBase : 0,
-      favoritesPerBase: sumBase ? sumFav / sumBase : 0,
-      totalInteractions: sumReact + sumFav,
-      items,
-      total,
-      page: params.page || 1,
-      pageSize: limit,
-      seriesDaily: [],
-    };
+    // --- Heatmap Aggregation for News (Company Level) ---
+    let heatmap: any[] = [];
+    try {
+      const meta = await this.detectEventMeta();
+      if (meta) {
+        const { table, typeCol, createdAtCol, newsRef } = meta;
+
+        // DEBUG: Check what event types actually exist
+        try {
+          const typesFound = await this.ds.query(`SELECT DISTINCT ${typeCol} as t FROM ${table} WHERE "companyId"=$1`, [companyId]);
+          console.log('DEBUG HEATMAP EVENT TYPES:', typesFound.map((r: any) => r.t));
+        } catch (e) {
+          console.error('DEBUG HEATMAP ERROR:', e);
+        }
+
+        // Default timezone adjustment -3h
+        const timeExp = meta.metaCol
+          ? `(${q(createdAtCol)} + make_interval(mins => COALESCE((meta->>'tzOffsetMinutes')::int, -180)))`
+          : `(${q(createdAtCol)} - INTERVAL '3 hours')`;
+
+        const paramsHeat: any[] = [companyId];
+        let heatFilter = '';
+
+        // Date filters
+        if (params.from) {
+          heatFilter += ` AND ${q(createdAtCol)} >= $${paramsHeat.length + 1}`;
+          paramsHeat.push(params.from);
+        }
+        if (params.to) {
+          heatFilter += ` AND ${q(createdAtCol)} < ($${paramsHeat.length + 1}::date + INTERVAL '1 day')`;
+          paramsHeat.push(params.to);
+        }
+
+        // --- HEATMAP SPLIT ---
+        // 1. Views Heatmap (Reads only)
+        // 2. Engagement Heatmap (Reactions/Comments)
+
+        // Common Filters
+        const paramsBase = [companyId];
+        let baseFilter = '';
+        if (params.from) { baseFilter += ` AND ${q(createdAtCol)} >= $${paramsBase.length + 1}`; paramsBase.push(params.from); }
+        if (params.to) { baseFilter += ` AND ${q(createdAtCol)} < ($${paramsBase.length + 1}::date + INTERVAL '1 day')`; paramsBase.push(params.to); }
+
+        // A. VIEW Query
+        const viewsFilter = ` AND UPPER(${typeCol}::text) IN ('OPEN','OPENED','VIEW','VISIT','VIEWED')`;
+        const sqlViews = `
+          SELECT 
+            EXTRACT(DOW FROM ${timeExp})::int AS day, 
+            EXTRACT(HOUR FROM ${timeExp})::int AS hour, 
+            COUNT(*)::int AS count 
+          FROM ${table} 
+          WHERE "companyId"=$1 ${baseFilter} ${viewsFilter}
+          GROUP BY 1,2 
+          ORDER BY 1,2
+        `;
+        let heatmapViews = await this.ds.query(sqlViews, paramsBase);
+
+        // B. ENGAGEMENT Query
+        const engageFilter = ` AND (UPPER(${typeCol}::text) IN ('REACTION', 'LIKE', 'LOVE', 'CLAP', 'BRAVO', 'SUPPORT') OR ${typeCol}::text ILIKE 'REACTION%')`;
+        const sqlEngage = `
+          SELECT 
+            EXTRACT(DOW FROM ${timeExp})::int AS day, 
+            EXTRACT(HOUR FROM ${timeExp})::int AS hour, 
+            COUNT(*)::int AS count 
+          FROM ${table} 
+          WHERE "companyId"=$1 ${baseFilter} ${engageFilter}
+          GROUP BY 1,2 
+          ORDER BY 1,2
+        `;
+        let heatmapEngagement = await this.ds.query(sqlEngage, paramsBase);
+
+
+        // Fallback for Views (if empty)
+        if (heatmapViews.length === 0) {
+          const { from, to } = params;
+          const paramsDaily: any[] = [companyId];
+          let dailyFilter = '';
+          if (from) { dailyFilter += ` AND "date" >= $${paramsDaily.length + 1}`; paramsDaily.push(from); }
+          if (to) { dailyFilter += ` AND "date" < ($${paramsDaily.length + 1}::date + INTERVAL '1 day')`; paramsDaily.push(to); }
+
+          const sqlDailyViews = `
+               SELECT 
+                 EXTRACT(DOW FROM d."date")::int AS day,
+                 12 AS hour, 
+                 SUM(d.opens)::int as count
+               FROM news_metrics_daily d
+               JOIN news_entity n ON n.id = d."newsId"
+               WHERE n."companyId"=$1 ${dailyFilter}
+               GROUP BY 1
+               ORDER BY 1 ASC
+           `;
+          const dailyRes = await this.ds.query(sqlDailyViews, paramsDaily);
+          if (dailyRes.length > 0) heatmapViews = dailyRes;
+        }
+
+        // Fallback for Engagement (if empty) using Daily Metrics
+        if (heatmapEngagement.length === 0) {
+          const { from, to } = params;
+          const paramsDaily: any[] = [companyId];
+          let dailyFilter = '';
+          if (from) { dailyFilter += ` AND "date" >= $${paramsDaily.length + 1}`; paramsDaily.push(from); }
+          if (to) { dailyFilter += ` AND "date" < ($${paramsDaily.length + 1}::date + INTERVAL '1 day')`; paramsDaily.push(to); }
+
+          // Sum non-view interactions
+          const sqlDaily = `
+               SELECT 
+                 EXTRACT(DOW FROM d."date")::int AS day,
+                 12 AS hour, 
+                 SUM(d.reactions + d.comments + d.shares + d.favorites)::int as count
+               FROM news_metrics_daily d
+               JOIN news_entity n ON n.id = d."newsId"
+               WHERE n."companyId"=$1 ${dailyFilter}
+               GROUP BY 1
+               ORDER BY 1 ASC
+           `;
+          const dailyRes = await this.ds.query(sqlDaily, paramsDaily);
+          if (dailyRes.length > 0) heatmapEngagement = dailyRes;
+        }
+
+        heatmap = heatmapViews; // Default legacy return (optional)
+
+        return {
+          openRate30d: sumBase ? sumOpen / sumBase : 0,
+          ackRate30d: sumBase ? sumAck / sumBase : 0,
+          reactionsPerBase: sumBase ? sumReact / sumBase : 0,
+          favoritesPerBase: sumBase ? sumFav / sumBase : 0,
+          totalInteractions: sumReact + sumFav,
+          items,
+          total,
+          page: params.page || 1,
+          pageSize: limit,
+          seriesDaily: [],
+          heatmap,
+          heatmapViews,
+          heatmapEngagement
+        };
+
+      } else {
+        // No meta found
+        return {
+          openRate30d: 0,
+          ackRate30d: 0,
+          reactionsPerBase: 0,
+          favoritesPerBase: 0,
+          totalInteractions: 0,
+          items: [],
+          total: 0,
+          page: params.page || 1,
+          pageSize: limit,
+          seriesDaily: [],
+          heatmap: [],
+          heatmapViews: [],
+          heatmapEngagement: []
+        };
+      }
+    } catch (e) {
+      console.error('Heatmap Error:', e);
+      return {
+        openRate30d: 0,
+        ackRate30d: 0,
+        reactionsPerBase: 0,
+        favoritesPerBase: 0,
+        totalInteractions: 0,
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        seriesDaily: [],
+        heatmap: [],
+        heatmapViews: [],
+        heatmapEngagement: []
+      };
+    }
   }
 
   async usersOverview(companyId: string, params: any) {
@@ -669,9 +830,45 @@ export class AnalyticsV2Service {
       // ignore
     }
 
-    // 3. Daily Series
+    // 3. Daily Series (Merged: Total Cumulative + Active + Engaged)
     let activitySeries: any[] = [];
     try {
+      // A. Get activations (firstLoginAt) AND registrations (createdAt)
+      const activationReq = await this.ds.query(`
+        SELECT to_char("firstLoginAt", 'YYYY-MM-DD') as date, COUNT(*)::int as c 
+        FROM user_entity 
+        WHERE "companyId"=$1 AND "firstLoginAt" IS NOT NULL
+        GROUP BY 1 ORDER BY 1 ASC
+      `, [companyId]);
+
+      const registrationReq = await this.ds.query(`
+        SELECT to_char("createdAt", 'YYYY-MM-DD') as date, COUNT(*)::int as c 
+        FROM user_entity 
+        WHERE "companyId"=$1
+        GROUP BY 1 ORDER BY 1 ASC
+      `, [companyId]);
+
+      const activationsMap = new Map<string, number>();
+      for (const r of activationReq) if (r.date) activationsMap.set(r.date, Number(r.c));
+
+      const registrationsMap = new Map<string, number>();
+      for (const r of registrationReq) if (r.date) registrationsMap.set(r.date, Number(r.c));
+
+      // B. Get Daily Active/Engaged (Bounded by Period if needed, but for full alignment we grab all or bounded)
+      // Since we build a graph, we ideally want the same date range as requested or FULL if no dates.
+      // If dates are provided, we still need total PRE-period for cumulative baseline.
+
+      // Calculate Baseline Totals (Before 'from')
+      let runningTotalActivated = 0;
+      let runningTotalRegistered = 0;
+      if (f) {
+        const preActRes = await this.ds.query(`SELECT COUNT(*)::int as c FROM user_entity WHERE "companyId"=$1 AND "firstLoginAt" < $2`, [companyId, f]);
+        runningTotalActivated = Number(preActRes?.[0]?.c || 0);
+
+        const preRegRes = await this.ds.query(`SELECT COUNT(*)::int as c FROM user_entity WHERE "companyId"=$1 AND "createdAt" < $2`, [companyId, f]);
+        runningTotalRegistered = Number(preRegRes?.[0]?.c || 0);
+      }
+
       const sqlDaily = `
         SELECT 
           to_char(u."date",'YYYY-MM-DD') as date,
@@ -682,9 +879,167 @@ export class AnalyticsV2Service {
         WHERE ue."companyId"=$1 ${dateFilter}
         GROUP BY 1 ORDER BY 1 ASC
       `;
-      activitySeries = await this.ds.query(sqlDaily, paramsPeriod);
+      const dailyMetrics = await this.ds.query(sqlDaily, paramsPeriod);
+      const metricsMap = new Map<string, { active: number, engaged: number }>();
+      for (const r of dailyMetrics) metricsMap.set(r.date, { active: Number(r.active), engaged: Number(r.engaged) });
+
+      // Generate Date Range Set (Union of activations in range AND metrics in range)
+      // If we are filtering by date, we iterate from 'from' to 'to'.
+      // If no date filter, we iterate from min(activation, metric) to max.
+      // For simplicity/robustness match existing `activitySeries` date scope or just use the requested period.
+
+      // If 'from'/'to' provided, generate days.
+      let allDates: string[] = [];
+      if (f && t) {
+        let curr = new Date(f);
+        const end = new Date(t);
+        while (curr <= end) {
+          allDates.push(curr.toISOString().slice(0, 10));
+          curr.setDate(curr.getDate() + 1);
+        }
+      } else {
+        // Use all available dates from DB maps
+        const dSet = new Set([...activationsMap.keys(), ...metricsMap.keys(), ...registrationsMap.keys()]);
+        allDates = Array.from(dSet).sort();
+      }
+
+      // Build Series
+      // Note: If no date filter, runningTotal starts at 0 and accumulates.
+      // If date filter exists, runningTotal starts at baseline calculated above.
+      // We must iterate linearly through ALL activations to ensure total is correct, OR trust the baseline query.
+
+      // Correct approach with potentially sparse dates in selection:
+      // It is safer to NOT filter Activations by date in step A if we want to build accurate cumulative on the fly, 
+      // OR use the baseline query.
+      // We used baseline query for 'from'.
+      // But inside the loop, if we skip dates (sparse map), we miss increments?
+      // Re-think: "activationsMap" is only for dates in range?
+      // No, step A query (lines above) has NO date filter. It gets ALL days with activations.
+      // So we can compute the FULL cumulative timeline then slice?
+      // Yes, safest.
+
+      const fullTimeline = new Map<string, number>();
+      let tempTotal = 0;
+      // Sort all activation dates
+      const activationDates = Array.from(activationsMap.keys()).sort();
+      // Fill gaps? No need, just cumulative sum map.
+      // Actually, we need to lookup precise date.
+
+      // Let's optimize:
+      // We only care about the requested range for the OUTPUT.
+      // But we need the cumulative sum at each point.
+      // With Baseline (users < from), we can just iterate the requested range.
+      // But we need to add activations happening WITHIN the range.
+      // `activationsMap` contains ALL dates.
+
+      for (const d of allDates) {
+        // If we are iterating strictly sequentially from 'from' to 'to':
+        // We need to add activations for 'd'.
+        // AND carry over previous total.
+
+        // Wait, if allDates has gaps (e.g. from DB keys), we miss days.
+        // Ideally we generate continuous days.
+        // If no Filter params, we might have gaps in `allDates`.
+
+        // Let's assume strict sequential iteration if params provided.
+        // If not provided, we iterate sorted union of keys.
+
+        // For the TOTAL, we conceptually need `COUNT(firstLoginAt <= d)`.
+        // We can just calculate this! No need for loop summation error prone logic.
+        // But running 30 queries (one per day) is bad.
+
+        // Hybrid:
+        // runningTotal is "Total users before Day D".
+        // On Day D, new users = activationsMap.get(D) || 0.
+        // total = runningTotal + newUsers.
+        // runningTotal += newUsers.
+
+        // This requires iterating ALL dates or ensuring we don't skip increments.
+        // If `allDates` has gaps, and we skip a day with activations, our total lags.
+        // So if we rely on loop, `allDates` MUST be continuous.
+
+        // Fix: If no params provided, find min/max and fill.
+        // If params provided, fill.
+      }
+
+      // Let's implement the Continuous fill.
+      if (allDates.length === 0 && activationDates.length > 0) {
+        let curr = new Date(activationDates[0]);
+        const end = new Date(activationDates[activationDates.length - 1]);
+        // Add metric dates max bounds too?
+        // Simplifying: Just use activation dates + metric dates bounds.
+        const metricDates = Array.from(metricsMap.keys()).sort();
+        if (metricDates.length > 0) {
+          const mStart = new Date(metricDates[0]);
+          const mEnd = new Date(metricDates[metricDates.length - 1]);
+          if (mStart < curr) curr = mStart;
+          if (mEnd > end) end.setTime(mEnd.getTime()); // Update end
+          // Note: simplistic date logic, but standard JS Date compare works.
+        }
+
+        allDates = [];
+        while (curr <= end) {
+          allDates.push(curr.toISOString().slice(0, 10));
+          curr.setDate(curr.getDate() + 1);
+        }
+      }
+
+      // Now iterate continuous `allDates`
+      // Also calculate engaged90d at each point: users who engaged in last 90 days from that date
+      const engaged90dMap = new Map<string, number>();
+
+      // Pre-calculate engaged90d for each date
+      for (const d of allDates) {
+        try {
+          const date90dAgo = new Date(d);
+          date90dAgo.setDate(date90dAgo.getDate() - 90);
+          const date90dAgoStr = date90dAgo.toISOString().slice(0, 10);
+
+          const sqlEngaged90d = `
+            SELECT COUNT(DISTINCT u."userId")::int as count
+            FROM user_metrics_daily u
+            JOIN user_entity ue ON ue.id::text = u."userId"::text
+            WHERE ue."companyId"=$1 
+              AND u."date" > $2 
+              AND u."date" <= $3
+              AND (u.reactions > 0 OR u.comments > 0 OR u.shares > 0)
+          `;
+          const res = await this.ds.query(sqlEngaged90d, [companyId, date90dAgoStr, d]);
+          engaged90dMap.set(d, Number(res?.[0]?.count || 0));
+        } catch (e) {
+          engaged90dMap.set(d, 0);
+        }
+      }
+
+      for (const d of allDates) {
+        runningTotalActivated += (activationsMap.get(d) || 0);
+        runningTotalRegistered += (registrationsMap.get(d) || 0);
+
+        const m = metricsMap.get(d) || { active: 0, engaged: 0 };
+        activitySeries.push({
+          date: d,
+          registered: runningTotalRegistered,
+          total: runningTotalActivated, // Keeping 'total' as Activated to maintain partial backward compat, mapped explicitly in Controller
+          active: m.active,
+          engaged: m.engaged,
+          engaged90d: engaged90dMap.get(d) || 0
+        });
+      }
+
+      // Filter final output by requested range (if we generated broad range for total calc? 
+      // - If we used start=from, runningTotal was initialized with Baseline.
+      // - If we auto-detected range, we shouldn't filter much.
+      // Note: 'allDates' was generated based on 'from/to' OR 'min/max data'.
+      // So no extra filtering needed?
+      // Wait, if we use Baseline (f is set), we iterate from f.
+      // But activationsMap has ALL dates. We must NOT add activations BEFORE f to runningTotal in the loop.
+      // So inside loop: `added = activationsMap.get(d)`. 
+      // If d < f (impossible if we generate allDates from f), no risk.
+      // But we verified `allDates` starts at `f` if provided.
+      // So we are good.
+
     } catch (e) {
-      // ignore
+      console.error('Activity Series Error', e);
     }
 
     // 4. Heatmap (Active Users by Time)
@@ -725,18 +1080,57 @@ export class AnalyticsV2Service {
       // ignore
     }
 
-    const activeRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0;
+    // 5. Turnover & Financial Loss (Strategic)
+    // We judge Turnover by Inactive Users who were updated recently? 
+    // Or just Total Inactive Count? 
+    // Metric: "Turnover Rate" usually = (Leavers / Avg Headcount).
+    // Here we will just Count Inactive for now, and estimate cost 
+    // assuming they left 'this year' or similar if we had date filter.
+    // For now: Total Inactive / Total Registered => Accumulative Churn.
+    // Cost: Inactive * R$ 5,000.
+    const inactiveUsers = totalUsers - activeUsers; // This logic is flawed if 'activeUsers' means 'logged in recently'.
+    // We need 'Deactivated Users' (isActive=false)
+    const deactivatedRes = await this.ds.query(
+      `SELECT COUNT(*)::int as c FROM user_entity WHERE "companyId"=$1 AND "isActive"=false`,
+      [companyId]
+    );
+    const deactivatedCount = Number(deactivatedRes?.[0]?.c || 0);
+    const totalHeadcount = totalUsers + deactivatedCount; // If totalUsers was only active. Verify query above (line 624).
+    // line 624: WHERE "companyId"=$1 AND "isActive"=true. So totalUsers IS active headcount.
+
+    // Turnover Rate (All time or Period?) 
+    // Let's stick to Snapshot: Deactivated / (Active + Deactivated)
+    // 6. Registered (All time) & Activated (All time)
+    const registeredRes = await this.ds.query(`SELECT COUNT(*)::int as c FROM user_entity WHERE "companyId"=$1`, [companyId]);
+    const totalRegistered = Number(registeredRes?.[0]?.c || 0);
+
+    const activatedRes = await this.ds.query(`SELECT COUNT(*)::int as c FROM user_entity WHERE "companyId"=$1 AND "firstLoginAt" IS NOT NULL`, [companyId]);
+    const totalActivated = Number(activatedRes?.[0]?.c || 0);
+
+    // Turnover Rate logic remains using deactivated count from earlier
+    const turnoverRate = totalRegistered > 0 ? (deactivatedCount / totalRegistered) * 100 : 0;
+    const turnoverCost = deactivatedCount * 5000; // Proxy Cost
+
+    // Rates based on Registered Base
+    const activeRate = totalRegistered > 0 ? Math.round((activeUsers / totalRegistered) * 100) : 0;
     const engagedRate = activeUsers > 0 ? Math.round((engagedUsers / activeUsers) * 100) : 0;
+
+    const activationRate = totalRegistered > 0 ? Math.round((totalActivated / totalRegistered) * 100) : 0;
 
     return {
       users: {
-        total: totalUsers,
-        registered: totalUsers, // Assuming registered = total for now
+        total: totalRegistered,
+        registered: totalRegistered,
+        activated: totalActivated,
         active: activeUsers,
         engaged: engagedUsers,
         activeRate,
-        engagedRate
+        engagedRate,
+        activationRate,
+        turnoverRate: Number(turnoverRate.toFixed(1)),
+        turnoverCost: turnoverCost
       },
+      topConnected: await this.getTopConnectedUsers(companyId, f, t),
       engagement: {
         reactions: totalReactions || 0,
         comments: totalComments || 0,
@@ -751,7 +1145,569 @@ export class AnalyticsV2Service {
       heatmap
     };
   }
+
+  private async getTopConnectedUsers(companyId: string, from?: string, to?: string) {
+    const params: any[] = [companyId];
+    let dateFilter = '';
+    if (from) {
+      dateFilter += ` AND u."date" >= $${params.length + 1}`;
+      params.push(from);
+    }
+    if (to) {
+      dateFilter += ` AND u."date" < ($${params.length + 1}::date + INTERVAL '1 day')`;
+      params.push(to);
+    }
+
+    const sql = `
+      SELECT 
+        ue.id, 
+        ue.name, 
+        ue."jobTitle" as role, 
+        ue."avatarUrl" as avatar,
+        ue.xp as xp
+      FROM user_metrics_daily u
+      JOIN user_entity ue ON ue.id::text = u."userId"::text
+      WHERE ue."companyId"=$1 ${dateFilter}
+      GROUP BY ue.id, ue.name, ue."jobTitle", ue."avatarUrl", ue.xp
+      ORDER BY ue.xp DESC
+      LIMIT 10
+    `;
+    const rows = await this.ds.query(sql, params);
+    return rows.map((r: any) => ({
+      ...r,
+      color: ['primary', 'success', 'info', 'warning', 'danger'][Math.floor(Math.random() * 5)]
+    }));
+  }
+
+  async getChannelEffectiveness(companyId: string) {
+    // Aggregate Metrics by Channel
+    // We need to JOIN news_entity to get channelId
+    // Then JOIN news_metrics_daily or calculate from events
+    // Using metrics_daily for speed
+
+    const sql = `
+        SELECT 
+           n."channelId", 
+           c.name as "channelName",
+           COUNT(DISTINCT n.id) as "newsCount",
+           SUM(d.opens)::int as "totalOpens",
+           SUM(d."uniqueOpens")::int as "uniqueOpens"
+        FROM news_entity n
+        JOIN news_metrics_daily d ON d."newsId" = n.id
+        LEFT JOIN channel c ON c.id::text = n."channelId"::text
+        WHERE n."companyId" = $1
+        GROUP BY 1, 2
+        ORDER BY "uniqueOpens" DESC
+    `;
+
+    const rows = await this.ds.query(sql, [companyId]);
+    return rows.map((r: any) => ({
+      channelId: r.channelId,
+      channelName: r.channelName || 'Unknown',
+      newsCount: Number(r.newsCount),
+      uniqueOpens: Number(r.uniqueOpens),
+      avgOpensPerNews: Number(r.newsCount) > 0 ? Math.round(Number(r.uniqueOpens) / Number(r.newsCount)) : 0
+    }));
+  }
+
   async searchOverview(companyId: string, params: any) {
     return {};
   }
+
+  /**
+   * Phase 2: Reading Behavior Analytics
+   * Analyzes "time-on-page" to distinguish opening from reading.
+   * Buckets: Glanced (< 3s), Skimmed (3-10s), Read (> 10s)
+   */
+  async getReadingBehavior(
+    companyId: string,
+    params?: { from?: string; to?: string; newsId?: string },
+  ) {
+    const { from, to, newsId } = params || {};
+    const fromDate = from ? toDateISO(from) : undefined;
+    const toDate = to ? toDateISO(to) : undefined;
+
+    // Build WHERE clause
+    const whereClauses: string[] = [`e."companyId" = $1`];
+    const queryParams: any[] = [companyId];
+    let paramIndex = 2;
+
+    // Filter by OPEN events only
+    whereClauses.push(`e.type = 'OPEN'`);
+
+    // Date range
+    if (fromDate) {
+      whereClauses.push(`DATE(e."createdAt") >= $${paramIndex}`);
+      queryParams.push(fromDate);
+      paramIndex++;
+    }
+    if (toDate) {
+      whereClauses.push(`DATE(e."createdAt") <= $${paramIndex}`);
+      queryParams.push(toDate);
+      paramIndex++;
+    }
+
+    // Specific news filter
+    if (newsId) {
+      whereClauses.push(`e."newsId" = $${paramIndex}`);
+      queryParams.push(newsId);
+      paramIndex++;
+    }
+
+    const whereClause = whereClauses.join(' AND ');
+
+    // Query: Extract durationMs from meta->durationMs
+    const sql = `
+      SELECT
+        COUNT(*) FILTER (WHERE (e.meta->>'durationMs')::int < 3000) AS "glanced",
+        COUNT(*) FILTER (WHERE (e.meta->>'durationMs')::int >= 3000 AND (e.meta->>'durationMs')::int < 10000) AS "skimmed",
+        COUNT(*) FILTER (WHERE (e.meta->>'durationMs')::int >= 10000) AS "read",
+        COUNT(*) FILTER (WHERE e.meta->>'durationMs' IS NULL OR e.meta->>'durationMs' = '') AS "noDuration",
+        COUNT(*) AS "totalOpens",
+        COUNT(DISTINCT e."userId") AS "uniqueReaders",
+        AVG((e.meta->>'durationMs')::int) FILTER (WHERE e.meta->>'durationMs' IS NOT NULL) AS "avgDurationMs"
+      FROM news_interaction_event e
+      WHERE ${whereClause}
+    `;
+
+    const [result] = await this.ds.query(sql, queryParams);
+
+    return {
+      from: fromDate || null,
+      to: toDate || null,
+      totalOpens: Number(result.totalOpens || 0),
+      uniqueReaders: Number(result.uniqueReaders || 0),
+      avgDurationMs: result.avgDurationMs ? Math.round(Number(result.avgDurationMs)) : null,
+      buckets: {
+        glanced: Number(result.glanced || 0), // < 3s
+        skimmed: Number(result.skimmed || 0), // 3-10s
+        read: Number(result.read || 0), // > 10s
+      },
+      noDuration: Number(result.noDuration || 0), // Legacy opens without tracking
+    };
+  }
+
+  /**
+   * Phase 3: Traffic Attribution Analytics
+   * Analyzes where users come from (Push, Email, Social, Direct, UTM campaigns)
+   * Tracks meta.origin, meta.utm_source, meta.utm_medium, meta.utm_campaign
+   */
+  async getTrafficSources(
+    companyId: string,
+    params?: { from?: string; to?: string; newsId?: string },
+  ) {
+    const { from, to, newsId } = params || {};
+    const fromDate = from ? toDateISO(from) : undefined;
+    const toDate = to ? toDateISO(to) : undefined;
+
+    // Build WHERE clause
+    const whereClauses: string[] = [`e."companyId" = $1`];
+    const queryParams: any[] = [companyId];
+    let paramIndex = 2;
+
+    // Filter by OPEN events only
+    whereClauses.push(`e.type = 'OPEN'`);
+
+    // Date range
+    if (fromDate) {
+      whereClauses.push(`DATE(e."createdAt") >= $${paramIndex}`);
+      queryParams.push(fromDate);
+      paramIndex++;
+    }
+    if (toDate) {
+      whereClauses.push(`DATE(e."createdAt") <= $${paramIndex}`);
+      queryParams.push(toDate);
+      paramIndex++;
+    }
+
+    // Specific news filter
+    if (newsId) {
+      whereClauses.push(`e."newsId" = $${paramIndex}`);
+      queryParams.push(newsId);
+      paramIndex++;
+    }
+
+    const whereClause = whereClauses.join(' AND ');
+
+    // Query: Aggregate by origin and UTM source
+    const sql = `
+      WITH sources AS (
+        SELECT
+          COALESCE(e.meta->>'origin', 'unknown') AS origin,
+          COALESCE(e.meta->>'utm_source', '') AS utm_source,
+          COALESCE(e.meta->>'utm_medium', '') AS utm_medium,
+          COALESCE(e.meta->>'utm_campaign', '') AS utm_campaign,
+          COUNT(*) AS opens,
+          COUNT(DISTINCT e."userId") AS unique_users
+        FROM news_interaction_event e
+        WHERE ${whereClause}
+        GROUP BY origin, utm_source, utm_medium, utm_campaign
+      )
+      SELECT
+        origin,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        opens AS "count",
+        unique_users AS "uniqueUsers"
+      FROM sources
+      ORDER BY opens DESC
+    `;
+
+    const rows = await this.ds.query(sql, queryParams);
+
+    // Aggregate by primary source (origin or utm_source)
+    const sourceMap = new Map<string, { count: number; uniqueUsers: number }>();
+
+    for (const row of rows) {
+      // Prioritize UTM source over origin
+      const primarySource = row.utm_source || row.origin || 'direct';
+      const existing = sourceMap.get(primarySource) || { count: 0, uniqueUsers: 0 };
+
+      sourceMap.set(primarySource, {
+        count: existing.count + Number(row.count),
+        uniqueUsers: existing.uniqueUsers + Number(row.uniqueUsers),
+      });
+    }
+
+    // Convert to array and calculate percentages
+    const totalOpens = Array.from(sourceMap.values()).reduce((sum, s) => sum + s.count, 0);
+    const sources = Array.from(sourceMap.entries())
+      .map(([source, data]) => ({
+        source,
+        count: data.count,
+        uniqueUsers: data.uniqueUsers,
+        percentage: totalOpens > 0 ? Math.round((data.count / totalOpens) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // UTM campaign breakdown (for detailed attribution)
+    const campaigns = rows
+      .filter((r) => r.utm_campaign)
+      .map((r) => ({
+        campaign: r.utm_campaign,
+        source: r.utm_source || r.origin,
+        medium: r.utm_medium,
+        count: Number(r.count),
+        uniqueUsers: Number(r.uniqueUsers),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Top 10 campaigns
+
+    return {
+      from: fromDate || null,
+      to: toDate || null,
+      totalOpens,
+      sources,
+      campaigns,
+    };
+  }
+
+  /**
+   * Phase 4: Chat & Session Behavioral Analytics
+   * Tracks messaging patterns and session engagement to identify behavioral indicators
+   */
+  async getChatBehavior(
+    companyId: string,
+    params?: { from?: string; to?: string; userId?: string },
+  ) {
+    const { from, to, userId } = params || {};
+    const fromDate = from ? toDateISO(from) : undefined;
+    const toDate = to ? toDateISO(to) : undefined;
+
+    // Build WHERE clause
+    const whereClauses: string[] = [`m."conversationId" IN (
+      SELECT p."conversationId" FROM chat_participant p
+      JOIN user_entity u ON u.id = p."userId"
+      WHERE u."companyId" = $1
+    )`];
+    const queryParams: any[] = [companyId];
+    let paramIndex = 2;
+
+    // Date range
+    if (fromDate) {
+      whereClauses.push(`DATE(m."createdAt") >= $${paramIndex}`);
+      queryParams.push(fromDate);
+      paramIndex++;
+    }
+    if (toDate) {
+      whereClauses.push(`DATE(m."createdAt") <= $${paramIndex}`);
+      queryParams.push(toDate);
+      paramIndex++;
+    }
+
+    // Specific user filter
+    if (userId) {
+      whereClauses.push(`m."senderId" = $${paramIndex}`);
+      queryParams.push(userId);
+      paramIndex++;
+    }
+
+    // Exclude deleted messages
+    whereClauses.push(`m."deletedAt" IS NULL`);
+
+    const whereClause = whereClauses.join(' AND ');
+
+    // Main chat metrics query
+    const metricsSql = `
+      SELECT
+        COUNT(*) AS "totalMessages",
+        COUNT(DISTINCT m."senderId") AS "activeUsers",
+        COUNT(DISTINCT m."conversationId") AS "activeConversations",
+        COUNT(*) FILTER (WHERE m.type = 'TEXT') AS "textMessages",
+        COUNT(*) FILTER (WHERE m.type = 'IMAGE') AS "imageMessages",
+        COUNT(*) FILTER (WHERE m.type = 'VOICE') AS "voiceMessages",
+        COUNT(*) FILTER (WHERE m.type = 'FILE') AS "fileMessages",
+        COUNT(DISTINCT CASE WHEN c.type = 'GROUP' THEN m."conversationId" END) AS "groupConversations",
+        COUNT(DISTINCT CASE WHEN c.type = 'DIRECT' THEN m."conversationId" END) AS "directConversations",
+        COUNT(*) FILTER (WHERE c.type = 'GROUP') AS "groupMessages",
+        COUNT(*) FILTER (WHERE c.type = 'DIRECT') AS "directMessages",
+        AVG(
+          CASE 
+            WHEN m."replyToId" IS NOT NULL THEN
+              EXTRACT(EPOCH FROM (m."createdAt" - prev."createdAt")) / 60
+            ELSE NULL
+          END
+        ) AS "avgResponseTimeMinutes"
+      FROM chat_message m
+      LEFT JOIN chat_message prev ON prev.id = m."replyToId"
+      LEFT JOIN chat_conversation c ON c.id = m."conversationId"
+      WHERE ${whereClause}
+    `;
+
+    const [metrics] = await this.ds.query(metricsSql, queryParams);
+
+    // Top messengers (activity leaders)
+    const topMessengersSql = `
+      SELECT
+        m."senderId" AS "userId",
+        u.name AS "userName",
+        COUNT(*) AS "messageCount",
+        COUNT(DISTINCT m."conversationId") AS "conversationCount",
+        MAX(m."createdAt") AS "lastMessageAt"
+      FROM chat_message m
+      LEFT JOIN user_entity u ON u.id = m."senderId"
+      WHERE ${whereClause}
+      GROUP BY m."senderId", u.name
+      ORDER BY "messageCount" DESC
+      LIMIT 10
+    `;
+
+    const topMessengers = await this.ds.query(topMessengersSql, queryParams);
+
+    // Daily message volume (for trend chart)
+    const dailyVolumeSql = `
+      SELECT
+        DATE(m."createdAt") AS "date",
+        COUNT(*) AS "count"
+      FROM chat_message m
+      WHERE ${whereClause}
+      GROUP BY DATE(m."createdAt")
+      ORDER BY "date" DESC
+      LIMIT 30
+    `;
+
+    const dailyVolume = await this.ds.query(dailyVolumeSql, queryParams);
+
+    // Low activity users (potential churn risk)
+    const inactiveThreshold = 7; // days
+    const lowActivitySql = `
+      SELECT
+        u.id AS "userId",
+        u.name AS "userName",
+        COUNT(m.id) AS "messageCount",
+        MAX(m."createdAt") AS "lastMessageAt",
+        EXTRACT(EPOCH FROM (NOW() - MAX(m."createdAt"))) / 86400 AS "daysSinceLastMessage"
+      FROM user_entity u
+      LEFT JOIN chat_message m ON m."senderId" = u.id
+        AND m."deletedAt" IS NULL
+      WHERE u."companyId" = $1
+        AND u."isActive" = true
+      GROUP BY u.id, u.name
+      HAVING MAX(m."createdAt") IS NULL 
+        OR EXTRACT(EPOCH FROM (NOW() - MAX(m."createdAt"))) / 86400 > ${inactiveThreshold}
+      ORDER BY "daysSinceLastMessage" DESC NULLS FIRST
+      LIMIT 20
+    `;
+
+    const lowActivityUsers = await this.ds.query(lowActivitySql, [companyId]);
+
+    return {
+      from: fromDate || null,
+      to: toDate || null,
+      totalMessages: Number(metrics.totalMessages || 0),
+      activeUsers: Number(metrics.activeUsers || 0),
+      activeConversations: Number(metrics.activeConversations || 0),
+      conversationTypes: {
+        group: Number(metrics.groupConversations || 0),
+        direct: Number(metrics.directConversations || 0),
+        groupMessages: Number(metrics.groupMessages || 0),
+        directMessages: Number(metrics.directMessages || 0),
+      },
+      messageTypes: {
+        text: Number(metrics.textMessages || 0),
+        image: Number(metrics.imageMessages || 0),
+        voice: Number(metrics.voiceMessages || 0),
+        file: Number(metrics.fileMessages || 0),
+      },
+      avgResponseTimeMinutes: metrics.avgResponseTimeMinutes
+        ? Math.round(Number(metrics.avgResponseTimeMinutes))
+        : null,
+      topMessengers: topMessengers.map((m: any) => ({
+        userId: m.userId,
+        userName: m.userName || 'Unknown',
+        messageCount: Number(m.messageCount),
+        conversationCount: Number(m.conversationCount),
+        lastMessageAt: m.lastMessageAt,
+      })),
+      dailyVolume: dailyVolume.map((d: any) => ({
+        date: d.date,
+        count: Number(d.count),
+      })),
+      lowActivityUsers: lowActivityUsers.map((u: any) => ({
+        userId: u.userId,
+        userName: u.userName || 'Unknown',
+        messageCount: Number(u.messageCount || 0),
+        lastMessageAt: u.lastMessageAt,
+        daysSinceLastMessage: u.daysSinceLastMessage
+          ? Math.round(Number(u.daysSinceLastMessage))
+          : null,
+      })),
+      insights: {
+        churnRisk: lowActivityUsers.length,
+        engagementRate:
+          metrics.activeUsers > 0
+            ? Math.round((Number(metrics.totalMessages) / Number(metrics.activeUsers)) * 10) / 10
+            : 0,
+      },
+    };
+  }
+
+  /**
+   * Phase 5: Engagement Funnel & Segmented Analytics
+   * Tracks conversion funnel (Registered → Activated → Engaged) by user segments
+   */
+  async getEngagementFunnel(
+    companyId: string,
+    params?: { from?: string; to?: string; segment?: 'department' | 'jobTitle' | 'location' },
+  ) {
+    const { from, to, segment } = params || {};
+    const fromDate = from ? toDateISO(from) : undefined;
+    const toDate = to ? toDateISO(to) : undefined;
+
+    // Build WHERE clause for users
+    const whereClauses: string[] = [`u."companyId" = $1`];
+    const queryParams: any[] = [companyId];
+    let paramIndex = 2;
+
+    if (fromDate) {
+      whereClauses.push(`DATE(u."createdAt") >= $${paramIndex}`);
+      queryParams.push(fromDate);
+      paramIndex++;
+    }
+    if (toDate) {
+      whereClauses.push(`DATE(u."createdAt") <= $${paramIndex}`);
+      queryParams.push(toDate);
+      paramIndex++;
+    }
+
+    // Only active users
+    whereClauses.push(`u."isActive" = true`);
+
+    const whereClause = whereClauses.join(' AND ');
+
+    // Segmentation field (default: none)
+    const segmentField = segment
+      ? `u."${segment}"`
+      : `'All Users'::text`;
+    const segmentAlias = segment || 'all';
+
+    // Funnel stages query
+    const funnelSql = `
+      WITH user_segments AS (
+        SELECT
+          u.id AS "userId",
+          COALESCE(${segmentField}, 'Unknown') AS segment,
+          u."createdAt" AS "registeredAt"
+        FROM user_entity u
+        WHERE ${whereClause}
+      ),
+      activated_users AS (
+        SELECT DISTINCT
+          e."userId"
+        FROM news_interaction_event e
+        WHERE e."companyId" = $1::uuid
+          AND e.type = 'OPEN'
+          AND e."userId" IS NOT NULL
+      ),
+      engaged_users AS (
+        SELECT
+          e."userId"
+        FROM news_interaction_event e
+        WHERE e."companyId" = $1::uuid
+          AND e."userId" IS NOT NULL
+        GROUP BY e."userId"
+        HAVING COUNT(*) >= 5
+      )
+      SELECT
+        us.segment,
+        COUNT(DISTINCT us."userId") AS registered,
+        COUNT(DISTINCT CASE WHEN au."userId" IS NOT NULL THEN us."userId" END) AS activated,
+        COUNT(DISTINCT CASE WHEN eu."userId" IS NOT NULL THEN us."userId" END) AS engaged
+      FROM user_segments us
+      LEFT JOIN activated_users au ON au."userId" = us."userId"
+      LEFT JOIN engaged_users eu ON eu."userId" = us."userId"
+      GROUP BY us.segment
+      ORDER BY registered DESC
+      LIMIT 20
+    `;
+
+    const funnelData = await this.ds.query(funnelSql, queryParams);
+
+    // Calculate overall funnel
+    const totalRegistered = funnelData.reduce((sum: number, row: any) => sum + Number(row.registered), 0);
+    const totalActivated = funnelData.reduce((sum: number, row: any) => sum + Number(row.activated), 0);
+    const totalEngaged = funnelData.reduce((sum: number, row: any) => sum + Number(row.engaged), 0);
+
+    const activationRate = totalRegistered > 0 ? Math.round((totalActivated / totalRegistered) * 100) : 0;
+    const engagementRate = totalActivated > 0 ? Math.round((totalEngaged / totalActivated) * 100) : 0;
+
+    // Segment breakdown
+    const segments = funnelData.map((row: any) => ({
+      segment: row.segment,
+      registered: Number(row.registered),
+      activated: Number(row.activated),
+      engaged: Number(row.engaged),
+      activationRate:
+        Number(row.registered) > 0
+          ? Math.round((Number(row.activated) / Number(row.registered)) * 100)
+          : 0,
+      engagementRate:
+        Number(row.activated) > 0
+          ? Math.round((Number(row.engaged) / Number(row.activated)) * 100)
+          : 0,
+    }));
+
+    // Top performing segments (by engagement rate)
+    const topSegments = [...segments]
+      .filter((s) => s.registered >= 3) // Minimum sample size
+      .sort((a, b) => b.engagementRate - a.engagementRate)
+      .slice(0, 5);
+
+    return {
+      from: fromDate || null,
+      to: toDate || null,
+      segmentType: segmentAlias,
+      overall: {
+        registered: totalRegistered,
+        activated: totalActivated,
+        engaged: totalEngaged,
+        activationRate,
+        engagementRate,
+      },
+      segments,
+      topPerformers: topSegments,
+    };
+  }
 }
+

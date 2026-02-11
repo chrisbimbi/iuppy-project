@@ -12,6 +12,7 @@ import {
 import { Role, User } from '@shared/types';
 import { GroupEntity } from '../groups/group.entity';
 import { UserXPHistoryEntity } from '../modules/gamification/entities/user-xp-history.entity';
+import { UserSpaceEntity } from '../spaces/user-space.entity';
 
 @Entity('user_entity')
 export class UserEntity implements User {
@@ -73,6 +74,35 @@ export class UserEntity implements User {
   @Column({ type: 'timestamp', nullable: true })
   hireDate?: Date | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  birthDate?: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  registrationNumber?: string | null; // Matrícula / EmployeeID
+
+  @Column({ type: 'text', nullable: true })
+  costCenter?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  terminationDate?: Date | null;
+
+  // 🔹 Flexible containers for complex ERP data (Holerite / Férias)
+  @Column({ type: 'jsonb', nullable: true, default: {} })
+  payrollData?: any; // Bank info, salary history, payslip links
+
+  @Column({ type: 'jsonb', nullable: true, default: {} })
+  vacationData?: any; // Periods, balance, history
+
+  // 🔹 Additional HR Info
+  @Column({ type: 'text', nullable: true })
+  contractType?: string | null; // CLT, PJ, Estágio
+
+  @Column({ type: 'text', nullable: true })
+  workShift?: string | null; // Turno A, 09:00-18:00
+
+  @Column({ type: 'text', nullable: true })
+  managerEmail?: string | null; // Primary hierarchy link
+
   @Column({ type: 'jsonb', default: {} })
   customAttributes: Record<string, any>;
 
@@ -112,4 +142,7 @@ export class UserEntity implements User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => UserSpaceEntity, (us) => us.user)
+  userSpaces: UserSpaceEntity[];
 }

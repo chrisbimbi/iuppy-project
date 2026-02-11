@@ -16,6 +16,11 @@ function parseOrigins(env?: string): string[] {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.url}`);
+    next();
+  });
+
   // Aumentar limite do body
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ limit: '50mb', extended: true }));
@@ -71,6 +76,12 @@ async function bootstrap() {
   });
 
   const port = parseInt(process.env.API_PORT || '3000', 10);
-  await app.listen(port);
+  console.log(`[MAIN] About to listen on 0.0.0.0:${port}...`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`[MAIN] ✅ Server is now listening on 0.0.0.0:${port}`);
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('[MAIN] ❌ FATAL ERROR during bootstrap:', err);
+  process.exit(1);
+});
+

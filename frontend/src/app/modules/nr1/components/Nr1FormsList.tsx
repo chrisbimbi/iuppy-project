@@ -15,7 +15,7 @@ const Kebab: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 interface Props {
-    template: string;
+    template?: string;
 }
 
 import FormTemplatesModal from './FormTemplatesModal';
@@ -34,8 +34,10 @@ export default function Nr1FormsList({ template }: Props) {
         if (!companyId) return;
         setLoading(true);
         try {
-            const data = await FormsApi.list({ companyId, template });
-            setRows(data);
+            const query: any = { companyId, isNr1: true };
+            if (template && template !== 'nr1_%') query.template = template; // Only use template if strict, otherwise all NR1 forms
+            const data = await FormsApi.list(query);
+            setRows(data.items || data); // Handle paginated response structure if needed
         } catch (e) {
             console.error(e);
         } finally {

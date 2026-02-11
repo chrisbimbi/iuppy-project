@@ -4,8 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Space } from '@shared/types/Space';
+import { UserSpaceEntity } from './user-space.entity';
 
 @Entity('space')
 export class SpaceEntity implements Space {
@@ -48,4 +50,7 @@ export class SpaceEntity implements Space {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => UserSpaceEntity, (us) => us.space)
+  userSpaces: UserSpaceEntity[];
 }

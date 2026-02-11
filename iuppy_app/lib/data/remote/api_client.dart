@@ -898,13 +898,24 @@ class ApiClient {
     return Map<String, dynamic>.from(resp.data as Map);
   }
 
-  Future<void> completeJourneyStep(
+  // Helper to fetch all journeys (e.g. for Training Catalog)
+  Future<List<Map<String, dynamic>>> getJourneys() async {
+    final resp = await _dio.get(
+      '/journeys',
+      queryParameters: {'companyId': companyId},
+    );
+    return List<Map<String, dynamic>>.from(
+      (resp.data as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  Future<Map<String, dynamic>> completeJourneyStep(
     String journeyId,
     String stepId, {
     Map<String, dynamic>? data,
     CancelToken? cancelToken,
   }) async {
-    await _dio.post(
+    final resp = await _dio.post(
       '/journeys/$journeyId/steps/$stepId/complete',
       data: data,
       options: Options(
@@ -912,6 +923,7 @@ class ApiClient {
       ),
       cancelToken: cancelToken,
     );
+    return Map<String, dynamic>.from(resp.data as Map);
   }
 
   Future<Map<String, dynamic>> getJourneyStepDetail(

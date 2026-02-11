@@ -7,7 +7,7 @@ import '../../../core/providers.dart';
 class GlassSearchAndSpaces extends ConsumerWidget {
   const GlassSearchAndSpaces({
     super.key,
-    this.hintText = 'Buscar (em cache)',
+    this.hintText = 'Buscar no app',
     this.onQueryChanged,
     this.onSearch,
     required this.selectedSpaceId,
@@ -40,7 +40,8 @@ class GlassSearchAndSpaces extends ConsumerWidget {
 }
 
 class _GlassSearchField extends HookConsumerWidget {
-  const _GlassSearchField({required this.hintText, this.onChanged, this.onSubmitted});
+  const _GlassSearchField(
+      {required this.hintText, this.onChanged, this.onSubmitted});
   final String hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -49,7 +50,7 @@ class _GlassSearchField extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = useTextEditingController();
     final radius = BorderRadius.circular(14);
-    
+
     return ClipRRect(
       borderRadius: radius,
       child: BackdropFilter(

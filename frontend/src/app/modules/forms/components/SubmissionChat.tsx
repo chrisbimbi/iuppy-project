@@ -19,7 +19,8 @@ type Props = {
   formId: string
   submissionId: string
   // ID do usuário do CMS logado (para UI)
-  currentCmsUserId: string | null 
+  currentCmsUserId: string | null
+  companyId?: string
 }
 
 // Estilos CSS in-line para simplicidade
@@ -76,21 +77,21 @@ const chatStyles: { [key: string]: React.CSSProperties } = {
   }
 }
 
-export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props) => {
+export const SubmissionChat = ({ formId, submissionId, currentCmsUserId, companyId }: Props) => {
   const [history, setHistory] = useState<ChatHistory | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [closing, setClosing] = useState(false)
-  
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   const loadHistory = async () => {
     setLoading(true)
     setErr(null)
     try {
-      const data = await FormsApi.getChatHistory(formId, submissionId)
+      const data = await FormsApi.getChatHistory(formId, submissionId, companyId)
       setHistory(data)
     } catch (e: any) {
       setErr(e.message ?? 'Falha ao carregar histórico de chat')
@@ -107,13 +108,13 @@ export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props
     // Auto-scroll para a última mensagem
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [history?.messages])
-  
+
   const handleSend = async () => {
     if (newMessage.trim().length === 0 || sending) return;
     setSending(true);
-    
+
     try {
-      const sentMessage = await FormsApi.postChatMessage(formId, submissionId, newMessage);
+      const sentMessage = await FormsApi.postChatMessage(formId, submissionId, newMessage, companyId);
       setHistory(prev => ({
         ...(prev ?? { chatStatus: 'open', messages: [] }),
         messages: [...(prev?.messages ?? []), sentMessage],
@@ -126,18 +127,18 @@ export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props
       setSending(false);
     }
   }
-  
+
   const handleCloseChat = async () => {
     if (closing) return;
     setClosing(true);
     try {
-      await FormsApi.closeChat(formId, submissionId);
+      await FormsApi.closeChat(formId, submissionId, companyId);
       setHistory(prev => ({
         ...(prev ?? { chatStatus: 'open', messages: [] }),
         chatStatus: 'closed',
       }));
     } catch (e: any) {
-       setErr(e.message ?? 'Falha ao encerrar chat');
+      setErr(e.message ?? 'Falha ao encerrar chat');
     } finally {
       setClosing(false);
     }
@@ -165,7 +166,7 @@ export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {history?.messages.map((msg) => {
             const isMe = msg.actor === 'rh'
-            
+
             return (
               <div key={msg.id} style={chatStyles.messageRow}>
                 <div
@@ -182,12 +183,12 @@ export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props
           <div ref={messagesEndRef} />
         </div>
       </div>
-      
+
       {/* 2. Banner de Chat Encerrado */}
       {isChatClosed && (
-         <div style={chatStyles.closedBanner}>
-           Esta conversa foi encerrada pelo RH.
-         </div>
+        <div style={chatStyles.closedBanner}>
+          Esta conversa foi encerrada pelo RH.
+        </div>
       )}
 
       {/* 3. Área de Input */}
@@ -201,22 +202,22 @@ export const SubmissionChat = ({ formId, submissionId, currentCmsUserId }: Props
           onKeyPress={(e) => e.key === 'Enter' && !sending && handleSend()}
           disabled={sending || isChatClosed}
         />
-        <Button 
-          variant="primary" 
-          className="ms-2" 
-          onClick={handleSend} 
+        <Button
+          variant="primary"
+          className="ms-2"
+          onClick={handleSend}
           disabled={sending || isChatClosed}
         >
           {sending ? <Spinner size="sm" /> : 'Enviar'}
         </Button>
       </div>
-      
+
       {/* 4. Footer com Ação de Encerrar */}
       {!isChatClosed && (
         <div className="p-2 text-end border-top">
-          <Button 
-            variant="light-danger" 
-            size="sm" 
+          <Button
+            variant="light-danger"
+            size="sm"
             onClick={handleCloseChat}
             disabled={closing}
           >

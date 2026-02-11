@@ -24,13 +24,11 @@ export default function FormsListPage() {
   const intl = useIntl();
   const { currentUser } = useAuth();
 
-  // 🔥 FIX: Prioritize localStorage (Context Switcher) over User Token
+  // Prioritize currentUser (Auth Token Source of Truth)
+  // localStorage 'companyId' was found to be stale/incorrect in Context Switcher scenarios.
   const getEffectiveCompanyId = () => {
-    if (typeof window !== 'undefined') {
-      const fromLs = window.localStorage.getItem('companyId');
-      if (fromLs) return fromLs;
-    }
-    return currentUser?.companyId;
+    if (currentUser?.companyId) return currentUser.companyId;
+    return window.localStorage.getItem('companyId');
   };
   const companyId = getEffectiveCompanyId();
 
@@ -47,6 +45,7 @@ export default function FormsListPage() {
     setLoading(true);
     setErr(null);
     try {
+      console.log('Loading forms for companyId:', cId);
       const data = await FormsApi.list({ companyId: cId, visibility: 'all' });
       setRows(data as any[]);
     } catch (e: any) {
@@ -70,8 +69,8 @@ export default function FormsListPage() {
     if (!companyId) return;
     if (!confirm(intl.formatMessage({ id: 'FORMS.LIST.CONFIRM.DUPLICATE' }))) return;
     try {
-      await Promise.all(selectedIds.map(id => FormsApi.duplicate(id)));
-      await load(companyId);
+      await Promise.all(selectedIds.map(id => FormsApi.duplicate(id, companyId!)));
+      await load(companyId!);
       setSel({});
     } catch (e) {
       alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.DUPLICATE_FAILED' }));
@@ -82,8 +81,8 @@ export default function FormsListPage() {
     if (!companyId) return;
     if (!confirm(intl.formatMessage({ id: 'FORMS.LIST.CONFIRM.DELETE' }))) return;
     try {
-      await FormsApi.removeMany(selectedIds);
-      await load(companyId);
+      await FormsApi.removeMany(selectedIds, companyId!);
+      await load(companyId!);
       setSel({});
     } catch (e) {
       alert(intl.formatMessage({ id: 'FORMS.LIST.ERROR.DELETE_FAILED' }));
@@ -93,7 +92,7 @@ export default function FormsListPage() {
   const bulkPublish = async () => {
     if (!companyId) return;
     try {
-      await Promise.all(selectedIds.map(id => FormsApi.publish(id)));
+      await Promise.all(selectedIds.map(id => FormsApi.publish(id, companyId!)));
       await load(companyId);
       setSel({});
     } catch (e) {

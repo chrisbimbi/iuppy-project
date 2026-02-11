@@ -5,6 +5,7 @@ import { Nr1RisksApi } from '../../services/api';
 import RiskMatrix from '../../components/RiskMatrix';
 import { Button, Table, Badge, Spinner, Form, InputGroup } from 'react-bootstrap';
 import RiskFormModal from '../../components/RiskFormModal';
+import { Content } from 'src/layout/components/Content';
 
 export default function RiskInventoryPage() {
     const { currentUser } = useAuth();
@@ -65,7 +66,7 @@ export default function RiskInventoryPage() {
     };
 
     return (
-        <>
+        <Content>
             <PageTitle breadcrumbs={[]}>Inventário de Riscos (GRO)</PageTitle>
 
             <div className="row g-5 g-xl-8 mb-5 mb-xl-10">
@@ -154,6 +155,6 @@ export default function RiskInventoryPage() {
 
             {/* RiskFormModal */}
             <RiskFormModal show={showModal} onHide={() => setShowModal(false)} riskId={editingId} onSaved={load} />
-        </>
+        </Content>
     );
 }

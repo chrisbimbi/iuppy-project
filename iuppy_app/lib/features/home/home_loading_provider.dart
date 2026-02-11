@@ -36,7 +36,7 @@ class HomeBootstrapNotifier extends StateNotifier<HomeStartupState> {
         ref.refresh(userStatsProvider.future), // Ensure fresh XP
         ref.refresh(journeyProgressProvider.future),
         ref.refresh(surveysListProvider.future),
-        ref.refresh(formsListProvider.future),
+        ref.refresh(formsListProvider((isNr1: null)).future),
         ref.refresh(myFormsSubmissionsProvider.future),
       ]);
 

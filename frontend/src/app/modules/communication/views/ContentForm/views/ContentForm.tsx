@@ -122,7 +122,7 @@ const ContentForm: React.FC<ContentFormProps> = ({
   const { currentUser } = useAuth();
   const [values, setValues] = useState<CreateContentDto>(initialValues);
   const [step, setStep] = useState(1);
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<string | boolean>(false);
 
   const [stage, setStage] = useState<'idle' | 'upload' | 'save'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -145,6 +145,28 @@ const ContentForm: React.FC<ContentFormProps> = ({
       base.authorId = String(currentUser.id);
       base.companyId = currentUser.companyId;
     }
+
+    // 🔧 FIX: Garantir que settings sempre tenha TODOS os campos obrigatórios
+    const defaultSettings = {
+      visibility: 'public',
+      allowComments: true,
+      moderateComments: false,
+      allowReactions: true,
+      notifyUsers: false,
+      pushNotification: false,
+      inAppNotification: false,
+      emailNotification: false,
+      acknowledgementRequired: false,
+      restrictAccess: false,
+      allowSharing: true,
+      showAuthor: true,
+      showPublishDate: true,
+      pinToTop: false,
+      schedulePublication: false,
+      expirePublication: false,
+      targetAudience: [],
+    };
+    base.settings = Object.assign({}, defaultSettings, base.settings || {});
 
     // 🩹 FIX: Reconstruir audienceMode se não vier do backend
     if (base.settings && !base.settings.audienceMode) {
@@ -297,9 +319,14 @@ const ContentForm: React.FC<ContentFormProps> = ({
           await maybePush(created.id, dto)
         }
       }
-    } catch (error) {
-      console.error('Erro ao salvar conteúdo:', error);
-      setErr(true);
+    } catch (error: any) {
+      console.error('❌ [ContentForm] Erro ao salvar conteúdo:', error);
+      console.error('❌ [ContentForm] Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      setErr(error?.response?.data?.message || error?.message || 'Erro desconhecido ao salvar');
     } finally {
       setStage('idle');
       helpers.setSubmitting(false);
@@ -312,19 +339,27 @@ const ContentForm: React.FC<ContentFormProps> = ({
     dto: CreateContentDto,
     helpers: FormikHelpers<CreateContentDto>
   ) => {
+    console.log('🔵 [ContentForm] onSubmit called with dto:', dto);
+
     if (!dto.channelId) {
+      console.warn('⚠️ [ContentForm] No channelId, aborting submit');
+      alert('Por favor, selecione um canal antes de salvar.');
       helpers.setSubmitting(false);
       return;
     }
 
+    console.log('🔵 [ContentForm] Validation passed, proceeding...');
+
     // Intercepta se for edição e tiver push marcado
     if (editingId && dto.isPublished && dto.settings?.pushNotification) {
+      console.log('🔵 [ContentForm] Showing push confirmation modal');
       setPendingDto(dto);
       setPendingHelpers(helpers);
       setShowPushConfirm(true);
       return;
     }
 
+    console.log('🔵 [ContentForm] Calling processSubmit...');
     await processSubmit(dto, helpers);
   };
 
@@ -365,7 +400,8 @@ const ContentForm: React.FC<ContentFormProps> = ({
       <Content>
         {err && (
           <div className="alert alert-danger">
-            {intl.formatMessage({ id: 'COMMUNICATION.FORM.ALERT.ERROR' })}
+            <strong>Erro ao salvar:</strong><br />
+            {typeof err === 'string' ? err : intl.formatMessage({ id: 'COMMUNICATION.FORM.ALERT.ERROR' })}
           </div>
         )}
 
@@ -452,7 +488,42 @@ const ContentForm: React.FC<ContentFormProps> = ({
                         'indicator-progress': isSubmitting || stage !== 'idle',
                       })}
                       disabled={isSubmitting || stage !== 'idle'}
-                      onClick={() => submitForm()}
+                      onClick={async () => {
+                        console.log('🟢 [ContentForm] Save button clicked!');
+                        console.log('🟢 [ContentForm] Current values:', values);
+                        console.log('🟢 [ContentForm] Formik errors:', formik.errors);
+                        console.log('🟢 [ContentForm] Formik isValid:', formik.isValid);
+                        console.log('🟢 [ContentForm] Formik isSubmitting:', formik.isSubmitting);
+                        console.log('🟢 [ContentForm] Formik touched:', formik.touched);
+
+                        // Tenta via submitForm
+                        console.log('🟢 [ContentForm] Calling submitForm()...');
+                        const submitResult = submitForm();
+                        console.log('🟢 [ContentForm] submitForm() returned:', submitResult);
+
+                        // Aguarda 1 segundo e se onSubmit não foi chamado, chama direto
+                        setTimeout(async () => {
+                          console.log('🟡 [ContentForm] Checking if onSubmit was called...');
+                          if (!formik.isSubmitting) {
+                            console.warn('⚠️ [ContentForm] submitForm() did not trigger onSubmit! Calling directly...');
+                            try {
+                              // Valida manualmente
+                              const errors = await formik.validateForm();
+                              console.log('🟡 [ContentForm] Manual validation errors:', errors);
+
+                              if (Object.keys(errors).length === 0) {
+                                console.log('🟡 [ContentForm] No validation errors, calling onSubmit directly');
+                                await onSubmit(formik.values, formik as any);
+                              } else {
+                                console.error('❌ [ContentForm] Validation failed:', errors);
+                                alert('Erros de validação: ' + JSON.stringify(errors, null, 2));
+                              }
+                            } catch (e) {
+                              console.error('❌ [ContentForm] Error during manual submit:', e);
+                            }
+                          }
+                        }, 1000);
+                      }}
                     >
                       {isSubmitting || stage !== 'idle'
                         ? intl.formatMessage({ id: 'COMMUNICATION.FORM.BUTTON.SAVING', defaultMessage: 'Salvando…' })

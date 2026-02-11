@@ -78,7 +78,7 @@ final notificationsListProvider =
   // 2. NOVOS FORMULÁRIOS
   try {
     final formsList = await ref
-        .watch(formsListProvider.future)
+        .watch(formsListProvider((isNr1: null)).future)
         .catchError((_) => <Map<String, dynamic>>[]);
     final seenIds = await ref.read(localFormStoreProvider).getSeenIds();
 

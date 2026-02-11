@@ -8,13 +8,17 @@ export function useSpaces(companyId: string) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    useEffect(() => {
+    const fetchSpaces = () => {
         setLoading(true);
         spacesService.list(companyId)
             .then(setData)
             .catch(err => setError(err))
             .finally(() => setLoading(false));
+    }
+
+    useEffect(() => {
+        fetchSpaces()
     }, [companyId]);
 
-    return { data, loading, error };
+    return { data, loading, error, refetch: fetchSpaces };
 }

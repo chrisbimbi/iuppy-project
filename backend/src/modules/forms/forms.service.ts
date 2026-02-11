@@ -34,6 +34,9 @@ import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { RespondDto } from './dto/respond.dto';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CommunicationsService } from '../../notifications/communications.service';
+import { UserSpaceEntity } from '../../spaces/user-space.entity';
+
+import { FormsRiskSyncService } from './forms-risk-sync.service';
 
 @Injectable()
 export class FormsService {
@@ -58,10 +61,13 @@ export class FormsService {
     private readonly badgeRepo: Repository<FormBadgeStateEntity>,
     @InjectRepository(FormSubmissionChatEntity)
     private readonly chatRepo: Repository<FormSubmissionChatEntity>,
+    @InjectRepository(UserSpaceEntity)
+    private readonly userSpaceRepo: Repository<UserSpaceEntity>,
     @InjectRepository(FormAuditLogEntity)
     private readonly auditRepo: Repository<FormAuditLogEntity>,
     private readonly ds: DataSource,
     private readonly comms: CommunicationsService,
+    private readonly riskSync: FormsRiskSyncService,
   ) { }
 
   // =========================================================
@@ -122,13 +128,14 @@ export class FormsService {
     const allUserIds = new Set<string>();
 
     if (spaceIds?.length) {
-      try {
-        const spaceUsers = await this.ds.query(
-          `SELECT "userId" FROM "user_space_entity" WHERE "companyId" = $1 AND "spaceId" = ANY($2::uuid[])`,
-          [companyId, spaceIds],
-        );
-        spaceUsers.forEach((r: any) => allUserIds.add(r.userId));
-      } catch (e) { }
+      const spaceUsers = await this.userSpaceRepo.find({
+        where: {
+          companyId,
+          spaceId: In(spaceIds),
+        },
+        select: ['userId'],
+      });
+      spaceUsers.forEach((r) => allUserIds.add(r.userId));
     }
 
     if (groupIds?.length) {
@@ -138,7 +145,9 @@ export class FormsService {
           [companyId, groupIds],
         );
         groupUsers.forEach((r: any) => allUserIds.add(r.userId));
-      } catch (e) { }
+      } catch (e) {
+        this.log.error(`[getUserIdsForAudience] Failed to get users from groups: ${e}`);
+      }
     }
 
     return Array.from(allUserIds);
@@ -299,6 +308,7 @@ export class FormsService {
     allowedSpaceIds?: string[],
     userId?: string,
     template?: string,
+    isNr1?: boolean,
   ) {
     const params: any[] = [companyId];
     let statusWhere = status ? 'AND f.status = $2' : '';
@@ -332,6 +342,12 @@ export class FormsService {
       } else {
         aclWhere += ` AND f.template = $${params.length}`;
       }
+    }
+
+    // Filter NR1
+    if (isNr1 !== undefined) {
+      params.push(isNr1);
+      aclWhere += ` AND f."isNr1" = $${params.length}`;
     }
 
     // 2. App Segmentation (userId)
@@ -377,6 +393,7 @@ export class FormsService {
         f."audienceSpaceIds",
         f."audienceGroupIds",
         f.visibility,
+        f."isNr1",
         (SELECT COUNT(*) FROM form_field ff WHERE ff."companyId"=f."companyId" AND ff."formId"=f.id AND ff."version"=f.version)::int AS "questionsCount", 
         (SELECT COUNT(*) FROM form_submission s WHERE s."companyId"=f."companyId" AND s."formId"=f.id)::int AS "submissionsCount" 
       FROM form f 
@@ -510,6 +527,10 @@ export class FormsService {
       this.log.warn(`postSubmitSideEffects error: ${String(err)}`);
     });
 
+    this.riskSync.syncSubmission(submissionId).catch((err) => {
+      this.log.warn(`[RiskSync] Error: ${String(err)}`);
+    });
+
     return { ok: true, submissionId, submittedAt, isOnTime };
   }
 
@@ -538,7 +559,9 @@ export class FormsService {
     } catch (e) { }
     try {
       await this.notifySubmission(companyId, form, sub, submissionSpaces);
-    } catch (e) { }
+    } catch (e) {
+      this.log.error(`[postSubmitSideEffects] Notification failed: ${e}`);
+    }
   }
 
   private sanitizeEmailList(raw: any): string[] {

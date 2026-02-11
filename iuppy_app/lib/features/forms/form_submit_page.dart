@@ -108,7 +108,15 @@ class _FormSubmitPageState extends ConsumerState<FormSubmitPage> {
     final type = (f['type'] ?? '').toString().toLowerCase().trim();
     final label = _readTranslatable(f['label'], locale);
     final required = (f['required'] ?? false) == true;
-    final List optionsRaw = (f['options'] as List? ?? []);
+    final rawOptions = f['options'];
+    List optionsRaw = [];
+    if (rawOptions is List) {
+      optionsRaw = rawOptions;
+    } else if (rawOptions is Map) {
+      // Handle translatable options list: { "pt-BR": [...], "en": [...] }
+      optionsRaw = (rawOptions[locale] ?? rawOptions['pt-BR'] ?? []) as List;
+    }
+
     final List<String> options = optionsRaw
         .map((e) =>
             e is Map ? _readTranslatable(e['label'], locale) : e.toString())

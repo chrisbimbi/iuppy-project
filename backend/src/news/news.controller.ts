@@ -25,6 +25,8 @@ import { JwtAccessGuard } from 'src/auth/guards/jwt-access.guard';
 import { AuthenticatedRequest } from 'src/common/types/authenticated-request.interface';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-access.guard';
 
+
+
 @Controller('news')
 export class NewsController {
   constructor(
@@ -418,4 +420,5 @@ export class NewsController {
     const user = req.user;
     return await this.hashtagAnalyticsService.getHashtagEngagement(user.companyId, tag);
   }
+
 }

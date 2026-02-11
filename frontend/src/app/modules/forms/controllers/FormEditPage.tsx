@@ -9,6 +9,7 @@ import FieldEditor, { Field } from '../components/FieldEditor';
 import FormEmailSettingsModal from '../components/FormsEmailSettingsModal';
 import LanguageTabs from '../components/LanguageTabs';
 import { useIntl } from 'react-intl';
+import { useAuth } from '../../auth/core/Auth';
 
 // ... types
 
@@ -20,6 +21,13 @@ export default function FormEditPage() {
   const nav = useNavigate();
   const [sp, setSp] = useSearchParams();
   const intl = useIntl();
+  const { currentUser } = useAuth();
+  // Prioritize session companyId (Source of Truth) to avoid stale localStorage issues
+  const getEffectiveCompanyId = () => {
+    if (currentUser?.companyId) return currentUser.companyId;
+    return window.localStorage.getItem('companyId');
+  };
+  const companyId = getEffectiveCompanyId();
 
   const STEPS = [
     { key: 'basics', title: intl.formatMessage({ id: 'FORMS.EDIT.STEP.BASICS' }) },
@@ -79,7 +87,7 @@ export default function FormEditPage() {
     if (isNew) return;
     setLoading(true);
     try {
-      const data = await FormsApi.get(formId!);
+      const data = await FormsApi.get(formId!, companyId || undefined);
       setModel(data);
       setOriginalStatus(data.status);
       setAvailableLocales(data.allowTranslations ? ['pt-BR', 'en', 'es-ES'] : [data.defaultLocale || 'pt-BR']);
@@ -106,9 +114,9 @@ export default function FormEditPage() {
     try {
       let res;
       if (isNew) {
-        res = await FormsApi.create({ ...model, companyId: 'current' }); // Backend handles companyId usually or we need to pass it
+        res = await FormsApi.create({ ...model, companyId: companyId || 'current' });
       } else {
-        res = await FormsApi.update(formId!, model);
+        res = await FormsApi.update(formId!, model, companyId!);
       }
 
       if (isNew) {
@@ -142,7 +150,7 @@ export default function FormEditPage() {
     if (!confirm(intl.formatMessage({ id: 'FORMS.EDIT.CONFIRM.PUBLISH' }))) return;
     setSaving(true);
     try {
-      await FormsApi.publish(formId!);
+      await FormsApi.publish(formId!, companyId!);
       await load();
       nav('/forms');
     } catch (e: any) {
@@ -156,18 +164,18 @@ export default function FormEditPage() {
       <div className="col-12">
         <Form.Group>
           <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.TITLE' })}</Form.Label>
-          <LanguageTabs locales={availableLocales} values={model.title} onChange={(locale, value) => setModel(m => ({ ...m, title: { ...m.title, [locale]: value } }))} />
+          <LanguageTabs locales={availableLocales} values={model.title} onChange={(locale, value) => setModel((m: any) => ({ ...m, title: { ...m.title, [locale]: value } }))} />
         </Form.Group>
       </div>
       <div className="col-12">
         <Form.Group>
           <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DESCRIPTION' })}</Form.Label>
-          <LanguageTabs locales={availableLocales} values={model.description || {}} onChange={(locale, value) => setModel(m => ({ ...m, description: { ...(m.description || {}), [locale]: value } }))} as="textarea" />
+          <LanguageTabs locales={availableLocales} values={model.description || {}} onChange={(locale, value) => setModel((m: any) => ({ ...m, description: { ...(m.description || {}), [locale]: value } }))} as="textarea" />
         </Form.Group>
       </div>
       <div className="col-md-4">
         <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.STATUS' })}</label>
-        <select className="form-select" value={model.status} onChange={(e) => setModel(m => ({ ...m, status: e.target.value as any }))}>
+        <select className="form-select" value={model.status} onChange={(e) => setModel((m: any) => ({ ...m, status: e.target.value as any }))}>
           <option value="draft">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.DRAFT' })}</option>
           <option value="published">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.PUBLISHED' })}</option>
           <option value="archived">{intl.formatMessage({ id: 'FORMS.EDIT.STATUS.ARCHIVED' })}</option>
@@ -178,7 +186,7 @@ export default function FormEditPage() {
       </div>
       <div className="col-md-4">
         <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.VISIBILITY', defaultMessage: 'Visibilidade' })}</label>
-        <select className="form-select" value={model.visibility ?? 'public'} onChange={(e) => setModel(m => ({ ...m, visibility: e.target.value }))}>
+        <select className="form-select" value={model.visibility ?? 'public'} onChange={(e) => setModel((m: any) => ({ ...m, visibility: e.target.value }))}>
           <option value="public">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.PUBLIC', defaultMessage: 'Público' })}</option>
           <option value="private">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.PRIVATE', defaultMessage: 'Privado' })}</option>
           <option value="specific_groups">{intl.formatMessage({ id: 'FORMS.EDIT.OPTION.GROUPS', defaultMessage: 'Grupos Específicos' })}</option>
@@ -187,7 +195,7 @@ export default function FormEditPage() {
       </div>
       <div className="col-md-4 d-flex align-items-end">
         <div className="form-check">
-          <input id="anonymous" className="form-check-input" type="checkbox" checked={!!model.anonymous} onChange={(e) => setModel(m => ({ ...m, anonymous: e.target.checked }))} />
+          <input id="anonymous" className="form-check-input" type="checkbox" checked={!!model.anonymous} onChange={(e) => setModel((m: any) => ({ ...m, anonymous: e.target.checked }))} />
           <label className="form-check-label" htmlFor="anonymous">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ANONYMOUS' })}</label>
         </div>
       </div>
@@ -195,7 +203,7 @@ export default function FormEditPage() {
         <div className="form-check">
           <input id="allowTranslations" className="form-check-input" type="checkbox" checked={!!model.allowTranslations} onChange={(e) => {
             const on = e.target.checked;
-            setModel(m => ({ ...m, allowTranslations: on }));
+            setModel((m: any) => ({ ...m, allowTranslations: on }));
             if (on) setAvailableLocales(['pt-BR', 'en', 'es-ES']);
             else setAvailableLocales([model.defaultLocale ?? 'pt-BR']);
           }} />
@@ -204,7 +212,7 @@ export default function FormEditPage() {
       </div>
       <div className="col-md-4">
         <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEFAULT_LOCALE' })}</label>
-        <select className="form-select" value={model.defaultLocale ?? 'pt-BR'} onChange={(e) => setModel(m => ({ ...m, defaultLocale: e.target.value }))}>
+        <select className="form-select" value={model.defaultLocale ?? 'pt-BR'} onChange={(e) => setModel((m: any) => ({ ...m, defaultLocale: e.target.value }))}>
           {availableLocales.map(loc => <option key={loc} value={loc}>{loc}</option>)}
         </select>
       </div>
@@ -212,41 +220,41 @@ export default function FormEditPage() {
   );
 
   const renderAudience = () => (
-    <AudiencePicker value={{ spaceIds: model.audienceSpaceIds ?? [], groupIds: model.audienceGroupIds ?? [] }} onChange={(val) => setModel(m => ({ ...m, audienceSpaceIds: val.spaceIds, audienceGroupIds: val.groupIds }))} />
+    <AudiencePicker value={{ spaceIds: model.audienceSpaceIds ?? [], groupIds: model.audienceGroupIds ?? [] }} onChange={(val) => setModel((m: any) => ({ ...m, audienceSpaceIds: val.spaceIds, audienceGroupIds: val.groupIds }))} />
   );
 
   const renderSettings = () => (
     <div className="row g-4">
       <div className="col-12">
         <div className="form-check form-switch">
-          <input id="schedStart" className="form-check-input" type="checkbox" checked={schedStartOn} onChange={(e) => { setSchedStartOn(e.target.checked); setModel(m => ({ ...m, scheduleStartAt: e.target.checked ? m.scheduleStartAt ?? new Date().toISOString() : null })) }} />
+          <input id="schedStart" className="form-check-input" type="checkbox" checked={schedStartOn} onChange={(e) => { setSchedStartOn(e.target.checked); setModel((m: any) => ({ ...m, scheduleStartAt: e.target.checked ? m.scheduleStartAt ?? new Date().toISOString() : null })) }} />
           <label className="form-check-label" htmlFor="schedStart">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.SCHEDULE_START' })}</label>
         </div>
       </div>
-      {schedStartOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.START_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleStartAt)} onChange={(e) => setModel(m => ({ ...m, scheduleStartAt: fromLocalInputValue(e.target.value) }))} /></div>}
+      {schedStartOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.START_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleStartAt)} onChange={(e) => setModel((m: any) => ({ ...m, scheduleStartAt: fromLocalInputValue(e.target.value) }))} /></div>}
 
       <div className="col-12">
         <div className="form-check form-switch">
-          <input id="schedEnd" className="form-check-input" type="checkbox" checked={schedEndOn} onChange={(e) => { setSchedEndOn(e.target.checked); setModel(m => ({ ...m, scheduleEndAt: e.target.checked ? m.scheduleEndAt ?? new Date(Date.now() + 86400000).toISOString() : null })) }} />
+          <input id="schedEnd" className="form-check-input" type="checkbox" checked={schedEndOn} onChange={(e) => { setSchedEndOn(e.target.checked); setModel((m: any) => ({ ...m, scheduleEndAt: e.target.checked ? m.scheduleEndAt ?? new Date(Date.now() + 86400000).toISOString() : null })) }} />
           <label className="form-check-label" htmlFor="schedEnd">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.SCHEDULE_END' })}</label>
         </div>
       </div>
-      {schedEndOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.END_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleEndAt)} onChange={(e) => setModel(m => ({ ...m, scheduleEndAt: fromLocalInputValue(e.target.value) }))} /></div>}
+      {schedEndOn && <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.END_DATE' })}</label><input type="datetime-local" className="form-control" value={toLocalInputValue(model.scheduleEndAt)} onChange={(e) => setModel((m: any) => ({ ...m, scheduleEndAt: fromLocalInputValue(e.target.value) }))} /></div>}
 
       <div className="col-12">
         <div className="form-check form-switch">
-          <input id="deadlineOn" className="form-check-input" type="checkbox" checked={deadlineOn} onChange={(e) => { const on = e.target.checked; setDeadlineOn(on); setModel(m => ({ ...m, deadlineAt: on ? m.deadlineAt ?? new Date().toISOString() : null })); }} />
+          <input id="deadlineOn" className="form-check-input" type="checkbox" checked={deadlineOn} onChange={(e) => { const on = e.target.checked; setDeadlineOn(on); setModel((m: any) => ({ ...m, deadlineAt: on ? m.deadlineAt ?? new Date().toISOString() : null })); }} />
           <label className="form-check-label" htmlFor="deadlineOn">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEADLINE_TOGGLE' })}</label>
         </div>
       </div>
       {deadlineOn && (
         <>
-          <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEADLINE_DATE' })}</label><div className="d-flex gap-2"><input type="datetime-local" className="form-control" value={toLocalInputValue(model.deadlineAt)} onChange={(e) => setModel(m => ({ ...m, deadlineAt: fromLocalInputValue(e.target.value) }))} /><button type="button" className="btn btn-light" onClick={setDeadline18hLocal}>18h</button></div></div>
+          <div className="col-md-6"><label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.DEADLINE_DATE' })}</label><div className="d-flex gap-2"><input type="datetime-local" className="form-control" value={toLocalInputValue(model.deadlineAt)} onChange={(e) => setModel((m: any) => ({ ...m, deadlineAt: fromLocalInputValue(e.target.value) }))} /><button type="button" className="btn btn-light" onClick={setDeadline18hLocal}>18h</button></div></div>
           <div className="col-md-6">
             <label className="form-label">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REMINDERS' })}</label>
             <div className="d-flex flex-wrap gap-3">
               {[{ k: '-P1D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.1_DAY' }) }, { k: '-P2D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.2_DAYS' }) }, { k: '-P7D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.1_WEEK' }) }, { k: '-P15D', label: intl.formatMessage({ id: 'FORMS.EDIT.REMINDER.15_DAYS' }) }].map((opt) => (
-                <div key={opt.k} className="form-check"><input id={`rem-${opt.k}`} className="form-check-input" type="checkbox" checked={(model.remindersConfig?.offsets ?? []).includes(opt.k)} onChange={(e) => { const offsets = new Set(model.remindersConfig?.offsets ?? []); if (e.target.checked) offsets.add(opt.k); else offsets.delete(opt.k); setModel(m => ({ ...m, remindersConfig: { ...(m.remindersConfig ?? {}), offsets: Array.from(offsets) } })); }} /><label className="form-check-label" htmlFor={`rem-${opt.k}`}>{opt.label}</label></div>
+                <div key={opt.k} className="form-check"><input id={`rem-${opt.k}`} className="form-check-input" type="checkbox" checked={(model.remindersConfig?.offsets ?? []).includes(opt.k)} onChange={(e) => { const offsets = new Set(model.remindersConfig?.offsets ?? []); if (e.target.checked) offsets.add(opt.k); else offsets.delete(opt.k); setModel((m: any) => ({ ...m, remindersConfig: { ...(m.remindersConfig ?? {}), offsets: Array.from(offsets) } })); }} /><label className="form-check-label" htmlFor={`rem-${opt.k}`}>{opt.label}</label></div>
               ))}
             </div>
           </div>
@@ -255,21 +263,21 @@ export default function FormEditPage() {
 
       <div className="col-md-4">
         <div className="form-check mt-2">
-          <input id="allowMult" className="form-check-input" type="checkbox" checked={!!model.allowMultipleSubmissions} onChange={(e) => setModel(m => ({ ...m, allowMultipleSubmissions: e.target.checked }))} />
+          <input id="allowMult" className="form-check-input" type="checkbox" checked={!!model.allowMultipleSubmissions} onChange={(e) => setModel((m: any) => ({ ...m, allowMultipleSubmissions: e.target.checked }))} />
           <label className="form-check-label" htmlFor="allowMult">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.MULTIPLE_SUBMISSIONS' })}</label>
         </div>
       </div>
 
       <div className="col-md-4">
         <div className="form-check mt-2">
-          <input id="allowExt" className="form-check-input" type="checkbox" checked={!!model.allowExternal} onChange={(e) => setModel(m => ({ ...m, allowExternal: e.target.checked }))} />
+          <input id="allowExt" className="form-check-input" type="checkbox" checked={!!model.allowExternal} onChange={(e) => setModel((m: any) => ({ ...m, allowExternal: e.target.checked }))} />
           <label className="form-check-label" htmlFor="allowExt">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_EXTERNAL' })}</label>
         </div>
       </div>
 
       <div className="col-md-4">
         <div className="form-check form-switch mt-2 d-flex align-items-center gap-2">
-          <input id="pushOn" className="form-check-input" type="checkbox" checked={pushOn} onChange={(e) => { const on = e.target.checked; setPushOn(on); if (on) setShowPushModal(true); else setModel(m => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: false } })); }} />
+          <input id="pushOn" className="form-check-input" type="checkbox" checked={pushOn} onChange={(e) => { const on = e.target.checked; setPushOn(on); if (on) setShowPushModal(true); else setModel((m: any) => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: false } })); }} />
           <label className="form-check-label" htmlFor="pushOn">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.PUSH_ON_PUBLISH' })}</label>
           {pushOn && <button type="button" className="btn btn-link btn-sm" onClick={() => setShowPushModal(true)}>{intl.formatMessage({ id: 'FORMS.EDIT.ACTION.EDIT' })}</button>}
         </div>
@@ -277,23 +285,35 @@ export default function FormEditPage() {
 
       <div className="col-md-6">
         <div className="form-check mt-3">
-          <input id="attachments" className="form-check-input" type="checkbox" checked={!!model.attachmentsAllowed} onChange={(e) => setModel(m => ({ ...m, attachmentsAllowed: e.target.checked }))} />
+          <input id="attachments" className="form-check-input" type="checkbox" checked={!!model.attachmentsAllowed} onChange={(e) => setModel((m: any) => ({ ...m, attachmentsAllowed: e.target.checked }))} />
           <label className="form-check-label" htmlFor="attachments">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ALLOW_ATTACHMENTS' })}</label>
         </div>
       </div>
       <div className="col-md-6">
         <Form.Group>
           <Form.Label>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.ATTACHMENT_HELP' })}</Form.Label>
-          <LanguageTabs locales={availableLocales} values={model.attachmentHelpText || {}} onChange={(locale, value) => setModel(m => ({ ...m, attachmentHelpText: { ...(m.attachmentHelpText || {}), [locale]: value } }))} />
+          <LanguageTabs locales={availableLocales} values={model.attachmentHelpText || {}} onChange={(locale, value) => setModel((m: any) => ({ ...m, attachmentHelpText: { ...(m.attachmentHelpText || {}), [locale]: value } }))} />
         </Form.Group>
       </div>
 
       <div className="col-12">
         <div className="form-check mt-2">
-          <input id="requiresApproval" className="form-check-input" type="checkbox" checked={!!model.requiresApproval} onChange={(e) => setModel(m => ({ ...m, requiresApproval: e.target.checked }))} />
+          <input id="requiresApproval" className="form-check-input" type="checkbox" checked={!!model.requiresApproval} onChange={(e) => setModel((m: any) => ({ ...m, requiresApproval: e.target.checked }))} />
           <label className="form-check-label" htmlFor="requiresApproval">{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REQUIRES_APPROVAL' })}</label>
         </div>
       </div>
+
+      <div className="col-12">
+        <div className="form-check mt-2">
+          <input id="isNr1" className="form-check-input" type="checkbox" checked={!!model.isNr1} onChange={(e) => setModel((m: any) => ({ ...m, isNr1: e.target.checked }))} />
+          <label className="form-check-label" htmlFor="isNr1">
+            Conteúdo NR-1
+            <span className="form-text text-muted d-block mt-1 fs-8">Marcar este formulário como parte do NR-1 Digital (Hub)</span>
+          </label>
+        </div>
+      </div>
+
+
 
       <div className="col-12">
         {!isNew && <button type="button" className="btn btn-light" onClick={() => setShowEmailModal(true)}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.CONFIGURE_EMAILS' })}</button>}
@@ -302,7 +322,7 @@ export default function FormEditPage() {
   );
 
   const renderFields = () => (
-    <FieldEditor fields={model.fields ?? []} onChange={(fields) => setModel(m => ({ ...m, fields }))} locales={availableLocales} />
+    <FieldEditor fields={model.fields ?? []} onChange={(fields) => setModel((m: any) => ({ ...m, fields }))} locales={availableLocales} />
   );
 
   const renderReview = () => {
@@ -336,6 +356,7 @@ export default function FormEditPage() {
           <ul className="list-unstyled mb-0">
             <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.PUSH_ON_PUBLISH' })}:</strong> {notif.push ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
             <li><strong>{intl.formatMessage({ id: 'FORMS.EDIT.LABEL.REQUIRES_APPROVAL' })}:</strong> {model.requiresApproval ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
+            <li><strong>Conteúdo NR-1:</strong> {model.isNr1 ? intl.formatMessage({ id: 'FORMS.EDIT.YES' }) : intl.formatMessage({ id: 'FORMS.EDIT.NO' })}</li>
           </ul>
         </div>
       </div>
@@ -406,7 +427,7 @@ export default function FormEditPage() {
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowPushModal(false)}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.CANCEL' })}</Button>
           <Button variant="primary" onClick={() => {
-            setModel(m => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: true, pushPayload: { title: pushTitleDraft, body: pushBodyDraft } } }));
+            setModel((m: any) => ({ ...m, notificationsConfig: { ...m.notificationsConfig, push: true, pushPayload: { title: pushTitleDraft, body: pushBodyDraft } } }));
             setShowPushModal(false);
           }}>{intl.formatMessage({ id: 'FORMS.EDIT.BUTTON.SAVE' })}</Button>
         </Modal.Footer>

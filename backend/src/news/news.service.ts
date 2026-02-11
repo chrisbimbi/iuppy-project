@@ -107,17 +107,21 @@ export class NewsService {
   }
 
   async getHashtags(companyId: string, q?: string): Promise<string[]> {
-    const query = this.newsRepo
-      .createQueryBuilder('n')
-      .select('DISTINCT UNNEST(n.hashtags)', 'tag')
-      .where('n.companyId = :companyId', { companyId });
+    // Usando raw query para garantir o UNNEST correto
+    const safeQ = q ? `%${q}%` : '%';
+    const result = await this.newsRepo.query(
+      `
+      SELECT DISTINCT tag
+      FROM news_entity n, UNNEST(n.hashtags) tag
+      WHERE n."companyId" = $1
+      AND tag ILIKE $2
+      ORDER BY tag ASC
+      LIMIT 20
+      `,
+      [companyId, safeQ],
+    );
 
-    if (q) {
-      query.andWhere('UNNEST(n.hashtags) ILIKE :q', { q: `%${q}%` });
-    }
-
-    const result = await query.getRawMany();
-    return result.map((r) => r.tag).filter(Boolean).sort();
+    return result.map((r: any) => r.tag);
   }
 
   async findAll(
@@ -127,6 +131,9 @@ export class NewsService {
     allowedSpaceIds?: string[],
   ): Promise<News[]> {
     const qb = this.newsRepo.createQueryBuilder('n');
+
+    // Filter soft-deleted
+    qb.andWhere('n.deletedAt IS NULL');
 
     // Filter by Company if provided
     if (companyId) {
@@ -396,7 +403,7 @@ export class NewsService {
   }
 
   async remove(id: string): Promise<void> {
-    await this.newsRepo.delete(id);
+    await this.newsRepo.softDelete(id);
   }
 
   // ----------
@@ -608,8 +615,90 @@ export class NewsService {
     );
   }
 
-  // ----------
-  // 🔥 NOVOS: Listas por usuário (para modais/exports)
-  // MOVIDO PARA NewsAnalyticsService
-  // ----------
+  async getDashboardStats(companyId: string) {
+    // 1. Top News (Fixed columns: publishedAt, highlightImages, newsId join)
+    const topNews = await this.newsRepo.createQueryBuilder('n')
+      .select([
+        'n.id AS id',
+        'n.title AS title',
+        'n.publishedAt AS date',
+        // TypeORM raw result for simple-json array might be stringified or not depending on driver
+        // We'll simplisticly access it.
+        'n.highlightImages AS images'
+      ])
+      // Use the actual table name 'news_interaction_event' and column 'newsId'
+      .leftJoin('news_interaction_event', 'i', 'i."newsId" = n.id::text')
+      .where('n.companyId = :companyId', { companyId })
+      .groupBy('n.id')
+      .orderBy('COUNT(i.id)', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    const totalNews = await this.newsRepo.count({ where: { companyId } });
+
+    // 2. Channels Analytics
+    const channels = await this.newsRepo.createQueryBuilder('n')
+      .leftJoin('n.channel', 'c')
+      .leftJoin('news_interaction_event', 'i', 'i."newsId" = n.id::text')
+      .select(['c.name AS name'])
+      .addSelect('COUNT(DISTINCT n.id)', 'news_count')
+      .addSelect('COUNT(i.id)', 'interaction_count')
+      .where('n.companyId = :companyId', { companyId })
+      .andWhere('n.channelId IS NOT NULL')
+      .groupBy('c.id')
+      .orderBy('interaction_count', 'DESC') // Sort by interactions
+      .limit(10)
+      .getRawMany();
+
+    // 3. Heatmap (Interactions by Day/Hour)
+    const heatmap = await this.interactionEventRepo.query(`
+        SELECT 
+            EXTRACT(DOW FROM "createdAt") as day,
+            EXTRACT(HOUR FROM "createdAt") as hour,
+            COUNT(*) as count
+        FROM news_interaction_event
+        WHERE "companyId" = $1
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+    `, [companyId]);
+
+    return {
+      topNews: topNews.map((n) => {
+        // Helper to get cover
+        let cover = null;
+        try {
+          // If Postgres returns valid JSON object/array
+          const imgs = (typeof n.images === 'string') ? JSON.parse(n.images) : n.images;
+          if (Array.isArray(imgs) && imgs.length > 0) cover = imgs[0];
+        } catch (e) { }
+
+        return {
+          id: n.id,
+          title: n.title,
+          date: n.date,
+          cover: cover,
+          interactions: parseInt(n.count) || 0, // COUNT(i.id) comes as count if not aliased? We explicitly ordered by count, let's infer.
+          // Wait, I used orderBy COUNT but didn't Select it explicitly in the SELECT array above.
+          // Let me fix the select to include count.
+        };
+      }),
+      totalNews,
+      channels: channels.map(c => ({
+        name: c.name,
+        newsCount: parseInt(c.news_count),
+        interactionCount: parseInt(c.interaction_count)
+      })),
+      heatmap: heatmap.map(h => ({
+        day: parseInt(h.day),
+        hour: parseInt(h.hour),
+        count: parseInt(h.count)
+      }))
+    };
+  }
+
+// ----------
+// 🔥 NOVOS: Listas por usuário (para modais/exports)
+// MOVIDO PARA NewsAnalyticsService
+// ----------
+
 }

@@ -13,11 +13,13 @@ class JourneyService {
     return _apiClient.getJourneyDetail(id);
   }
 
-  Future<void> completeStep(String journeyId, String stepId, {Map<String, dynamic>? data}) async {
+  Future<Map<String, dynamic>> completeStep(String journeyId, String stepId,
+      {Map<String, dynamic>? data}) async {
     return _apiClient.completeJourneyStep(journeyId, stepId, data: data);
   }
 
-  Future<Map<String, dynamic>> getStepDetails(String journeyId, String stepId) async {
+  Future<Map<String, dynamic>> getStepDetails(
+      String journeyId, String stepId) async {
     // Assuming this method exists in ApiClient or I need to add it.
     // Based on grep results, there was no getJourneyStepDetail, but let's check ApiClient again or assume a path.
     // Actually, looking at grep results earlier:

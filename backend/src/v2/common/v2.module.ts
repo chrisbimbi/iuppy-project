@@ -21,6 +21,7 @@ import { NewsMetricsDailyEntity } from 'src/v2/interactions/entities/news-metric
 import { UserMetricsDailyEntity } from 'src/v2/interactions/entities/user-metrics-daily.entity';
 import { SearchMetricsDailyEntity } from 'src/v2/interactions/entities/search-metrics-daily.entity';
 import { NewsFavoriteEntity } from 'src/v2/interactions/entities/news-favorite.entity';
+import { SearchLogEntity } from 'src/search/search-log.entity';
 
 // CONTROLLERS
 import { NewsV2Controller } from 'src/v2/news/news.controller';
@@ -93,6 +94,7 @@ import { NewsMetricsUsersServiceV2 } from '../news/news-metrics-users.service';
       // audience
       NewsAudienceEntity,
       NewsFavoriteEntity,
+      SearchLogEntity
     ]),
     NotificationsModule,
     forwardRef(() => NewsModule),
@@ -147,6 +149,7 @@ import { NewsMetricsUsersServiceV2 } from '../news/news-metrics-users.service';
     CommentCounterAdapterV2,
     MetricsDailyServiceV2,
     UserAnalyticsService,
+    AnalyticsV2Service,
   ],
 })
 export class V2Module { }

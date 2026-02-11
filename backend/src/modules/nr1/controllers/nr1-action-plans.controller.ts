@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import { Nr1ActionPlansService } from '../services/nr1-action-plans.service';
 import { Nr1ActionPlan } from '../entities/nr1-action-plan.entity';
 
-@Controller('nr1/actions')
+@Controller('nr1/action-plans')
 export class Nr1ActionPlansController {
     constructor(private readonly actionsService: Nr1ActionPlansService) { }
 

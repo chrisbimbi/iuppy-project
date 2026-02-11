@@ -15,6 +15,15 @@ services:
     ports:
       - "5433:5432"
 
+  redis:
+    image: redis:alpine
+    container_name: iuppy_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - iuppy_redis_data:/data
+
   api:
     build:
       context: ./backend
@@ -24,12 +33,18 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env.development
+    environment:
+      # Overrides for Docker internal networking
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
     depends_on:
       - postgres
-    command: >
-      sh -c "npm run migration:run && npm run start:dev"
+      - redis
+    command: npm run start:dev
     ports:
-      - "4000:3000"
+      - "4000:4000"
     volumes:
       - ./backend:/usr/src/app
       - ./shared:/usr/src/shared
@@ -40,3 +55,4 @@ services:
 volumes:
   iuppy_postgres_data:
   api_node_modules:
+  iuppy_redis_data:

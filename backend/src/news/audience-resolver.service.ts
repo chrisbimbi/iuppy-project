@@ -5,6 +5,7 @@ import { AudienceMode } from '@shared/types/NewsSettings';
 import { UserDeviceEntity } from '../notifications/entities/user-device.entity';
 import { CompanyEntity } from '../companies/company.entity';
 import { SpaceEntity } from '../spaces/space.entity';
+import { UserSpaceEntity } from '../spaces/user-space.entity';
 import { Channel } from '../channels/channel.entity';
 import { GroupEntity } from '../groups/group.entity';
 import { UserEntity } from '../users/user.entity';
@@ -22,6 +23,8 @@ export class AudienceResolverService {
     private readonly companyRepo: Repository<CompanyEntity>,
     @InjectRepository(SpaceEntity)
     private readonly spaceRepo: Repository<SpaceEntity>,
+    @InjectRepository(UserSpaceEntity)
+    private readonly userSpaceRepo: Repository<UserSpaceEntity>,
     @InjectRepository(Channel)
     private readonly channelRepo: Repository<Channel>,
     @InjectRepository(GroupEntity)
@@ -31,7 +34,7 @@ export class AudienceResolverService {
     @InjectRepository(NewsEntity)
     private readonly newsRepo: Repository<NewsEntity>,
     private readonly logicalService: LogicalAudienceService,
-  ) {}
+  ) { }
 
   // ---------- helpers ----------
   private toIdArray(v: any): string[] {
@@ -112,6 +115,14 @@ export class AudienceResolverService {
         if (!space) return [];
 
         const targetGroupIds = this.getSpaceTargetGroups(space);
+
+        // 1. Direct Members
+        const members = await this.userSpaceRepo.find({
+          where: { spaceId: String(spaceId) },
+        });
+        members.forEach((m) => userIds.push(m.userId));
+
+        // 2. Group Members
         if (targetGroupIds.length > 0) {
           const groups = await this.groupRepo.find({
             where: { id: In(targetGroupIds), companyId },
@@ -122,7 +133,8 @@ export class AudienceResolverService {
           );
         }
 
-        if (userIds.length === 0) {
+        // 3. Fallback to All Users (Only if NO groups AND NO direct members are configured)
+        if (userIds.length === 0 && targetGroupIds.length === 0 && members.length === 0) {
           const users = await this.userRepo.find({
             where: { companyId, isActive: true },
             select: ['id'],
@@ -192,8 +204,8 @@ export class AudienceResolverService {
         // ... (keep existing)
         const groupIds = this.toIdArray(
           params?.groupIds ??
-            params?.audienceGroupIds ??
-            params?.targetAudience,
+          params?.audienceGroupIds ??
+          params?.targetAudience,
         );
         if (groupIds.length === 0)
           throw new BadRequestException('groupIds é obrigatório para GROUPS');

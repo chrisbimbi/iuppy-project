@@ -70,6 +70,11 @@ export class CreateNewDto {
   @IsBoolean()
   mustAcknowledge?: boolean;
 
+  // 🔥 NR-1 Flag
+  @IsOptional()
+  @IsBoolean()
+  isNr1?: boolean;
+
   // --- AI Fields ---
   @IsOptional()
   @IsString()

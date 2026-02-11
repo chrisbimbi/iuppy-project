@@ -6,6 +6,8 @@ import { Card, Spinner, Alert, Button, Table } from 'react-bootstrap';
 import { useIntl } from 'react-intl';
 import { SubmissionDetailModal } from '../components/SubmissionDetailModal';
 
+import { useAuth } from '../../auth/core/Auth';
+
 type FormInfo = {
   id: string;
   title: TranslatableString | string;
@@ -48,6 +50,9 @@ const getTranslation = (
 export default function FormSubmissionsPage() {
   const intl = useIntl();
   const { formId } = useParams<{ formId: string }>();
+  const { currentUser } = useAuth();
+  const companyId = currentUser?.companyId || window.localStorage.getItem('companyId') || undefined;
+
   const [form, setForm] = useState<FormInfo | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,9 +67,10 @@ export default function FormSubmissionsPage() {
     setErr(null);
 
     Promise.all([
-      FormsApi.get(formId),
+      FormsApi.get(formId, companyId),
       FormsApi.analyticsSubmissions(formId, {
         pageSize: '100',
+        companyId,
       }),
     ])
       .then(([formDetail, subResponse]) => {

@@ -17,6 +17,9 @@ export class SearchLogEntity {
     @Column({ type: 'int', default: 0 })
     resultCount: number;
 
+    @Column({ nullable: true })
+    userGroupId: string;
+
     @CreateDateColumn()
     createdAt: Date;
 }

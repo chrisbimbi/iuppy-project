@@ -55,6 +55,9 @@ export class CreateJourneyStepDto {
   pollConfig?: any;
 
   @IsOptional()
+  quizConfig?: any;
+
+  @IsOptional()
   contentPayload?: any;
 
   @IsOptional()
@@ -116,6 +119,10 @@ export class CreateJourneyDto {
   @ValidateNested({ each: true })
   @Type(() => CreateJourneyStepDto)
   steps?: CreateJourneyStepDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  isNr1?: boolean;
 }
 
 import { PartialType } from '@nestjs/mapped-types';

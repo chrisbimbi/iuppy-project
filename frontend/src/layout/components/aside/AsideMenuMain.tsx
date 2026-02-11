@@ -30,43 +30,43 @@ export function AsideMenuMain() {
   const { loading: aclLoading, canView } = useAccess()
 
   const showContents = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('news') && canView('news'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('news') && (isOrgAdmin || canView('news'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showChannels = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('channels') && canView('channels'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('channels') && (isOrgAdmin || canView('channels'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showSurveys = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('surveys') && canView('surveys'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('surveys') && (isOrgAdmin || canView('surveys'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showGroups = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('groups') && canView('groups'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('groups') && (isOrgAdmin || canView('groups'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   // 🔥 FORMS
   const showForms = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('forms') && canView('forms'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('forms') && (isOrgAdmin || canView('forms'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showJourneys = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('journeys') && canView('journeys'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('journeys') && (isOrgAdmin || canView('journeys'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showSocial = useMemo(() => {
-    if (modsLoading || aclLoading) return true
-    return isOrgAdmin || (isEnabled('social') && canView('social'))
+    if (modsLoading || aclLoading) return false
+    return isEnabled('social') && (isOrgAdmin || canView('social'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   const showVacations = useMemo(() => {
-    if (modsLoading || aclLoading) return false // Default false if loading
+    if (modsLoading || aclLoading) return false
     return isEnabled('vacations') && (isOrgAdmin || canView('vacations'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
@@ -78,6 +78,11 @@ export function AsideMenuMain() {
   const showGamification = useMemo(() => {
     if (modsLoading || aclLoading) return false
     return isEnabled('gamification') && (isOrgAdmin || canView('gamification'))
+  }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
+
+  const showNr1 = useMemo(() => {
+    if (modsLoading || aclLoading) return false
+    return isEnabled('nr1') && (isOrgAdmin || canView('nr1'))
   }, [modsLoading, aclLoading, isOrgAdmin, isEnabled, canView])
 
   return (
@@ -126,6 +131,18 @@ export function AsideMenuMain() {
         {showGamification && (
           <AsideMenuItem to="/gamification" hasBullet fontIcon="bi-controller" title={t('MENU.GAMIFICATION', 'Gamificação')} />
         )}
+        {showNr1 && (
+          <AsideMenuItemWithSub to="/modules/nr1" title="NR-1 Digital" fontIcon="bi-shield-check" hasBullet>
+            <AsideMenuItem to="/modules/nr1/analytics" hasBullet title="Indicadores" />
+            <AsideMenuItem to="/modules/nr1/participation" hasBullet title="Participação" />
+            <AsideMenuItem to="/modules/nr1/risks" hasBullet title="Riscos (PGR)" />
+            <AsideMenuItem to="/modules/nr1/actions" hasBullet title="Planos de Ação" />
+            <AsideMenuItem to="/modules/nr1/emergency" hasBullet title="Emergência (PAE)" />
+            <AsideMenuItem to="/modules/nr1/trainings" hasBullet title="Treinamentos" />
+            <AsideMenuItem to="/modules/nr1/esocial/config" hasBullet title="Configuração eSocial" />
+            <AsideMenuItem to="/modules/nr1/esocial" hasBullet title="eSocial (S-2240)" />
+          </AsideMenuItemWithSub>
+        )}
       </AsideMenuItemWithSub>
 
       {/* GAMIFICATION - Standalone */}
@@ -134,6 +151,13 @@ export function AsideMenuMain() {
       {showChannels && (
         <AsideMenuItem to="/channels" fontIcon="bi-chat-left-text" title={t('MENU.CHANNELS', 'Canais')} />
       )}
+
+      {/* SPACES */}
+      {(isOrgAdmin) && (
+        <AsideMenuItem to="/spaces" fontIcon="bi-grid-3x3-gap" title="Spaces" />
+      )}
+
+
 
       {/* Usuários & Grupos */}
       <AsideMenuItemWithSub to="#" title={t('MENU.USERS_GROUPS', 'Usuários e Grupos')} fontIcon="bi-people">

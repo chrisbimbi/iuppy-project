@@ -21,4 +21,20 @@ export class IntegrationsController {
     async triggerSync(@Body() body: { connectionId: string, type?: 'full' | 'delta' }) {
         return this.integrationsService.triggerSync(body.connectionId, body.type);
     }
+
+    @Post(':connectionId/discover-schema')
+    async discoverSchema(@Request() req) {
+        // In real app, validate user owns connectionId
+        return this.integrationsService.discoverSchema(req.params.connectionId);
+    }
+
+    @Get(':connectionId/config')
+    async getConfig(@Request() req) {
+        return this.integrationsService.getConfig(req.params.connectionId);
+    }
+
+    @Post(':connectionId/config')
+    async saveConfig(@Request() req, @Body() body: { mapping: any, uniqueIdentifier: string }) {
+        return this.integrationsService.saveConfig(req.params.connectionId, body.mapping, body.uniqueIdentifier);
+    }
 }

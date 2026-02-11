@@ -34,6 +34,7 @@ export interface CreateFormDto {
   allowTranslations?: boolean;
   defaultLocale?: string | null;
   visibility?: 'public' | 'private' | 'specific_groups' | 'journey_only';
+  isNr1?: boolean;
 
   fields: CreateFormFieldDto[];
 }

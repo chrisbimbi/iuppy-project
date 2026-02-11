@@ -11,6 +11,7 @@ export interface UpdateNewsDto {
   hashtags?: string[];
   isPublished?: boolean;
   mustAcknowledge?: boolean;
+  isNr1?: boolean;
   attachments: { url: string; name: string }[]; // Exemplo de estrutura para arquivos
   highlightImages: {
     name: any; url: string; altText?: string

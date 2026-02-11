@@ -16,6 +16,7 @@ import 'package:chewie/chewie.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:iuppy_app/features/news/widgets/web_sheet.dart';
 import 'package:photo_view/photo_view.dart';
+import 'quiz_step_widget.dart';
 
 // Hybrid Video Type Enum
 enum VideoSourceType { native, youtube, external }
@@ -364,9 +365,11 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
     final isReadOnly = extra?['isReadOnly'] == true || isCompleted;
 
-    // Check if it's an embedded form/poll
+    // Check if it's an embedded form/poll/quiz
     final isEmbeddedForm = contentType == 'FORM' && formConfig != null;
     final isEmbeddedPoll = contentType == 'POLL' && pollConfig != null;
+    final quizConfig = _stepData!['quizConfig'];
+    final isQuiz = contentType == 'QUIZ' && quizConfig != null;
 
     return Scaffold(
       backgroundColor: background,
@@ -694,6 +697,15 @@ class _StepDetailPageState extends ConsumerState<StepDetailPage> {
                           onSubmit: (answers) {
                             _completeStepWithData(answers);
                           },
+                        ),
+
+                      // Embedded Quiz
+                      if (isQuiz)
+                        QuizStepWidget(
+                          quizConfig: quizConfig,
+                          journeyId: widget.journeyId,
+                          stepId: widget.stepId,
+                          isReadOnly: isReadOnly,
                         ),
 
                       if (requireAck &&

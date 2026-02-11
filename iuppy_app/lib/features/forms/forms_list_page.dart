@@ -31,6 +31,7 @@ class FormsListPage extends HookConsumerWidget {
   final String? openFormId;
   final String? openSubmissionId;
   final String? openAction; // 'chat' ou 'details'
+  final bool isNr1; // 🔥 Nova prop para filtro
 
   const FormsListPage({
     super.key,
@@ -38,11 +39,12 @@ class FormsListPage extends HookConsumerWidget {
     this.openFormId,
     this.openSubmissionId,
     this.openAction,
+    this.isNr1 = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncForms = ref.watch(formsListProvider);
+    final asyncForms = ref.watch(formsListProvider((isNr1: isNr1)));
 
     // Badges
     final newFormsAsync = ref.watch(newFormsCountProvider);

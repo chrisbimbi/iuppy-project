@@ -4,13 +4,14 @@ import { Tabs, Tab } from 'react-bootstrap';
 import { PageTitle } from 'src/layout/core';
 import Nr1FormsList from '../components/Nr1FormsList';
 import ParticipationInbox from '../components/ParticipationInbox';
+import { Content } from 'src/layout/components/Content';
 
 export default function Nr1ParticipationHub() {
     const intl = useIntl();
     const [key, setKey] = useState('forms');
 
     return (
-        <>
+        <Content>
             <PageTitle>Participação e Consultas</PageTitle>
 
             <div className="card">
@@ -24,7 +25,7 @@ export default function Nr1ParticipationHub() {
                         <Tab eventKey="forms" title="Formulários NR-1">
                             <div className="p-6">
                                 {/* Forms specific to NR-1 (Near Miss, Perception, etc) */}
-                                <Nr1FormsList template="nr1_%" />
+                                <Nr1FormsList />
                             </div>
                         </Tab>
                         <Tab eventKey="inbox" title="Caixa de Entrada (CIPA)">
@@ -42,6 +43,6 @@ export default function Nr1ParticipationHub() {
                     </Tabs>
                 </div>
             </div>
-        </>
+        </Content>
     );
 }

@@ -6,6 +6,7 @@ import { SurveysController } from './surveys.controller';
 import { SurveyEntity } from './entities/survey.entity';
 import { SurveyQuestionEntity } from './entities/survey-question.entity';
 import { SurveyResponseEntity } from './entities/survey-response.entity';
+import { UserSpaceEntity } from '../../spaces/user-space.entity';
 
 // 🔥 IMPORT DO MÓDULO DE NOTIFICAÇÕES
 // (Verifique se o nome da classe é NotificationsModule ou CommunicationsModule no seu projeto)
@@ -19,6 +20,7 @@ import { ClusteringService } from './services/clustering.service';
       SurveyEntity,
       SurveyQuestionEntity,
       SurveyResponseEntity,
+      UserSpaceEntity,
     ]),
     NotificationsModule, // <--- ADICIONADO: Agora o service tem acesso ao CommunicationsService
     AccessControlModule,

@@ -6,11 +6,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 
 import { SurveyEntity } from './entities/survey.entity';
 import { SurveyQuestionEntity } from './entities/survey-question.entity';
 import { SurveyResponseEntity } from './entities/survey-response.entity';
+import { UserSpaceEntity } from '../../spaces/user-space.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { CreateSurveyDto } from './dto/create-survey.dto';
@@ -41,6 +42,8 @@ export class SurveysService {
     private questionsRepo: Repository<SurveyQuestionEntity>,
     @InjectRepository(SurveyResponseEntity)
     private responsesRepo: Repository<SurveyResponseEntity>,
+    @InjectRepository(UserSpaceEntity)
+    private userSpaceRepo: Repository<UserSpaceEntity>,
     private readonly comms: CommunicationsService,
     private readonly eventEmitter: EventEmitter2,
   ) { }
@@ -68,13 +71,14 @@ export class SurveysService {
     const allUserIds = new Set<string>();
 
     if (spaceIds?.length) {
-      try {
-        const spaceUsers = await ds.query(
-          `SELECT "userId" FROM "user_space_entity" WHERE "companyId" = $1 AND "spaceId" = ANY($2::uuid[])`,
-          [companyId, spaceIds],
-        );
-        spaceUsers.forEach((r: any) => allUserIds.add(r.userId));
-      } catch (e) { }
+      const spaceUsers = await this.userSpaceRepo.find({
+        where: {
+          companyId,
+          spaceId: In(spaceIds),
+        },
+        select: ['userId'],
+      });
+      spaceUsers.forEach((r) => allUserIds.add(r.userId));
     }
 
     if (groupIds?.length) {
@@ -894,6 +898,63 @@ export class SurveysService {
       starsAverage,
       scaleAverage,
       questions,
+    };
+  }
+
+  // --- Dashboard Stats (NEW) ---
+  async getDashboardStats(companyId: string) {
+    const totalPolls = await this.surveysRepo.count({
+      where: {
+        companyId,
+        status: 'published'
+      }
+    });
+
+    const totalResponses = await this.responsesRepo.count({
+      where: { survey: { companyId } }
+    });
+
+    // Average Participation
+    const pollsWithParticipations = await this.surveysRepo.find({
+      where: { companyId, status: 'published' },
+      relations: ['questions']
+    });
+
+    let totalParticipationSum = 0;
+    for (const poll of pollsWithParticipations) {
+      const respCount = await this.responsesRepo.count({ where: { survey: { id: poll.id } } });
+      const audienceCount = (await this.getUserIdsForAudience(companyId, poll.spaceIds, poll.groupIds)).length;
+      if (audienceCount > 0) {
+        totalParticipationSum += (respCount / audienceCount);
+      }
+    }
+
+    const avgParticipationPercent = pollsWithParticipations.length > 0
+      ? Math.round((totalParticipationSum / pollsWithParticipations.length) * 100)
+      : 0;
+
+    const recentPolls = await this.surveysRepo.find({
+      where: { companyId, status: 'published' },
+      order: { createdAt: 'DESC' },
+      take: 5
+    });
+
+    const recentWithStats = await Promise.all(recentPolls.map(async s => {
+      const count = await this.responsesRepo.count({ where: { survey: { id: s.id } } });
+      return {
+        id: s.id,
+        title: s.title,
+        status: s.status,
+        responses: count,
+        createdAt: s.createdAt
+      };
+    }));
+
+    return {
+      totalPolls,
+      totalResponses,
+      avgParticipationPercent,
+      recentPolls: recentWithStats
     };
   }
 }

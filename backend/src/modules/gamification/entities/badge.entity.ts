@@ -43,6 +43,9 @@ export class BadgeEntity {
     @Column('int', { default: 0 })
     ruleValue: number; // e.g. 10 (reads)
 
+    @Column({ default: false })
+    isNr1: boolean;
+
     @CreateDateColumn()
     createdAt: Date;
 

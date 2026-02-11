@@ -3,9 +3,14 @@ import React, { useEffect, useState } from 'react'
 import { IntegrationsService, IntegrationProvider } from './services/integrations.service'
 import AiSavingsWidget from './components/AiSavingsWidget'
 
+import IntegrationConfigUI from './components/IntegrationConfigUI'
+import SuccessModal from './components/SuccessModal'
+
 const IntegrationsWorkspace: React.FC = () => {
     const [providers, setProviders] = useState<IntegrationProvider[]>([])
     const [loading, setLoading] = useState(false)
+    const [configConnectionId, setConfigConnectionId] = useState<string | null>(null)
+    const [showSuccessModal, setShowSuccessModal] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -24,15 +29,22 @@ const IntegrationsWorkspace: React.FC = () => {
     }
 
     const handleSync = async (providerKey: string) => {
-        // Mock connection retrieval logic for now - assuming 1 connection per provider
-        alert(`Sync triggered for ${providerKey} (Check console/network)`)
-        // In real app: loop connections or map providerKey to connectionId
         try {
             // Mock connection ID for demo purposes
-            await IntegrationsService.triggerSync('mock-connection-id', 'DELTA')
+            await IntegrationsService.triggerSync('f207d707-8c30-49b0-a820-d35767ade5af', 'FULL')
+            setShowSuccessModal(true)
         } catch (error) {
             console.error('Sync failed', error)
+            alert('Falha ao iniciar sincronização.')
         }
+    }
+
+    const handleConfigure = (providerKey: string) => {
+        // In a real scenario, we'd fetch the connection ID for this provider.
+        // For the Phase 6 demo, we'll assume a fixed connection ID for the 'Microsoft' provider
+        // or just pass a mock one to trigger the UI.
+        const mockConnectionId = 'f207d707-8c30-49b0-a820-d35767ade5af';
+        setConfigConnectionId(mockConnectionId);
     }
 
     return (
@@ -63,7 +75,12 @@ const IntegrationsWorkspace: React.FC = () => {
                                         <p className='text-muted text-center fs-7 mb-5'>{provider.description}</p>
 
                                         <div className='d-flex gap-2'>
-                                            <button className='btn btn-light btn-sm'>Configurar</button>
+                                            <button
+                                                className='btn btn-light btn-sm'
+                                                onClick={() => handleConfigure(provider.key)}
+                                            >
+                                                Configurar
+                                            </button>
                                             <button
                                                 className='btn btn-primary btn-sm'
                                                 onClick={() => handleSync(provider.key)}
@@ -78,6 +95,20 @@ const IntegrationsWorkspace: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {configConnectionId && (
+                <IntegrationConfigUI
+                    connectionId={configConnectionId}
+                    onClose={() => setConfigConnectionId(null)}
+                />
+            )}
+
+            <SuccessModal
+                show={showSuccessModal}
+                onClose={() => setShowSuccessModal(false)}
+                title="Sincronização Iniciada!"
+                message="A importação completa dos usuários foi solicitada com sucesso. Em instantes os dados aparecerão na listagem."
+            />
         </>
     )
 }

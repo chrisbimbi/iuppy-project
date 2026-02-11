@@ -41,6 +41,8 @@ import { PerformanceModule } from './modules/performance/performance.module';
 import { Nr1Module } from './modules/nr1/nr1.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { BullModule } from '@nestjs/bull';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+
 
 @Module({
   imports: [
@@ -53,11 +55,21 @@ import { BullModule } from '@nestjs/bull';
     // habilita scheduler global
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT) || 6379,
+    // TEMPORARILY DISABLED - Testing if this causes HTTP crashes
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const host = configService.get('REDIS_HOST');
+        const port = configService.get('REDIS_PORT');
+        console.log('[AppModule] REDIS CONFIG:', { host, port, envHost: process.env.REDIS_HOST });
+        return {
+          redis: {
+            host: host || 'redis', // Fallback explicitly to 'redis' if undefined
+            port: parseInt(port) || 6379,
+          },
+        };
       },
+      inject: [ConfigService],
     }),
 
     ServeStaticModule.forRoot({
@@ -118,6 +130,7 @@ import { BullModule } from '@nestjs/bull';
     PerformanceModule,
     Nr1Module,
     IntegrationsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

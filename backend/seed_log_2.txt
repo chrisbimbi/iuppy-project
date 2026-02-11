@@ -1,0 +1,71 @@
+🚀 Initializing Data Source...
+✅ Data Source Initialized.
+🏢 Seeding Content for: Iuppy Demo (Killer Content) (2af4557f-9259-4eed-818d-1d0ffe0b8982) | Admin: Admin Demo
+📰 Seeding Killer News...
+🗺️ Seeding Killer Journeys...
+📊 Seeding Killer Polls...
+📝 Seeding Killer Forms...
+❌ Error Seeding Forms: QueryFailedError: null value in column "formId" of relation "form_field" violates not-null constraint
+    at PostgresQueryRunner.query (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/typeorm/src/driver/postgres/PostgresQueryRunner.ts:328:19)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async InsertQueryBuilder.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/query-builder/InsertQueryBuilder.ts:163:33)
+    at async SubjectExecutor.executeInsertOperations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/SubjectExecutor.ts:435:42)
+    at async SubjectExecutor.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/SubjectExecutor.ts:137:9)
+    at async EntityPersistExecutor.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/EntityPersistExecutor.ts:182:21)
+    at async seedKillerContent (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/src/scripts/seed_killer_content.ts:340:21) {
+  query: 'INSERT INTO "form_field"("id", "companyId", "formId", "version", "type", "label", "required", "options", "order", "createdAt") VALUES (DEFAULT, $1, DEFAULT, DEFAULT, $2, $3, $4, $5, $6, DEFAULT) RETURNING "id", "version", "required", "order", "createdAt"',
+  parameters: [
+    '2af4557f-9259-4eed-818d-1d0ffe0b8982',
+    'date',
+    '{"pt-BR":"Data do Início do Afastamento"}',
+    true,
+    '{}',
+    1
+  ],
+  driverError: error: null value in column "formId" of relation "form_field" violates not-null constraint
+      at /Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/pg/lib/client.js:545:17
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async PostgresQueryRunner.query (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/typeorm/src/driver/postgres/PostgresQueryRunner.ts:257:25)
+      at async InsertQueryBuilder.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/query-builder/InsertQueryBuilder.ts:163:33)
+      at async SubjectExecutor.executeInsertOperations (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/SubjectExecutor.ts:435:42)
+      at async SubjectExecutor.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/SubjectExecutor.ts:137:9)
+      at async EntityPersistExecutor.execute (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/node_modules/src/persistence/EntityPersistExecutor.ts:182:21)
+      at async seedKillerContent (/Users/christianotavernari/Palmezan/iuppy/iuppy-project/backend/src/scripts/seed_killer_content.ts:340:21) {
+    length: 372,
+    severity: 'ERROR',
+    code: '23502',
+    detail: 'Failing row contains (7ad12c4d-e68c-4ee3-b5dc-0e970f70aa31, 2af4557f-9259-4eed-818d-1d0ffe0b8982, null, 1, date, {"pt-BR": "Data do Início do Afastamento"}, t, {}, 1, 2026-01-19 12:47:47.385458).',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'form_field',
+    column: 'formId',
+    dataType: undefined,
+    constraint: undefined,
+    file: 'execMain.c',
+    line: '1893',
+    routine: 'ExecConstraints'
+  },
+  length: 372,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (7ad12c4d-e68c-4ee3-b5dc-0e970f70aa31, 2af4557f-9259-4eed-818d-1d0ffe0b8982, null, 1, date, {"pt-BR": "Data do Início do Afastamento"}, t, {}, 1, 2026-01-19 12:47:47.385458).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'form_field',
+  column: 'formId',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '1893',
+  routine: 'ExecConstraints'
+}
+⚠️ Seeding NR-1 Risks...
+🎉 SEEDING COMPLETED SUCCESSFULLY! ENJOY YOUR KILLER CONTENT.

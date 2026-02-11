@@ -187,5 +187,11 @@
   "JOURNEYS.BUILDER.SAVING": "Speichern...",
   "JOURNEYS.STEP.EDIT": "Schritt bearbeiten",
   "JOURNEYS.STEP.TITLE": "Titel",
-  "JOURNEYS.STEP.TIME": "Zeit"
+  "JOURNEYS.STEP.TIME": "Zeit",
+  "COMPANY.MODULES.SOCIAL": "Soziale Wand",
+  "COMPANY.LOGO_UPLOADER.BUTTON.SELECT": "Bild auswählen",
+  "MENU.GAMIFICATION": "Gamification",
+  "COMMUNICATION.FORM.STEP1.CREATE_HASHTAG": "\"{tag}\" erstellen",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_TITLE_REQUIRED": "Push-Titel ist erforderlich",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_CONTENT_REQUIRED": "Push-Inhalt ist erforderlich"
 }

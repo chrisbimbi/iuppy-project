@@ -66,13 +66,15 @@ export class InteractionsService {
     companyId: string,
     newsId: string,
     userId: string | null | undefined,
+    meta?: any,
   ) {
     await this.assertNews(companyId, newsId);
     const table = this.events.metadata.tableName || 'news_interaction_event';
-    const params = [companyId, newsId, userId ?? null, 'ACK'];
+    // [MODIFIED] Added meta to params
+    const params = [companyId, newsId, userId ?? null, 'ACK', meta ? JSON.stringify(meta) : null];
     await this.events.query(
-      `INSERT INTO ${table} ("companyId","newsId","userId","type")
-       VALUES ($1,$2,$3,$4)
+      `INSERT INTO ${table} ("companyId","newsId","userId","type","meta")
+       VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT DO NOTHING`,
       params,
     );
@@ -136,8 +138,8 @@ export class InteractionsService {
     return this.insertOpen(companyId, newsId, userId, meta);
   }
 
-  async acknowledge(companyId: string, newsId: string, userId?: string) {
-    return this.upsertAck(companyId, newsId, userId);
+  async acknowledge(companyId: string, newsId: string, userId?: string, meta?: any) {
+    return this.upsertAck(companyId, newsId, userId, meta);
   }
 
   async react(

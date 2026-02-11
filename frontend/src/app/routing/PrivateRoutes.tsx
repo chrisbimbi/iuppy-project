@@ -14,6 +14,7 @@ import CampaignsPage from '../modules/communication/views/CampaignsPage'
 import GroupsPage from '../modules/groups/controller/GroupsPage'
 import { UsersPage } from '../modules/users/controllers/UsersPage'
 import ChannelsPage from '../modules/channels/controllers/ChannelsPage'
+import SpacesPage from '../modules/spaces/controllers/SpacesPage'
 
 import SurveysPage from '../modules/surveys/controllers/SurveysPage'
 import SurveyEditPage from '../modules/surveys/controllers/SurveyEditPage'
@@ -46,7 +47,9 @@ import EmergencyPage from '../modules/nr1/views/emergency/EmergencyPage'
 import TrainingsPage from '../modules/nr1/views/trainings/TrainingsPage'
 import AuditExportPage from '../modules/nr1/views/audit/AuditExportPage'
 import EsocialQueuePage from '../modules/nr1/views/esocial/EsocialQueuePage'
+import EsocialConfigPage from '../modules/nr1/views/esocial/EsocialConfigPage'
 import AnalyticsPage from '../modules/nr1/views/analytics/AnalyticsPage'
+import RiskTypesPage from '../modules/nr1/views/settings/RiskTypesPage'
 
 // 🔥 MODULES
 import VacationDashboard from '../modules/vacations/views/VacationDashboard'
@@ -186,6 +189,9 @@ const PrivateRoutes: FC = () => {
         {/* Canais */}
         <Route path="channels" element={<ChannelsPage />} />
 
+        {/* Spaces */}
+        <Route path="spaces" element={<SpacesPage />} />
+
         {/* 🔥 NR-1 */}
         <Route
           path="modules/nr1/participation"
@@ -249,6 +255,17 @@ const PrivateRoutes: FC = () => {
             <RequireModule moduleKey="nr1">
               <React.Suspense fallback={<TopBarProgress />}>
                 <AuditExportPage />
+              </React.Suspense>
+            </RequireModule>
+          }
+        />
+
+        <Route
+          path="modules/nr1/esocial/config"
+          element={
+            <RequireModule moduleKey="nr1">
+              <React.Suspense fallback={<TopBarProgress />}>
+                <EsocialConfigPage />
               </React.Suspense>
             </RequireModule>
           }

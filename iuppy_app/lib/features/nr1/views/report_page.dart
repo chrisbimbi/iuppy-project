@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iuppy_app/features/forms/form_submit_page.dart';
 import 'package:iuppy_app/features/forms/providers/forms_provider.dart';
 import '../providers/nr1_providers.dart';
+import 'nr1_risk_report_page.dart';
 
 // Reusing the card design from FormsListPage (simplified here or we could extract it)
 // For speed, I'll inline a similar card design but specialized for Reporting.
@@ -18,7 +19,7 @@ class Nr1ReportPage extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('REPORTAR',
+        title: const Text('REPORTAR OCORRÊNCIA',
             style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Space Mono',
@@ -39,21 +40,41 @@ class Nr1ReportPage extends HookConsumerWidget {
         ),
       ),
       body: asyncForms.when(
-        data: (forms) {
+        data: (allForms) {
+          // Filter only specific report templates
+          final forms = allForms.where((f) {
+            final t = f['template'] as String?;
+            return t == 'nr1_near_miss' ||
+                t == 'nr1_science' ||
+                t == 'nr1_risk_reporting';
+          }).toList();
+
           if (forms.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.assignment_turned_in_outlined,
-                      size: 64, color: Colors.grey.shade300),
-                  const SizedBox(height: 16),
-                  Text('Nenhum formulário de reporte disponível.',
-                      style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 16,
-                          fontFamily: 'Space Mono')),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.assignment_turned_in_outlined,
+                        size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Text('Nenhum formulário de reporte disponível.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 16,
+                            fontFamily: 'Space Mono')),
+                    const SizedBox(height: 12),
+                    Text(
+                        'Entre em contato com o RH se precisar relatar algo urgente.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 14,
+                            fontFamily: 'Space Mono')),
+                  ],
+                ),
               ),
             );
           }
@@ -75,8 +96,15 @@ class Nr1ReportPage extends HookConsumerWidget {
                   form: f,
                   onTap: () {
                     if (id == null) return;
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => FormSubmitPage(formId: id)));
+
+                    final t = f['template'] as String?;
+                    if (t == 'nr1_risk_reporting') {
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => Nr1RiskReportPage(form: f)));
+                    } else {
+                      Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => FormSubmitPage(formId: id)));
+                    }
                   },
                 );
               },
@@ -128,6 +156,9 @@ class _ReportCard extends StatelessWidget {
     } else if (template == 'nr1_science') {
       icon = Icons.shield_outlined;
       color = Colors.red.shade700;
+    } else if (template == 'nr1_risk_reporting') {
+      icon = Icons.bolt_outlined;
+      color = Colors.purple.shade700;
     }
 
     return Card(

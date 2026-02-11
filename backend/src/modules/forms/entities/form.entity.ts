@@ -105,6 +105,9 @@ export class FormEntity {
   @Column('int', { default: 1 })
   version: number;
 
+  @Column({ default: false })
+  isNr1: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

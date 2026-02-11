@@ -1,5 +1,9 @@
 {
   "TRANSLATOR.SELECT": "Elige tu idioma",
+  "ERRORS.403.TITLE": "Acceso Denegado",
+  "ERRORS.403.MESSAGE": "Este módulo no está habilitado para su empresa o no tiene permiso.",
+  "ERRORS.BUTTON.BACK": "Volver",
+  "ERRORS.BUTTON.COMPANY_SETTINGS": "Configuración de la Empresa",
   "MENU.NEW": "nuevo",
   "MENU.ACTIONS": "Comportamiento",
   "MENU.CREATE_POST": "Crear nueva publicación",
@@ -187,5 +191,11 @@
   "JOURNEYS.STEP.DELETE_CONFIRM_TEXT": "¿Está seguro? Esta acción no se puede deshacer.",
   "JOURNEYS.STEP.DELETE_CONFIRM_BTN": "Sí, eliminar",
   "JOURNEYS.STEP.DELETE": "Eliminar",
-  "JOURNEYS.STEP.CANCEL": "Cancelar"
+  "JOURNEYS.STEP.CANCEL": "Cancelar",
+  "COMPANY.MODULES.SOCIAL": "Muro Social",
+  "COMPANY.LOGO_UPLOADER.BUTTON.SELECT": "Seleccionar imagen",
+  "MENU.GAMIFICATION": "Gamificación",
+  "COMMUNICATION.FORM.STEP1.CREATE_HASHTAG": "Crear \"{tag}\"",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_TITLE_REQUIRED": "El título de la notificación es obligatorio",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_CONTENT_REQUIRED": "El contenido de la notificación es obligatorio"
 }

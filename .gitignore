@@ -78,3 +78,4 @@ backend/creds/firebase-admin.json
 # Secrets
 backend/creds/firebase-admin.json
 secrets/
+site_iuppy/public/videos/video_obrigado.mp4

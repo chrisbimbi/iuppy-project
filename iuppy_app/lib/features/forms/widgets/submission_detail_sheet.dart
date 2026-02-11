@@ -299,10 +299,13 @@ class _AnswerCard extends StatelessWidget {
     final rawType =
         (answer?['type'] ?? field['type'] ?? 'short_text').toString();
     final valueStr = answer?['value']?.toString() ?? '';
-    final options = (field['options'] as List? ?? [])
-        .map((e) =>
-            e is Map ? _readTranslatable(e['label'], locale) : e.toString())
-        .toList();
+    var optionsList = <String>[];
+    if (field['options'] is List) {
+      optionsList = (field['options'] as List)
+          .map((e) =>
+              e is Map ? _readTranslatable(e['label'], locale) : e.toString())
+          .toList();
+    }
 
     Widget valueWidget;
     switch (rawType) {
@@ -320,7 +323,7 @@ class _AnswerCard extends StatelessWidget {
         valueWidget = Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: options
+            children: optionsList
                 .map((opt) =>
                     _OptionChip(label: opt, selected: selected.contains(opt)))
                 .toList());
@@ -329,7 +332,7 @@ class _AnswerCard extends StatelessWidget {
         valueWidget = Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: options
+            children: optionsList
                 .map(
                     (opt) => _OptionChip(label: opt, selected: opt == valueStr))
                 .toList());

@@ -1,5 +1,5 @@
 
-import { Process, Processor } from '@nestjs/bull';
+import { Process, Processor, OnQueueActive, OnQueueError, OnQueueFailed } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { IntegrationRun, IntegrationRunType } from '../entities/integration_run.entity';
@@ -36,5 +36,20 @@ export class IntegrationProcessor {
             this.logger.error(`Job failed for connection ${connectionId}`, error.stack);
             throw error; // Let Bull handle retries if configured
         }
+    }
+
+    @OnQueueActive()
+    onActive(job: Job) {
+        this.logger.log(`Processing job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`);
+    }
+
+    @OnQueueError()
+    onError(error: Error) {
+        this.logger.error(`Queue Error: ${error.message}`, error.stack);
+    }
+
+    @OnQueueFailed()
+    onFailed(job: Job, error: Error) {
+        this.logger.error(`Job ${job.id} failed: ${error.message}`, error.stack);
     }
 }

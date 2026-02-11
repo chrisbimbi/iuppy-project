@@ -655,9 +655,9 @@ export class NewsV2Service {
     return { userState }
   }
 
-  async ack(companyId: string, newsId: string, userId: string): Promise<{ userState: UserState }> {
+  async ack(companyId: string, newsId: string, userId: string, meta?: any): Promise<{ userState: UserState }> {
     await this.ensureNews(companyId, newsId)
-    await this.interactions.acknowledge(companyId, newsId, userId)
+    await this.interactions.acknowledge(companyId, newsId, userId, meta)
     const userState = await this.getUserState(companyId, newsId, userId)
     return { userState }
   }

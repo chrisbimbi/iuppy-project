@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-iuppy-blue: #0047FF;
+  --color-iuppy-orange: #FFA801;
+  --color-iuppy-villain: #090648;
+  --color-iuppy-text: #171717;
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+
+  --animate-marquee: marquee 30s linear infinite;
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-33.33%);
+    }
+  }
+}
+
+/* Custom Utilities */
+@utility container-custom {
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  max-width: 80rem;
+  /* max-w-7xl */
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}

@@ -39,6 +39,7 @@ import { SurveyEntity } from '../surveys/entities/survey.entity';
     ],
     providers: [GamificationService, GamificationListener, GamificationSettingsService, GamificationAnalyticsService],
     controllers: [GamificationController],
-    exports: [GamificationService, GamificationSettingsService],
+    exports: [GamificationService, GamificationSettingsService, GamificationAnalyticsService],
+
 })
 export class GamificationModule { }

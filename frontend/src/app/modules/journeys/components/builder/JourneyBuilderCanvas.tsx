@@ -21,6 +21,7 @@ export const JourneyBuilderCanvas: FC = () => {
     const [journeyId, setJourneyId] = useState<string | null>(id || null)
     const [title, setTitle] = useState('New Journey')
     const [endDate, setEndDate] = useState<string>('')
+    const [isNr1, setIsNr1] = useState(false)
     const [journeyConfig, setJourneyConfig] = useState<any>({
         triggerType: 'ONBOARDING',
         targetAudience: null,
@@ -49,6 +50,7 @@ export const JourneyBuilderCanvas: FC = () => {
             setJourneyId(journey.id)
             setTitle(journey.title)
             setEndDate(journey.endDate ? new Date(journey.endDate).toISOString().slice(0, 16) : '')
+            setIsNr1(journey.isNr1 || false)
             setJourneyConfig({
                 triggerType: journey.triggerType,
                 targetAudience: journey.targetAudience,
@@ -99,79 +101,89 @@ export const JourneyBuilderCanvas: FC = () => {
 
         setLoading(true)
         try {
-            // Flatten days to steps with delayDays
-            const stepsToSave = days.flatMap(day =>
-                day.steps.map((step, index) => ({
-                    // Map frontend fields to backend DTO
-                    title: step.title,
-                    delayDays: day.day - 1,
-                    orderIndex: index,
-                    releaseTime: step.time, // Map 'time' to 'releaseTime'
-                    contentType: (step as any).contentType || step.type.toUpperCase(), // Prefer 'contentType' from editor, fallback to 'type'
-                    contentPayload: step.contentPayload,
+            const allSteps: any[] = []
+            let orderIndex = 0
 
-                    // New fields
-                    mediaType: (step as any).mediaType,
-                    mediaUrl: (step as any).mediaUrl,
-                    videoConfig: (step as any).videoConfig,
-                    requireAck: (step as any).requireAck,
-                    formConfig: (step as any).formConfig,
-                    pollConfig: (step as any).pollConfig,
-                    pushTitle: (step as any).pushTitle,
-                    pushMessage: (step as any).pushMessage,
+            days.forEach((day) => {
+                day.steps.forEach((step) => {
+                    // SANITIZE PAYLOAD: Only send fields expected by CreateJourneyStepDto
+                    // Remove id, createdAt, updatedAt, journeyId if they exist (unless id is needed for update)
 
-                    // Handle ID - if it's a temp ID (short), don't send it to backend to create new
-                    // If it's a real UUID (long), send it to update
-                    id: step.id.length < 10 ? undefined : step.id
-                }))
-            )
+                    const stepPayload: any = {
+                        title: step.title,
+                        delayDays: day.day - 1,
+                        releaseTime: step.time || null,
+                        contentType: step.type?.toUpperCase() || 'ARTICLE',
+                        mediaType: step.mediaType || 'NONE',
+                        mediaUrl: step.mediaUrl || null,
+                        videoConfig: step.videoConfig || null,
+                        requireAck: step.requireAck,
+                        formConfig: step.formConfig || null,
+                        pollConfig: step.pollConfig || null,
+                        quizConfig: step.quizConfig || null, // Ensure this passes
+                        contentPayload: step.contentPayload || null,
+                        smartFields: step.smartFields || null,
+                        orderIndex: orderIndex++,
+                        pushTitle: step.pushTitle || null,
+                        pushMessage: step.pushMessage || null
+                    }
 
-            const payload: any = {
+                    // Only include ID if it's a real server ID (UUID) not a temp one (math.random)
+                    // If it's a temp ID, we shouldn't send it, letting backend create new
+                    // Check if it looks like a UUID
+                    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(step.id)
+                    if (isUuid) {
+                        stepPayload.id = step.id
+                    }
+
+                    allSteps.push(stepPayload)
+                })
+            })
+
+            const payload = {
+                companyId: currentUser.companyId,
                 title,
-                endDate: endDate ? new Date(endDate) : null,
+                endDate: endDate || null,
+                description: '',
+                active: true,
+                isNr1,
                 ...journeyConfig,
-                steps: stepsToSave,
-                active: true // Default active
+                steps: allSteps
             }
-
-            if (!journeyId) {
-                payload.companyId = currentUser.companyId
-            }
-
-            console.log('Saving journey:', payload)
 
             let savedJourney: Journey
             if (journeyId) {
                 savedJourney = await updateJourney(journeyId, payload)
+                Swal.fire({
+                    text: intl.formatMessage({ id: 'JOURNEYS.SAVE.SUCCESS' }),
+                    icon: 'success',
+                    buttonsStyling: false,
+                    confirmButtonText: 'Ok!',
+                    customClass: { confirmButton: 'btn btn-primary' }
+                })
             } else {
                 savedJourney = await createJourney(payload)
                 setJourneyId(savedJourney.id)
+                Swal.fire({
+                    text: intl.formatMessage({ id: 'JOURNEYS.SAVE.SUCCESS' }),
+                    icon: 'success',
+                    buttonsStyling: false,
+                    confirmButtonText: 'Ok!',
+                    customClass: { confirmButton: 'btn btn-primary' }
+                })
             }
 
-            // toast.success('Journey saved successfully!')
-            Swal.fire({
-                text: 'Journey saved successfully!',
-                icon: 'success',
-                buttonsStyling: false,
-                confirmButtonText: 'Ok, got it!',
-                customClass: {
-                    confirmButton: 'btn btn-primary'
-                }
-            })
             // Reload to get real IDs
             loadJourney(savedJourney.id)
 
         } catch (error) {
             console.error('Failed to save journey:', error)
-            // toast.error('Failed to save journey. Check console for details.')
             Swal.fire({
                 text: 'Failed to save journey. Check console for details.',
                 icon: 'error',
                 buttonsStyling: false,
-                confirmButtonText: 'Ok, got it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger'
-                }
+                confirmButtonText: 'Ok',
+                customClass: { confirmButton: 'btn btn-danger' }
             })
         } finally {
             setLoading(false)
@@ -353,6 +365,22 @@ export const JourneyBuilderCanvas: FC = () => {
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                         <div className='form-text text-muted'>{intl.formatMessage({ id: 'JOURNEYS.BUILDER.FORM.EXPIRATION_HELP' })}</div>
+                    </div>
+                    <div className='col-md-4'>
+                        <label className='form-label fw-bold'>Treinamento NR-1</label>
+                        <div className='form-check form-switch form-check-custom form-check-solid'>
+                            <input
+                                className='form-check-input'
+                                type='checkbox'
+                                checked={isNr1}
+                                onChange={(e) => setIsNr1(e.target.checked)}
+                                id='isNr1Checkbox'
+                            />
+                            <label className='form-check-label' htmlFor='isNr1Checkbox'>
+                                Marcar como conteúdo de Segurança do Trabalho (NR-1)
+                            </label>
+                        </div>
+                        <div className='form-text text-muted'>Treinamentos NR-1 aparecem no módulo de Compliance</div>
                     </div>
                 </div>
             </div>

@@ -20,7 +20,7 @@ export class AnalyticsV2Controller {
   constructor(
     private readonly svc: AnalyticsV2Service,
     private readonly schema: SchemaIntrospectorV2,
-  ) {}
+  ) { }
 
   private makeEtag(
     companyId: string,
@@ -238,6 +238,126 @@ export class AnalyticsV2Controller {
     }
     res.setHeader('ETag', etag);
     const data = await this.svc.searchOverview(companyId, { from, to });
+    return { ...data, etag, serverTime: new Date().toISOString() };
+  }
+
+  // =========================
+  // 6) Reading Behavior (Time on Page)
+  // =========================
+  @Get('content/reading-behavior')
+  async readingBehavior(
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('newsId') newsId: string | undefined,
+    @Req() req: any,
+    @Headers('if-none-match') inm: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const companyId = req.user.companyId;
+    const last = await this.schema.getLastUpdateMarker(companyId, from, to);
+    const etag = this.makeEtag(
+      companyId,
+      'content/reading-behavior',
+      { from, to, newsId },
+      last,
+    );
+    if (inm && inm === etag) {
+      res.setHeader('ETag', etag);
+      res.status(304);
+      return;
+    }
+    res.setHeader('ETag', etag);
+    const data = await this.svc.getReadingBehavior(companyId, { from, to, newsId });
+    return { ...data, etag, serverTime: new Date().toISOString() };
+  }
+
+  // =========================
+  // 7) Traffic Attribution (Sources)
+  // =========================
+  @Get('content/traffic-sources')
+  async trafficSources(
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('newsId') newsId: string | undefined,
+    @Req() req: any,
+    @Headers('if-none-match') inm: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const companyId = req.user.companyId;
+    const last = await this.schema.getLastUpdateMarker(companyId, from, to);
+    const etag = this.makeEtag(
+      companyId,
+      'content/traffic-sources',
+      { from, to, newsId },
+      last,
+    );
+    if (inm && inm === etag) {
+      res.setHeader('ETag', etag);
+      res.status(304);
+      return;
+    }
+    res.setHeader('ETag', etag);
+    const data = await this.svc.getTrafficSources(companyId, { from, to, newsId });
+    return { ...data, etag, serverTime: new Date().toISOString() };
+  }
+
+  // =========================
+  // 8) Chat & Session Behavioral Analytics
+  // =========================
+  @Get('chat/behavior')
+  async chatBehavior(
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('userId') userId: string | undefined,
+    @Req() req: any,
+    @Headers('if-none-match') inm: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const companyId = req.user.companyId;
+    const last = await this.schema.getLastUpdateMarker(companyId, from, to);
+    const etag = this.makeEtag(
+      companyId,
+      'chat/behavior',
+      { from, to, userId },
+      last,
+    );
+    if (inm && inm === etag) {
+      res.setHeader('ETag', etag);
+      res.status(304);
+      return;
+    }
+    res.setHeader('ETag', etag);
+    const data = await this.svc.getChatBehavior(companyId, { from, to, userId });
+    return { ...data, etag, serverTime: new Date().toISOString() };
+  }
+
+  // =========================
+  // 9) Engagement Funnel & Segmented Analytics
+  // =========================
+  @Get('funnel/engagement')
+  async engagementFunnel(
+    @Query('from') from: string | undefined,
+    @Query('to') to: string | undefined,
+    @Query('segment') segment: 'department' | 'jobTitle' | 'location' | undefined,
+    @Req() req: any,
+    @Headers('if-none-match') inm: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const companyId = req.user.companyId;
+    const last = await this.schema.getLastUpdateMarker(companyId, from, to);
+    const etag = this.makeEtag(
+      companyId,
+      'funnel/engagement',
+      { from, to, segment },
+      last,
+    );
+    if (inm && inm === etag) {
+      res.setHeader('ETag', etag);
+      res.status(304);
+      return;
+    }
+    res.setHeader('ETag', etag);
+    const data = await this.svc.getEngagementFunnel(companyId, { from, to, segment });
     return { ...data, etag, serverTime: new Date().toISOString() };
   }
 }

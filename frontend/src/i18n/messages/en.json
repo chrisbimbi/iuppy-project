@@ -1,5 +1,9 @@
 {
   "TRANSLATOR.SELECT": "Select your language",
+  "ERRORS.403.TITLE": "Access Denied",
+  "ERRORS.403.MESSAGE": "This module is not enabled for your company or you do not have permission.",
+  "ERRORS.BUTTON.BACK": "Back",
+  "ERRORS.BUTTON.COMPANY_SETTINGS": "Company Settings",
   "MENU.NEW": "new",
   "MENU.ACTIONS": "Actions",
   "MENU.CREATE_POST": "Create New Post",
@@ -651,6 +655,9 @@
   "COMMUNICATION.FORM.STEP1.TYPE.ALERT": "Alert",
   "COMMUNICATION.FORM.STEP1.TYPE.UPDATE": "Update",
   "COMMUNICATION.FORM.STEP1.TYPE.UNKNOWN": "Unknown",
+  "COMMUNICATION.FORM.STEP1.CREATE_HASHTAG": "Create \"{tag}\"",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_TITLE_REQUIRED": "Push title is required",
+  "COMMUNICATION.FORM.VALIDATION.PUSH_CONTENT_REQUIRED": "Push content is required",
   "COMMUNICATION.FORM.STEP2.TITLE.AUDIENCE": "Choose Audience",
   "COMMUNICATION.FORM.STEP2.SUBTITLE.AUDIENCE": "Select who should receive/see this content.",
   "COMMUNICATION.FORM.STEP2.LABEL.AUDIENCE": "Audience",
@@ -1165,10 +1172,6 @@
   "COMPANY.LOGO_UPLOADER.BUTTON.SELECT": "Select image",
   "COMPANY.LOGO_UPLOADER.BUTTON.UPLOADING": "Uploading...",
   "COMPANY.LOGO_UPLOADER.BUTTON.SAVE": "Salvar logo",
-  "ERRORS.403.TITLE": "Acesso negado",
-  "ERRORS.403.MESSAGE": "Este módulo não está habilitado para sua empresa.",
-  "ERRORS.BUTTON.BACK": "Voltar",
-  "ERRORS.BUTTON.COMPANY_SETTINGS": "Configurações da Empresa",
   "ERRORS.404.TITLE": "Oops!",
   "ERRORS.BUTTON.HOME": "Return Home",
   "ERRORS.500.TITLE": "System Error",
@@ -1311,5 +1314,7 @@
   "WIDGETS.STATISTICS.GOAL_48K": "48k Goal",
   "WIDGETS.STATISTICS.DESC.COMPANY_FINANCE": "Company Finance",
   "WIDGETS.STATISTICS.IMPRESSIONS_400K": "400k Impressions",
-  "WIDGETS.STATISTICS.DESC.MARKETING_ANALYSIS": "Marketing Analysis"
+  "WIDGETS.STATISTICS.DESC.MARKETING_ANALYSIS": "Marketing Analysis",
+  "COMPANY.MODULES.SOCIAL": "Social Wall",
+  "MENU.GAMIFICATION": "Gamification"
 }

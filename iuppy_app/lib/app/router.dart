@@ -36,7 +36,10 @@ import '../features/vacations/vacation_request_screen.dart';
 import '../features/vacations/admin/vacation_policy_page.dart';
 import '../features/vacations/manager/vacation_manager_page.dart';
 import '../features/performance/performance_page.dart';
-import '../features/nr1/views/report_page.dart';
+import 'package:iuppy_app/features/nr1/views/nr1_hub_page.dart';
+import 'package:iuppy_app/features/nr1/views/trainings_page.dart';
+import 'package:iuppy_app/features/nr1/views/emergency_page.dart';
+import 'package:iuppy_app/features/nr1/views/report_page.dart';
 
 // ... (GoRouterRefreshStream e _normalizeDeepLinkUri mantidos iguais) ...
 
@@ -358,19 +361,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const Nr1ReportPage(),
       ),
       GoRoute(
-          path: '/modules/nr1',
-          builder: (_, __) => const _Stub(
-              title: 'NR-1 Hub'), // Placeholder for now or specific hub page
-          routes: [
-            GoRoute(
-              path: 'participation',
-              builder: (_, __) => const _Stub(title: 'Participação'),
-            ),
-            GoRoute(
-              path: 'risks',
-              builder: (_, __) => const _Stub(title: 'Riscos'),
-            ),
-          ]),
+        path: '/modules/nr1',
+        builder: (_, __) => const Nr1HubPage(),
+        routes: [
+          GoRoute(
+            path: 'trainings',
+            builder: (_, __) => const TrainingsPage(),
+          ),
+          GoRoute(
+            path: 'emergency',
+            builder: (_, __) => const EmergencyPage(),
+          ),
+          GoRoute(
+            path: 'report',
+            builder: (_, __) => const Nr1ReportPage(),
+          ),
+          GoRoute(
+            path: 'participation',
+            builder: (_, __) => const FormsListPage(
+                initialTab: 0, isNr1: true), // Opens Forms list filtered by NR1
+          ),
+        ],
+      ),
     ],
   );
 });

@@ -30,7 +30,7 @@ export const AsideMenuItemWithSub: React.FC<Props & WithChildren> = ({
     >
       <span className='menu-link'>
         {icon && aside.menuIcon === 'svg' && <KTIcon iconName={icon} className='fs-2' />}
-        {fontIcon && aside.menuIcon === 'font' && <i className={`bi ${fontIcon} fs-2`}></i>}
+        {fontIcon && aside.menuIcon === 'font' && <i className={`bi ${fontIcon} fs-2 me-3`}></i>}
         <span className='menu-title'>{title}</span>
         <span className='menu-arrow'></span>
       </span>

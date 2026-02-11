@@ -16,6 +16,7 @@ import {
 import ReactApexChart from 'react-apexcharts';
 import { useIntl } from 'react-intl';
 import WordCloudCanvas from '../components/WordCloudCanvas';
+import { useAuth } from '../../auth/core/Auth';
 
 // 1. Mapa de Tradução (UX Polished)
 // 1. Mapa de Tradução (UX Polished)
@@ -124,6 +125,9 @@ const sevenDaysAgo = toLocalDateInput(new Date(new Date().setDate(new Date().get
 export default function FormStatsPage() {
   const intl = useIntl();
   const { formId } = useParams<{ formId: string }>();
+  const { currentUser } = useAuth();
+  const companyId = currentUser?.companyId || window.localStorage.getItem('companyId') || undefined;
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StatsData | null>(null);
   const [fieldData, setFieldData] = useState<FieldStat[]>([]);
@@ -150,6 +154,7 @@ export default function FormStatsPage() {
 
     const queryParams = {
       ...filters,
+      companyId, // Fix: Explicitly pass companyId
       spaceId: filters.spaceId || undefined,
       groupId: filters.groupId || undefined,
     };

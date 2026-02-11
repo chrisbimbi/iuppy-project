@@ -6,7 +6,7 @@ export class AddSocialModule1733940000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
         // Social Post
         await queryRunner.query(`
-            CREATE TABLE "social_posts" (
+            CREATE TABLE IF NOT EXISTS "social_posts" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "companyId" character varying NOT NULL,
                 "channelId" character varying NOT NULL,
@@ -22,12 +22,12 @@ export class AddSocialModule1733940000000 implements MigrationInterface {
                 CONSTRAINT "PK_social_posts" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`CREATE INDEX "IDX_social_posts_company_channel" ON "social_posts" ("companyId", "channelId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_social_posts_company_author" ON "social_posts" ("companyId", "authorId")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_social_posts_company_channel" ON "social_posts" ("companyId", "channelId")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_social_posts_company_author" ON "social_posts" ("companyId", "authorId")`);
 
         // Social Comment
         await queryRunner.query(`
-            CREATE TABLE "social_comments" (
+            CREATE TABLE IF NOT EXISTS "social_comments" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "companyId" character varying NOT NULL,
                 "postId" uuid NOT NULL,
@@ -38,11 +38,11 @@ export class AddSocialModule1733940000000 implements MigrationInterface {
                 CONSTRAINT "PK_social_comments" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`CREATE INDEX "IDX_social_comments_post" ON "social_comments" ("postId")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_social_comments_post" ON "social_comments" ("postId")`);
 
         // Social Reaction
         await queryRunner.query(`
-            CREATE TABLE "social_reactions" (
+            CREATE TABLE IF NOT EXISTS "social_reactions" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "companyId" character varying NOT NULL,
                 "postId" uuid NOT NULL,
@@ -52,11 +52,11 @@ export class AddSocialModule1733940000000 implements MigrationInterface {
                 CONSTRAINT "PK_social_reactions" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_social_reactions_unique" ON "social_reactions" ("postId", "userId", "type")`);
+        await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_social_reactions_unique" ON "social_reactions" ("postId", "userId", "type")`);
 
         // Social Interaction Event
         await queryRunner.query(`
-            CREATE TABLE "social_interaction_events" (
+            CREATE TABLE IF NOT EXISTS "social_interaction_events" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "companyId" character varying NOT NULL,
                 "postId" uuid NOT NULL,
@@ -101,11 +101,11 @@ export class AddSocialModule1733940000000 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "social_reactions" DROP CONSTRAINT "FK_social_reactions_user"`);
-        await queryRunner.query(`ALTER TABLE "social_reactions" DROP CONSTRAINT "FK_social_reactions_post"`);
-        await queryRunner.query(`ALTER TABLE "social_comments" DROP CONSTRAINT "FK_social_comments_author"`);
-        await queryRunner.query(`ALTER TABLE "social_comments" DROP CONSTRAINT "FK_social_comments_post"`);
-        await queryRunner.query(`ALTER TABLE "social_posts" DROP CONSTRAINT "FK_social_posts_author"`);
+        await queryRunner.query(`ALTER TABLE "social_reactions" DROP CONSTRAINT IF EXISTS "FK_social_reactions_user"`);
+        await queryRunner.query(`ALTER TABLE "social_reactions" DROP CONSTRAINT IF EXISTS "FK_social_reactions_post"`);
+        await queryRunner.query(`ALTER TABLE "social_comments" DROP CONSTRAINT IF EXISTS "FK_social_comments_author"`);
+        await queryRunner.query(`ALTER TABLE "social_comments" DROP CONSTRAINT IF EXISTS "FK_social_comments_post"`);
+        await queryRunner.query(`ALTER TABLE "social_posts" DROP CONSTRAINT IF EXISTS "FK_social_posts_author"`);
 
         await queryRunner.query(`DROP TABLE "social_interaction_events"`);
         await queryRunner.query(`DROP TABLE "social_reactions"`);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { PageTitle } from 'src/layout/core';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { Content } from 'src/layout/components/Content';
 
 export default function EsocialQueuePage() {
     const intl = useIntl();
@@ -24,7 +25,7 @@ export default function EsocialQueuePage() {
     };
 
     return (
-        <>
+        <Content>
             <PageTitle>Fila eSocial (S-2240)</PageTitle>
 
             <div className="row g-5 g-xl-8 mb-5">
@@ -128,6 +129,6 @@ export default function EsocialQueuePage() {
                     <Button variant="primary" onClick={() => setShowGenModal(false)}>Gerar e Enfileirar</Button>
                 </Modal.Footer>
             </Modal>
-        </>
+        </Content>
     );
 }

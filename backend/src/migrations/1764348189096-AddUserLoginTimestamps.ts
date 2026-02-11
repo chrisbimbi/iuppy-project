@@ -5,10 +5,10 @@ export class AddUserLoginTimestamps1764348189096 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE "user_entity" ADD "firstLoginAt" TIMESTAMP`,
+      `ALTER TABLE "user_entity" ADD COLUMN IF NOT EXISTS "firstLoginAt" TIMESTAMP`,
     );
     await queryRunner.query(
-      `ALTER TABLE "user_entity" ADD "lastLoginAt" TIMESTAMP`,
+      `ALTER TABLE "user_entity" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP`,
     );
     // Optional: Safe defaults for arrays if needed
     await queryRunner.query(
@@ -24,10 +24,10 @@ export class AddUserLoginTimestamps1764348189096 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE "user_entity" DROP COLUMN "lastLoginAt"`,
+      `ALTER TABLE "user_entity" DROP COLUMN IF EXISTS "lastLoginAt"`,
     );
     await queryRunner.query(
-      `ALTER TABLE "user_entity" DROP COLUMN "firstLoginAt"`,
+      `ALTER TABLE "user_entity" DROP COLUMN IF EXISTS "firstLoginAt"`,
     );
   }
 }

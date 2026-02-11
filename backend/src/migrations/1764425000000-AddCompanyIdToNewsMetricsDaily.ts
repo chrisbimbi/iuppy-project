@@ -9,7 +9,7 @@ export class AddCompanyIdToNewsMetricsDaily1764425000000 implements MigrationInt
 
         // Recreate with companyId
         await queryRunner.query(`
-            CREATE TABLE "news_metrics_daily" (
+            CREATE TABLE IF NOT EXISTS "news_metrics_daily" (
                 "companyId" uuid NOT NULL,
                 "newsId" uuid NOT NULL,
                 "date" date NOT NULL,
@@ -24,7 +24,7 @@ export class AddCompanyIdToNewsMetricsDaily1764425000000 implements MigrationInt
         `);
 
         // Add index
-        await queryRunner.query(`CREATE INDEX "IDX_news_metrics_daily_newsId_date" ON "news_metrics_daily" ("newsId", "date")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_news_metrics_daily_newsId_date" ON "news_metrics_daily" ("newsId", "date")`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

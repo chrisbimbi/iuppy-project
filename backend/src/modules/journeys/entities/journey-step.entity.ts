@@ -80,6 +80,9 @@ export class JourneyStepEntity {
   pollConfig: any;
 
   @Column({ type: 'jsonb', nullable: true })
+  quizConfig: any;
+
+  @Column({ type: 'jsonb', nullable: true })
   contentPayload: any;
 
   @Column({ type: 'jsonb', nullable: true })

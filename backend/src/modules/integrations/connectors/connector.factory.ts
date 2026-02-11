@@ -5,6 +5,7 @@ import { MtlsAgentFactory } from '../security/mtls-agent.factory';
 import { BaseConnector, ConnectorOptions } from './base.connector';
 // Will import specific connectors here as they are created
 import { AdpConnector } from './implementations/adp.connector';
+import { MicrosoftGraphConnector } from './microsoft-graph.connector';
 
 @Injectable()
 export class ConnectorFactory {
@@ -28,6 +29,10 @@ export class ConnectorFactory {
         switch (connection.providerKey) {
             case 'adp':
                 return new AdpConnector(options);
+            case 'microsoft':
+            case 'microsoft-graph':
+            case 'azure-ad':
+                return new MicrosoftGraphConnector(options);
             // case 'sap-sf': ...
             // case 'totvs-protheus': ...
             default:

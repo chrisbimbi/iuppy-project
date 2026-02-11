@@ -62,6 +62,10 @@ export class UpdateNewDto {
   @IsBoolean()
   mustAcknowledge?: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  isNr1?: boolean;
+
   // --- AI Fields ---
   @IsOptional()
   @IsString()
