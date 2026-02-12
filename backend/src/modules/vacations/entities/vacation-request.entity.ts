@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { VacationRequest, VacationRequestStatus, VacationType } from '@shared/types';
 import { UserEntity } from '../../../users/user.entity';
+import { CollectiveVacationEntity } from './collective-vacation.entity';
 
 @Entity('vacation_requests')
 @Index(['userId'])
@@ -56,4 +57,11 @@ export class VacationRequestEntity implements VacationRequest {
     @ManyToOne(() => UserEntity)
     @JoinColumn({ name: 'userId' })
     user?: UserEntity;
+
+    @Column({ nullable: true })
+    collectiveVacationId?: string;
+
+    @ManyToOne(() => CollectiveVacationEntity, (cv) => cv.requests)
+    @JoinColumn({ name: 'collectiveVacationId' })
+    collectiveVacation?: CollectiveVacationEntity;
 }

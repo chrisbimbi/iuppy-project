@@ -12,8 +12,11 @@ import { CalibrateUserDto } from './dto/calibrate-user.dto';
 import { OneOnOneEntity } from './entities/one-on-one.entity';
 import { PDIEntity } from './entities/pdi.entity';
 import { PDIActionEntity } from './entities/pdi-action.entity';
-import { AssessmentStatus, PerformanceCycleStatus } from '@shared/types';
+import { CalibrationResultEntity } from './entities/calibration-result.entity';
+import { AssessmentStatus, PerformanceCycleStatus, AssessmentType } from '@shared/types';
 import { CommunicationsService } from '../../notifications/communications.service';
+
+import { UserEntity } from '../../users/user.entity';
 
 @Injectable()
 export class PerformanceService {
@@ -32,12 +35,24 @@ export class PerformanceService {
         private readonly pdiRepo: Repository<PDIEntity>,
         @InjectRepository(PDIActionEntity)
         private readonly pdiActionRepo: Repository<PDIActionEntity>,
+        @InjectRepository(CalibrationResultEntity)
+        private readonly calibrationRepo: Repository<CalibrationResultEntity>,
+        @InjectRepository(UserEntity)
+        private readonly usersRepo: Repository<UserEntity>,
         private readonly notifications: CommunicationsService,
     ) { }
 
     async createCycle(dto: CreatePerformanceCycleDto) {
         const cycle = this.cycleRepo.create(dto as any);
         return this.cycleRepo.save(cycle);
+    }
+
+    async getActiveCycle(companyId?: string) {
+        const where: any = { status: PerformanceCycleStatus.ACTIVE };
+        if (companyId) {
+            where.companyId = companyId;
+        }
+        return this.cycleRepo.findOne({ where });
     }
 
     async createGoal(dto: CreateGoalDto) {
@@ -105,6 +120,50 @@ export class PerformanceService {
         return { success: true };
     }
 
+    async getParticipants(cycleId: string, department?: string) {
+        // Enforce cycle existence
+        const cycle = await this.cycleRepo.findOneBy({ id: cycleId });
+        if (!cycle) throw new NotFoundException('Ciclo não encontrado');
+
+        // Fetch users (filtered by department if provided)
+        const query = this.usersRepo.createQueryBuilder('user')
+            .where('user.companyId = :companyId', { companyId: cycle.companyId })
+            .andWhere('user.isActive = true');
+
+        if (department) {
+            query.andWhere('user.department = :department', { department });
+        }
+
+        const users = await query.getMany();
+
+        // For each user, get current quadrant (from Calibration or calculate from forms)
+        const participants = await Promise.all(users.map(async (u) => {
+            // Check if calibrated result exists
+            const calibration = await this.calibrationRepo.findOneBy({ userId: u.id, cycleId });
+
+            if (calibration) {
+                return {
+                    id: u.id,
+                    name: u.name,
+                    department: u.department,
+                    quadrant: calibration.quadrant,
+                    isCalibrated: true
+                };
+            }
+
+            // Otherwise calculate on the fly (or return blank if no assessment yet)
+            const box = await this.calculate9Box(u.id, cycleId);
+            return {
+                id: u.id,
+                name: u.name,
+                department: u.department,
+                quadrant: box.quadrant || 'Low-Low', // Fallback
+                isCalibrated: false
+            };
+        }));
+
+        return participants;
+    }
     async calculate9Box(userId: string, cycleId: string) {
         // 1. Calculate Results (X-Axis) based on Goal Completion
         const goals = await this.goalRepo.find({ where: { userId } });
@@ -116,50 +175,75 @@ export class PerformanceService {
         if (avgProgress >= 70) xAxis = 'Medium';
         if (avgProgress >= 100) xAxis = 'High';
 
-        // 2. Calculate Competencies (Y-Axis) based on Assessment Scores
-        // Fetch all forms for this user in this cycle where THEY are the target
-        const forms = await this.formRepo.find({ where: { cycleId, targetUserId: userId } });
+        // 2. Calculate Competencies (Y-Axis) based on Weighted Assessment Scores
+        const forms = await this.formRepo.find({
+            where: { cycleId, targetUserId: userId, status: AssessmentStatus.SUBMITTED }
+        });
 
-        // Very simplified logic: Average of all scores from all forms
-        // In production: Weighted average (Manager 50%, Peer 30%, Self 20%)
-        let totalScore = 0;
-        let count = 0;
+        const scoresByType: Record<string, number[]> = {
+            [AssessmentType.SELF]: [],
+            [AssessmentType.MANAGER]: [],
+            [AssessmentType.PEER]: [],
+        };
 
         for (const f of forms) {
             const answers = await this.answerRepo.find({ where: { formId: f.id } });
             const numericAnswers = answers.filter(a => a.score !== null && a.score !== undefined);
-            const formSum = numericAnswers.reduce((acc, a) => acc + (a.score || 0), 0);
+            const formAvg = numericAnswers.length > 0
+                ? numericAnswers.reduce((acc, a) => acc + (a.score || 0), 0) / numericAnswers.length
+                : 0;
 
-            if (numericAnswers.length > 0) {
-                totalScore += (formSum / numericAnswers.length);
-                count++;
+            if (formAvg > 0) {
+                scoresByType[f.type].push(formAvg);
             }
         }
 
-        const avgScore = count > 0 ? totalScore / count : 0; // 1-5 scale
+        // Weighted Average Logic: Self (20%), Peer (30%), Manager (50%)
+        let weightedScore = 0;
+        let totalWeight = 0;
+        const weights = { [AssessmentType.SELF]: 0.2, [AssessmentType.PEER]: 0.3, [AssessmentType.MANAGER]: 0.5 };
 
+        for (const type of Object.values(AssessmentType)) {
+            if (scoresByType[type].length > 0) {
+                const typeAvg = scoresByType[type].reduce((a, b) => a + b, 0) / scoresByType[type].length;
+                weightedScore += typeAvg * weights[type];
+                totalWeight += weights[type];
+            }
+        }
+
+        const finalScoreY = totalWeight > 0 ? weightedScore / totalWeight : 0;
         let yAxis = 'Low';
-        if (avgScore >= 3) yAxis = 'Medium';
-        if (avgScore >= 4.5) yAxis = 'High';
+        if (finalScoreY >= 3) yAxis = 'Medium';
+        if (finalScoreY >= 4) yAxis = 'High';
 
         return {
-            userId,
-            cycleId,
             scoreX: avgProgress,
-            scoreY: avgScore,
-            quadrant: `${xAxis}-${yAxis}`, // "High-High" = Top Right
+            scoreY: finalScoreY,
+            quadrant: `${yAxis}-${xAxis}`
         };
     }
 
+
     async calibrate(dto: CalibrateUserDto) {
-        // In a real DB we would store this in a 'CalibrationResultEntity'
-        // preventing modifying the raw calculation.
-        // For this Mission, assuming we return the DTO as confirmation logic.
-        return {
-            ...dto,
-            status: 'CALIBRATED',
-            calibratedAt: new Date(),
-        };
+        let result = await this.calibrationRepo.findOne({
+            where: { userId: dto.userId, cycleId: dto.cycleId }
+        });
+
+        if (!result) {
+            result = this.calibrationRepo.create({
+                userId: dto.userId,
+                cycleId: dto.cycleId,
+            });
+        }
+
+        result.quadrant = dto.quadrant;
+        result.scoreX = dto.scoreX;
+        result.scoreY = dto.scoreY;
+        result.justification = dto.justification;
+        result.calibratedAt = new Date();
+        result.calibratorId = dto.calibratorId;
+
+        return this.calibrationRepo.save(result);
     }
 
     // --- 1:1 Meetings ---
@@ -214,13 +298,29 @@ export class PerformanceService {
             'High-Low': 0, 'High-Medium': 0, 'High-High': 0
         };
 
+        const completionStats = {
+            self: { total: 0, submitted: 0 },
+            manager: { total: 0, submitted: 0 }
+        };
+
         if (activeCycleId) {
             // Find all users who have forms in this cycle
             const forms = await this.formRepo.find({
                 where: { cycleId: activeCycleId },
-                select: ['targetUserId']
+                select: ['id', 'targetUserId', 'type', 'status']
             });
             const uniqueUsers = [...new Set(forms.map(f => f.targetUserId))];
+
+            // Completion Stats
+            forms.forEach(f => {
+                if (f.type === AssessmentType.SELF) {
+                    completionStats.self.total++;
+                    if (f.status === AssessmentStatus.SUBMITTED) completionStats.self.submitted++;
+                } else if (f.type === AssessmentType.MANAGER) {
+                    completionStats.manager.total++;
+                    if (f.status === AssessmentStatus.SUBMITTED) completionStats.manager.submitted++;
+                }
+            });
 
             for (const userId of uniqueUsers) {
                 try {
@@ -235,7 +335,76 @@ export class PerformanceService {
         return {
             activeCycles: activeCycles.length,
             totalGoals,
-            nineBoxDistribution
+            nineBoxDistribution,
+            completionStats
         };
+    }
+
+    async getTurnoverRisk(companyId: string) {
+        // 1. Identify Risk Groups based on 9-Box
+        // High Risk: Low-Low, Low-Medium
+        // Medium Risk: Medium-Low, Low-High
+
+        // We reuse the 9-box distribution logic or fetch from cache
+        const stats = await this.getDashboardStats(companyId);
+        const dist = stats.nineBoxDistribution;
+
+        const highRiskCount = (dist['Low-Low'] || 0) + (dist['Low-Medium'] || 0);
+        const mediumRiskCount = (dist['Medium-Low'] || 0) + (dist['Low-High'] || 0);
+
+        // Avg Risk Score (Inverse of Performance?)
+        // Let's say max risk is 1.0. 
+        // 0.8-1.0 = High Risk. 
+        // We can simulate a score based on the ratio of low performers.
+        const totalUsers = Object.values(dist).reduce((a: number, b: number) => a + b, 0);
+        const riskRatio = totalUsers > 0 ? (highRiskCount + mediumRiskCount * 0.5) / totalUsers : 0;
+
+        return {
+            highRiskCount,
+            mediumRiskCount,
+            avgRiskScore: Number(riskRatio.toFixed(2)),
+            trend: '+1.5%' // Mock trend for now as we don't have time-series risk data yet
+        };
+    }
+
+    async getPerformanceEvolution(companyId: string) {
+        // Fetch last 6 closed cycles + active
+        const cycles = await this.cycleRepo.find({
+            where: { companyId },
+            order: { endDate: 'ASC' },
+            take: 6
+        });
+
+        // For each cycle, calculate average company score (Y-axis: Competencies)
+        const evolution = [];
+
+        for (const cycle of cycles) {
+            // This is heavy, in prod we would cache this "cycle average" property on the CycleEntity
+            const forms = await this.formRepo.find({ where: { cycleId: cycle.id, status: AssessmentStatus.SUBMITTED } });
+
+            let totalScore = 0;
+            let count = 0;
+
+            for (const f of forms) {
+                // We need the score. We can re-calc or check if we stored it. 
+                // We didn't store form-level score efficiently in Phase 1 (calculated on fly).
+                // Fast path: Just count submitted forms as "engagement" or calc average from answers
+                // Let's do a simple count of average answers to be somewhat real
+                const answers = await this.answerRepo.find({ where: { formId: f.id } });
+                const numeric = answers.filter(a => a.score !== undefined);
+                if (numeric.length > 0) {
+                    const avg = numeric.reduce((a, b) => a + (b.score || 0), 0) / numeric.length;
+                    totalScore += avg;
+                    count++;
+                }
+            }
+
+            evolution.push({
+                cycleName: cycle.name,
+                averageScore: count > 0 ? Number((totalScore / count).toFixed(2)) : 0
+            });
+        }
+
+        return evolution;
     }
 }

@@ -13,22 +13,86 @@ export interface ConnectorSyncResult<T> {
  * This decouples the core system from the provider's specific schema.
  */
 export interface NormalizedUser {
-    externalId: string;
+    // --- Identificadores ---
+    externalId: string; // ID no ERP
     email: string;
+    secondaryEmail?: string;
+    personalEmail?: string;
+    registrationNumber?: string; // Matrícula
+    internalId?: string; // ID interno iuppy (se já existir)
+
+    // --- Nome e Pessoal ---
     fullName: string;
     firstName: string;
     lastName: string;
-    isActive: boolean;
+    middleName?: string;
+    preferredName?: string;
+    birthDate?: Date;
+    gender?: string;
+    maritalStatus?: string;
+    nationality?: string;
+    academicLevel?: string;
+    raceColor?: string;
+    disabilityType?: string;
+
+    // --- Documentos ---
+    cpf?: string;
+    rg?: string;
+    rgIssuer?: string;
+    rgState?: string;
+    rgIssueDate?: Date;
+    pis?: string;
+    ctpsNumber?: string;
+    ctpsSeries?: string;
+    ctpsState?: string;
+    voterId?: string;
+
+    // --- Contato e Endereço ---
+    phone?: string; // Work phone
+    mobile?: string; // Personal/Mobile
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    address?: string; // Full string
+    addressStreet?: string;
+    addressNumber?: string;
+    addressComplement?: string;
+    addressNeighborhood?: string;
+    addressCity?: string;
+    addressState?: string;
+    addressZipCode?: string;
+
+    // --- Emprego e Hierarquia ---
+    role?: string;
     jobTitle?: string;
     department?: string;
-    location?: string;
+    costCenter?: string;
     managerId?: string; // External ID of the manager
+    managerEmail?: string;
+    location?: string;
+    legalEntity?: string; // CNPJ/Nome da Filial
+    employmentType?: string; // CLT, PJ, Estágio
+    employmentStatus?: string; // Ativo, Afastado, Desligado
+    workShift?: string; // Jornada
     hireDate?: Date;
     terminationDate?: Date;
-    // For AI functionality
-    salaryBand?: string; // "L1", "L2"... (Obfuscated)
-    commuteDistanceKm?: number;
-    rawPayload?: any; // Store original for debugging/snapshots
+    probationEndDate?: Date;
+    isActive: boolean;
+
+    // --- Remuneração e Financeiro ---
+    baseSalary?: number;
+    hourlyRate?: number;
+    payFrequency?: string;
+    currency?: string;
+    bankName?: string;
+    bankBranch?: string;
+    bankAccount?: string;
+    bankAccountType?: string;
+    pixKey?: string;
+
+    // --- Outros ---
+    avatarUrl?: string;
+    locale?: string;
+    rawPayload?: any; // Objeto original do ERP para auditoria
 }
 
 export interface ConnectorOptions {

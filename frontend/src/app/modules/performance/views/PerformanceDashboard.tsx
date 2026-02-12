@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { get9BoxDistribution, getCompetenciesRadar } from '../services/performanceService';
 import TurnoverRiskWidget from '../components/TurnoverRiskWidget';
+import { PerformanceEvolutionChart } from '../components/PerformanceEvolutionChart';
 import { Content } from 'src/layout/components/Content';
 
 const PerformanceDashboard: React.FC = () => {
@@ -55,6 +56,8 @@ const PerformanceDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <PerformanceEvolutionChart />
         </Content>
     );
 };

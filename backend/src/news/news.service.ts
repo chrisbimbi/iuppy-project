@@ -152,10 +152,11 @@ export class NewsService {
       qb.andWhere('na.userId = :userId', { userId });
     }
 
+    // Always join channel to return spaceIds for frontend filtering
+    qb.leftJoinAndSelect('n.channel', 'c');
+
     // Filter by Allowed Space IDs (for Scoped Admins)
     if (allowedSpaceIds && allowedSpaceIds.length > 0) {
-      // Join channel to check spaceIds
-      qb.innerJoin('n.channel', 'c');
       // Postgres array overlap: c.spaceIds && allowedSpaceIds
       qb.andWhere('c.spaceIds && :allowedSpaceIds', { allowedSpaceIds });
     }
@@ -696,9 +697,9 @@ export class NewsService {
     };
   }
 
-// ----------
-// 🔥 NOVOS: Listas por usuário (para modais/exports)
-// MOVIDO PARA NewsAnalyticsService
-// ----------
+  // ----------
+  // 🔥 NOVOS: Listas por usuário (para modais/exports)
+  // MOVIDO PARA NewsAnalyticsService
+  // ----------
 
 }

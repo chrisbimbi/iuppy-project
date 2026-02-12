@@ -8,6 +8,11 @@ export const createPolicy = async (policy: Partial<VacationPolicy>) => {
     return response.data
 }
 
+export const createCollectiveVacation = async (data: any) => {
+    const response = await axios.post(`${API_URL}/vacations/collective`, data);
+    return response.data;
+};
+
 export const getRequests = async (companyId: string) => {
     const response = await axios.get<VacationRequest[]>(`${API_URL}/vacations/requests?companyId=${companyId}`)
     return response.data

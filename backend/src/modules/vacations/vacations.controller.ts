@@ -25,6 +25,12 @@ export class VacationsController {
         return this.vacationsService.requestVacation(dto.userId, dto);
     }
 
+    @Post('collective')
+    async createCollectiveVacation(@Body() dto: any) {
+        // dto: { companyId, title, startDate, endDate, targetFilters, description }
+        return this.vacationsService.createCollectiveVacation(dto);
+    }
+
     @Get('policy')
     async getPolicy(@Query('companyId') companyId: string = 'DEFAULT') {
         return this.vacationsService.getPolicy(companyId);

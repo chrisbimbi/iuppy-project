@@ -3,11 +3,13 @@ import { getRequests, approveRequest, rejectRequest } from '../services/vacation
 import { VacationRequest } from '@shared/types'
 import { useAuth } from '../../../modules/auth/core/Auth'
 import { Content } from 'src/layout/components/Content'
+import { CollectiveVacationModal } from '../components/CollectiveVacationModal'
 
 const VacationRequestsPage: React.FC = () => {
     const { currentUser } = useAuth()
     const [requests, setRequests] = useState<VacationRequest[]>([])
     const [loading, setLoading] = useState(true)
+    const [showCollectiveModal, setShowCollectiveModal] = useState(false)
 
     const fetchRequests = async () => {
         try {
@@ -59,6 +61,11 @@ const VacationRequestsPage: React.FC = () => {
                             <h3>Solicitações de Férias</h3>
                         </div>
                     </div>
+                    <div className="card-toolbar">
+                        <button className="btn btn-sm btn-primary" onClick={() => setShowCollectiveModal(true)}>
+                            <i className="bi bi-people-fill"></i> Coletivas
+                        </button>
+                    </div>
                 </div>
                 <div className="card-body py-4">
                     <div className="table-responsive">
@@ -105,7 +112,12 @@ const VacationRequestsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </Content>
+            <CollectiveVacationModal
+                show={showCollectiveModal}
+                onClose={() => setShowCollectiveModal(false)}
+                onSuccess={() => fetchRequests()}
+            />
+        </Content >
     )
 }
 

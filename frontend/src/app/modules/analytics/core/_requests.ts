@@ -14,6 +14,13 @@ export interface DashboardStatsResponse {
             engagedUsers: number
             turnoverRate?: number
             turnoverCost?: number
+            turnoverStats?: {
+                rate: number
+                admissions: number
+                terminations: number
+                headcount: number
+                period: string
+            }
             evolution: Array<{
                 month: string
                 total: number
@@ -129,11 +136,16 @@ export interface DashboardStatsResponse {
             // Legacy for compatibility if widget used old props
             pendingCount?: number
             whoIsOutList?: any[]
+            awayUsersList?: Array<{ id: string; name: string; avatar?: string; endDate: string }>
         }
         performance?: {
             activeCycles: number
             totalGoals: number
             nineBoxDistribution: Record<string, number>
+            completionStats?: {
+                self: { total: number; submitted: number }
+                manager: { total: number; submitted: number }
+            }
         }
         journeys?: {
             activeJourneys: number

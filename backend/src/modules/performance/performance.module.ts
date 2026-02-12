@@ -9,11 +9,13 @@ import { KeyResultEntity } from './entities/key-result.entity';
 import { PDIEntity } from './entities/pdi.entity';
 import { PDIActionEntity } from './entities/pdi-action.entity';
 import { OneOnOneEntity } from './entities/one-on-one.entity';
+import { CalibrationResultEntity } from './entities/calibration-result.entity';
 import { PerformanceController } from './performance.controller';
 import { PerformanceAnalyticsController } from './performance-analytics.controller';
 import { PerformanceService } from './performance.service';
 
 import { NotificationsModule } from '../../notifications/notifications.module';
+import { UsersModule } from '../../users/users.module';
 
 import { OneOnOneController } from './one-on-one.controller';
 
@@ -23,6 +25,7 @@ import { LlmToolsService } from './services/llm-tools.service';
 @Module({
     imports: [
         NotificationsModule,
+        UsersModule,
         TypeOrmModule.forFeature([
             PerformanceCycleEntity,
             AssessmentFormEntity,
@@ -33,6 +36,7 @@ import { LlmToolsService } from './services/llm-tools.service';
             PDIEntity,
             PDIActionEntity,
             OneOnOneEntity,
+            CalibrationResultEntity,
         ]),
     ],
     controllers: [PerformanceController, PerformanceAnalyticsController, OneOnOneController],

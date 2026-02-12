@@ -47,6 +47,9 @@ export class DashboardStatsController {
         const promises: any = {};
 
         // 1. USERS (Switch to V2 for accurate Active/Engaged separation)
+        // Also fetch Turnover Stats from UsersService (Phase 4)
+        promises.turnover = this.usersService.getTurnoverStats(companyId).catch(() => null);
+
         promises.users = this.analyticsV2Service.usersOverview(companyId, { from: null, to: null })
             .then(v2Stats => ({
                 totalUsers: v2Stats.users.total,
@@ -56,7 +59,7 @@ export class DashboardStatsController {
                 engagementRate: v2Stats.users.engagedRate,
                 activeRate: v2Stats.users.activeRate,
                 activationRate: v2Stats.users.activationRate,
-                turnoverRate: v2Stats.users.turnoverRate,
+                turnoverRate: v2Stats.users.turnoverRate, // Will be overridden if needed or used as fallback
                 turnoverCost: v2Stats.users.turnoverCost,
                 // Map V2 activity series to evolution graph expected by frontend
                 evolution: (v2Stats.activitySeries || []).map(s => ({
@@ -156,14 +159,25 @@ export class DashboardStatsController {
         const keys = Object.keys(promises);
         const results = await Promise.all(Object.values(promises));
 
-        const response = {
+        const response: any = {
             activeModules,
             stats: {},
         };
 
         keys.forEach((key, index) => {
+            if (key === 'turnover') return; // Handled separately
             response.stats[key] = results[index];
         });
+
+        // Merge Turnover Stats into Users Stats
+        const turnoverIndex = keys.indexOf('turnover');
+        if (turnoverIndex !== -1 && results[turnoverIndex]) {
+            if (!response.stats.users) response.stats.users = {};
+            // Override with fresh data
+            response.stats.users.turnoverStats = results[turnoverIndex];
+            // Also override the rate if available
+            response.stats.users.turnoverRate = results[turnoverIndex].rate;
+        }
 
         return response;
     }

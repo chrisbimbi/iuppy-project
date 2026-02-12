@@ -14,6 +14,12 @@ export class PerformanceController {
         return this.perfService.createCycle(dto);
     }
 
+    @Get('cycles/active')
+    async getActiveCycle() {
+        // For simulation, we assume any IN_PROGRESS cycle is valid.
+        return this.perfService.getActiveCycle();
+    }
+
     @Post('goals')
     async createGoal(@Body() dto: CreateGoalDto) {
         return this.perfService.createGoal(dto);
@@ -57,5 +63,20 @@ export class PerformanceController {
     @Post('calibration')
     async calibrate(@Body() dto: CalibrateUserDto) {
         return this.perfService.calibrate(dto);
+    }
+
+    @Get('cycles/:id/participants')
+    async getParticipants(@Param('id') id: string, @Query('department') dept?: string) {
+        return this.perfService.getParticipants(id, dept);
+    }
+
+    @Get('analytics/turnover')
+    async getTurnoverRisk() {
+        return this.perfService.getTurnoverRisk('DEFAULT_COMPANY_ID');
+    }
+
+    @Get('analytics/evolution')
+    async getPerformanceEvolution() {
+        return this.perfService.getPerformanceEvolution('DEFAULT_COMPANY_ID');
     }
 }

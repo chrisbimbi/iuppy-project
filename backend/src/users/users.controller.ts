@@ -15,7 +15,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
@@ -27,6 +27,12 @@ export class UsersController {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  @Get('turnover/stats')
+  async getTurnoverStats() {
+    // TODO: Get companyId from request/user context. Using 'DEFAULT' for now.
+    return await this.usersService.getTurnoverStats('DEFAULT');
   }
 
   @Get()

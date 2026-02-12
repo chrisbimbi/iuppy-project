@@ -58,13 +58,10 @@ export class FullSyncService {
                     // If mapping is available, use it. Otherwise fallback to connector's normalized fields.
                     let mappedUser: any = extUserRecord; // Default fallback
 
+                    // ...
                     if (Object.keys(fieldMapping).length > 0) {
                         // Use AutoMapper with custom mapping on the raw original record
-                        mappedUser = this.autoMapper.mapRecord(extUserRecord, fieldMapping);
-
-                        // Fallback to normalized if mapping missed basic fields
-                        if (!mappedUser.email) mappedUser.email = extUserRecord.email;
-                        if (!mappedUser.fullName) mappedUser.fullName = extUserRecord.fullName;
+                        mappedUser = this.autoMapper.mapRecord(extUserRecord.rawPayload || extUserRecord, fieldMapping);
                     }
 
                     // Final safety check for required fields
@@ -75,6 +72,97 @@ export class FullSyncService {
                         this.logger.warn(`Skipping user without email: ${JSON.stringify(extUserRecord)}`);
                         continue;
                     }
+
+                    // --- Deactivation Logic (Soft-Delete) ---
+                    let isActive = extUserRecord.isActive; // Start with connector's status
+                    if (mappedUser.active === false) isActive = false;
+
+                    const now = new Date();
+                    if (mappedUser.terminationDate && new Date(mappedUser.terminationDate) <= now) {
+                        isActive = false;
+                        this.logger.log(`Deactivating user ${matchEmail} due to termination date: ${mappedUser.terminationDate}`);
+                    }
+
+                    // Assemble exhaustive user data object for create/update
+                    const userData: any = {
+                        name: matchName,
+                        isActive,
+                        // --- Nome e Pessoal ---
+                        middleName: mappedUser.middleName || undefined,
+                        preferredName: mappedUser.preferredName || undefined,
+                        birthDate: mappedUser.birthDate ? new Date(mappedUser.birthDate) : undefined,
+                        gender: mappedUser.gender || undefined,
+                        maritalStatus: mappedUser.maritalStatus || undefined,
+                        nationality: mappedUser.nationality || undefined,
+                        academicLevel: mappedUser.academicLevel || undefined,
+                        raceColor: mappedUser.raceColor || undefined,
+                        disabilityType: mappedUser.disabilityType || undefined,
+
+                        // --- Documentos ---
+                        cpf: mappedUser.cpf || undefined,
+                        rg: mappedUser.rg || undefined,
+                        rgIssuer: mappedUser.rgIssuer || undefined,
+                        rgState: mappedUser.rgState || undefined,
+                        rgIssueDate: mappedUser.rgIssueDate ? new Date(mappedUser.rgIssueDate) : undefined,
+                        pis: mappedUser.pis || undefined,
+                        ctpsNumber: mappedUser.ctpsNumber || undefined,
+                        ctpsSeries: mappedUser.ctpsSeries || undefined,
+                        ctpsState: mappedUser.ctpsState || undefined,
+                        voterId: mappedUser.voterId || undefined,
+
+                        // --- Contato e Endereço ---
+                        secondaryEmail: mappedUser.secondaryEmail || undefined,
+                        personalEmail: mappedUser.personalEmail || undefined,
+                        phone: mappedUser.phone || undefined,
+                        mobilePhone: mappedUser.mobile || undefined,
+                        emergencyContactName: mappedUser.emergencyContactName || undefined,
+                        emergencyContactPhone: mappedUser.emergencyContactPhone || undefined,
+                        address: mappedUser.address || undefined,
+                        addressStreet: mappedUser.addressStreet || undefined,
+                        addressNumber: mappedUser.addressNumber || undefined,
+                        addressComplement: mappedUser.addressComplement || undefined,
+                        addressNeighborhood: mappedUser.addressNeighborhood || undefined,
+                        addressCity: mappedUser.addressCity || undefined,
+                        addressState: mappedUser.addressState || undefined,
+                        addressZipCode: mappedUser.addressZipCode || undefined,
+
+                        // --- Emprego e Hierarquia ---
+                        registrationNumber: mappedUser.registrationNumber || undefined,
+                        jobTitle: mappedUser.jobTitle || undefined,
+                        department: mappedUser.department || undefined,
+                        costCenter: mappedUser.costCenter || undefined,
+                        legalEntity: mappedUser.legalEntity || undefined,
+                        contractType: mappedUser.contractType || undefined,
+                        employmentStatus: mappedUser.employmentStatus || (isActive ? 'Ativo' : 'Desligado'),
+                        workShift: mappedUser.workShift || undefined,
+                        managerEmail: mappedUser.managerEmail || undefined,
+                        positionId: mappedUser.positionId || undefined,
+                        location: mappedUser.location || undefined,
+                        hireDate: mappedUser.hireDate ? new Date(mappedUser.hireDate) : undefined,
+                        admissionDate: mappedUser.hireDate ? new Date(mappedUser.hireDate) : undefined,
+                        salary: mappedUser.baseSalary || undefined,
+                        hiringType: mappedUser.contractType || undefined,
+                        terminationDate: mappedUser.terminationDate ? new Date(mappedUser.terminationDate) : undefined,
+                        probationEndDate: mappedUser.probationEndDate ? new Date(mappedUser.probationEndDate) : undefined,
+
+                        // --- Remuneração e Financeiro ---
+                        payrollData: {
+                            baseSalary: mappedUser.baseSalary || undefined,
+                            hourlyRate: mappedUser.hourlyRate || undefined,
+                            payFrequency: mappedUser.payFrequency || undefined,
+                            currency: mappedUser.currency || 'BRL',
+                            bankName: mappedUser.bankName || undefined,
+                            bankBranch: mappedUser.bankBranch || undefined,
+                            bankAccount: mappedUser.bankAccount || undefined,
+                            bankAccountType: mappedUser.bankAccountType || undefined,
+                            pixKey: mappedUser.pixKey || undefined,
+                            ...mappedUser.payrollData
+                        },
+                        vacationData: mappedUser.vacationData || undefined,
+                        customAttributes: mappedUser.customAttributes || {},
+                        syncKey: extUserRecord.externalId
+                    };
+
 
                     // A. Check if link exists
                     let link = await this.identityRepo.findOneBy({
@@ -88,13 +176,7 @@ export class FullSyncService {
                     if (link) {
                         // Update existing user
                         userId = link.internalUserId;
-
-                        await this.usersService.update(userId, {
-                            name: matchName,
-                            jobTitle: mappedUser.jobTitle || undefined,
-                            department: mappedUser.department || undefined,
-                            phone: mappedUser.phone || mappedUser.mobile || undefined
-                        });
+                        await this.usersService.update(userId, userData);
                         updated++;
                     } else {
                         // B. Link not found, check if user exists by email (Auto-Match)
@@ -112,45 +194,16 @@ export class FullSyncService {
                             await this.identityRepo.save(link);
 
                             // Update fields
-                            await this.usersService.update(userId, {
-                                name: matchName,
-                                jobTitle: mappedUser.jobTitle || undefined,
-                                department: mappedUser.department || undefined,
-                                phone: mappedUser.phone || undefined,
-                                hireDate: mappedUser.hireDate ? new Date(mappedUser.hireDate) : undefined,
-                                birthDate: mappedUser.birthDate ? new Date(mappedUser.birthDate) : undefined,
-                                registrationNumber: mappedUser.registrationNumber || undefined,
-                                costCenter: mappedUser.costCenter || undefined,
-                                terminationDate: mappedUser.terminationDate ? new Date(mappedUser.terminationDate) : undefined,
-                                payrollData: mappedUser.payrollData || undefined,
-                                vacationData: mappedUser.vacationData || undefined,
-                                contractType: mappedUser.contractType || undefined,
-                                workShift: mappedUser.workShift || undefined,
-                                managerEmail: mappedUser.managerEmail || undefined
-                            });
+                            await this.usersService.update(userId, userData);
                             updated++;
                         } else {
                             // C. Create new user
                             const newUser = await this.usersService.create({
                                 email: matchEmail,
-                                name: matchName,
                                 password: crypto.randomUUID(),
                                 companyId: run.connection.companyId,
-                                role: 'user',
-                                department: mappedUser.department,
-                                jobTitle: mappedUser.jobTitle,
-                                phone: mappedUser.phone,
-                                hireDate: mappedUser.hireDate ? new Date(mappedUser.hireDate) : undefined,
-                                birthDate: mappedUser.birthDate ? new Date(mappedUser.birthDate) : undefined,
-                                registrationNumber: mappedUser.registrationNumber,
-                                costCenter: mappedUser.costCenter,
-                                terminationDate: mappedUser.terminationDate ? new Date(mappedUser.terminationDate) : undefined,
-                                payrollData: mappedUser.payrollData,
-                                vacationData: mappedUser.vacationData,
-                                contractType: mappedUser.contractType,
-                                workShift: mappedUser.workShift,
-                                managerEmail: mappedUser.managerEmail,
-                                firstLoginAt: null
+                                firstLoginAt: null,
+                                ...userData
                             } as any);
 
                             userId = newUser.id;

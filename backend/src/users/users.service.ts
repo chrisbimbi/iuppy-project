@@ -31,6 +31,10 @@ export class UsersService {
     return this.userRepository.find();
   }
 
+  async findAllByCompany(companyId: string): Promise<UserEntity[]> {
+    return this.userRepository.find({ where: { companyId } });
+  }
+
   async findOne(id: string): Promise<UserEntity> {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {
@@ -323,6 +327,45 @@ export class UsersService {
       totalUsers,
       activeUsers,
       evolution,
+    };
+  }
+
+  async getTurnoverStats(companyId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Using raw query for Between dates as TypeORM 'Between' operator requires import
+    // or we can use query builder. Let's use QueryBuilder for clarity.
+
+    // Terminations
+    const terminations = await this.userRepository.createQueryBuilder('u')
+      .where('u.companyId = :companyId', { companyId })
+      .andWhere('u.terminationDate >= :start', { start: startOfMonth })
+      .andWhere('u.terminationDate <= :end', { end: endOfMonth })
+      .getCount();
+
+    // Admissions
+    const admissions = await this.userRepository.createQueryBuilder('u')
+      .where('u.companyId = :companyId', { companyId })
+      .andWhere('u.admissionDate >= :start', { start: startOfMonth })
+      .andWhere('u.admissionDate <= :end', { end: endOfMonth })
+      .getCount();
+
+    // Headcount (Active users now)
+    const headcount = await this.userRepository.count({
+      where: { companyId, isActive: true }
+    });
+
+    // Turnover Rate = ((Admissions + Terminations) / 2) / Headcount
+    const rate = headcount > 0 ? ((admissions + terminations) / 2) / headcount : 0;
+
+    return {
+      rate: Number((rate * 100).toFixed(2)),
+      admissions,
+      terminations,
+      headcount,
+      period: `${now.toLocaleString('default', { month: 'long' })}/${now.getFullYear()}`
     };
   }
 }

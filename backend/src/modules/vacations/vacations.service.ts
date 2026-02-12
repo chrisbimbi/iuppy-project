@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { VacationPolicyEntity } from './entities/vacation-policy.entity';
@@ -10,10 +10,13 @@ import { CommunicationsService } from '../../notifications/communications.servic
 import * as dayjs from 'dayjs';
 import * as isBetween from 'dayjs/plugin/isBetween';
 
-dayjs.extend(isBetween);
+import { CollectiveVacationEntity } from './entities/collective-vacation.entity';
+import { UsersService } from '../../users/users.service';
 
 @Injectable()
 export class VacationsService {
+    private readonly logger = new Logger(VacationsService.name);
+
     constructor(
         @InjectRepository(VacationPolicyEntity)
         private readonly policyRepo: Repository<VacationPolicyEntity>,
@@ -21,8 +24,62 @@ export class VacationsService {
         private readonly balanceRepo: Repository<VacationBalanceEntity>,
         @InjectRepository(VacationRequestEntity)
         private readonly requestRepo: Repository<VacationRequestEntity>,
+        @InjectRepository(CollectiveVacationEntity)
+        private readonly collectiveRepo: Repository<CollectiveVacationEntity>,
+        private readonly usersService: UsersService,
         private readonly notifications: CommunicationsService,
     ) { }
+
+    async createCollectiveVacation(dto: {
+        companyId: string;
+        title: string;
+        startDate: string;
+        endDate: string;
+        targetFilters: { departments?: string[]; groups?: string[]; userIds?: string[] };
+        description?: string;
+    }) {
+        const collective = await this.collectiveRepo.save(this.collectiveRepo.create({
+            companyId: dto.companyId,
+            title: dto.title,
+            startDate: dto.startDate,
+            endDate: dto.endDate,
+            targetFilters: dto.targetFilters,
+            description: dto.description
+        }));
+
+        // Fetch users based on filters
+        // For now, simple implementation targeting everyone in selected departments/groups
+        const users = await this.usersService.findAllByCompany(dto.companyId);
+        const targetUsers = users.filter(u => {
+            if (dto.targetFilters.userIds?.includes(u.id)) return true;
+            if (dto.targetFilters.departments?.includes(u.department)) return true;
+            // group filter would require checking u.groups or a query
+            return false;
+        });
+
+        const requests = targetUsers.map(u => this.requestRepo.create({
+            userId: u.id,
+            startDate: dto.startDate,
+            endDate: dto.endDate,
+            type: VacationType.COLLECTIVE,
+            status: VacationRequestStatus.APPROVED, // Collective is usually pre-approved by Admin
+            collectiveVacationId: collective.id
+        }));
+
+        await this.requestRepo.save(requests);
+
+        // Notify Users
+        await this.notifications.sendPush({
+            companyId: dto.companyId,
+            userIds: targetUsers.map(u => u.id),
+            title: `Férias Coletivas: ${dto.title}`,
+            body: `Período: ${dayjs(dto.startDate).format('DD/MM')} a ${dayjs(dto.endDate).format('DD/MM')}`,
+            kind: 'COLLECTIVE_VACATION',
+            entityId: collective.id,
+        });
+
+        return collective;
+    }
 
     async createPolicy(dto: Partial<VacationPolicyEntity>) {
         return this.policyRepo.save(this.policyRepo.create(dto));
@@ -44,11 +101,60 @@ export class VacationsService {
 
     async calculateAccrual(userId: string, absences: number = 0): Promise<number> {
         // CLT Art 130 Logic - Strict Compliance
+        // This calculates the TOTAL entitlement after 12 months based on absences
         if (absences <= 5) return 30;
         if (absences <= 14) return 24;
         if (absences <= 23) return 18;
         if (absences <= 32) return 12;
         return 0; // More than 32 absences = 0 days
+    }
+
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async dailyVacationSync() {
+        this.logger.log('🚀 Running Daily Vacation Accrual Sync...');
+
+        // 1. Fetch all users
+        const users = await this.usersService.findAll(); // Simple background job approach
+
+        for (const user of users) {
+            if (!user.admissionDate) continue;
+
+            // 2. Find or create current acquisition period balance
+            const admission = dayjs(user.admissionDate);
+            const now = dayjs();
+            const yearsSinceAdmission = now.diff(admission, 'year');
+            const periodStart = admission.add(yearsSinceAdmission, 'year');
+            const periodEnd = periodStart.add(1, 'year').subtract(1, 'day');
+
+            let balance = await this.balanceRepo.findOne({
+                where: { userId: user.id, periodStart: periodStart.toISOString() }
+            });
+
+            if (!balance) {
+                balance = this.balanceRepo.create({
+                    userId: user.id,
+                    periodStart: periodStart.toISOString(),
+                    periodEnd: periodEnd.toISOString(),
+                    concessiveLimitDate: periodEnd.add(1, 'year').toISOString(),
+                    daysVested: 0,
+                    daysTaken: 0,
+                    daysSold: 0,
+                    balanceTotal: 0
+                });
+            }
+
+            // 3. Pro-rata Accrual Calculation
+            const daysInPeriod = now.diff(periodStart, 'day');
+            const totalEntitlement = await this.calculateAccrual(user.id);
+            const accruedSoFar = (daysInPeriod / 365) * totalEntitlement;
+
+            balance.daysVested = Number(accruedSoFar.toFixed(4));
+            balance.balanceTotal = balance.daysVested - balance.daysTaken - balance.daysSold;
+
+            await this.balanceRepo.save(balance);
+        }
+
+        this.logger.log('✅ Daily Vacation Accrual Sync completed.');
     }
 
     async requestVacation(userId: string, dto: { startDate: string; endDate: string; soldDays?: number; request13th?: boolean; type?: VacationType }) {
@@ -235,14 +341,15 @@ export class VacationsService {
 
         // 2. Who is Away NOW?
         const today = new Date();
-        const awayNow = await this.requestRepo.count({
-            where: {
-                user: { companyId },
-                status: VacationRequestStatus.APPROVED,
-                startDate: LessThanOrEqual(today.toISOString()),
-                endDate: MoreThanOrEqual(today.toISOString())
-            }
-        });
+        const awayNowQuery = this.requestRepo.createQueryBuilder('req')
+            .leftJoinAndSelect('req.user', 'user')
+            .where('req.user.companyId = :companyId', { companyId })
+            .andWhere('req.status = :status', { status: VacationRequestStatus.APPROVED })
+            .andWhere('req.startDate <= :today', { today: today.toISOString() })
+            .andWhere('req.endDate >= :today', { today: today.toISOString() });
+
+        const awayNow = await awayNowQuery.getCount();
+        const awayUsersList = await awayNowQuery.take(5).getMany();
 
         // 3. Compliance Risk (Balances) & Liability
         // We need to fetch balances to analyze dates
@@ -277,16 +384,33 @@ export class VacationsService {
         });
 
         // 4. Financial Liability Proxy
-        // Avg Salary Proxy = R$ 5,000.00 (Market Avg)
-        // Cost = (Days / 30) * Salary * 1.33 (1/3 Vacation Bonus)
-        const AVG_SALARY = 5000;
-        const estimatedLiability = (totalBalanceDays / 30) * AVG_SALARY * 1.33;
+        // We use real salaries from UserEntity where available
+        const usersWithSalary = await this.balanceRepo.find({
+            where: { user: { companyId } },
+            relations: ['user'],
+            select: {
+                balanceTotal: true,
+                user: { id: true, salary: true }
+            }
+        });
+
+        let estimatedLiability = 0;
+        usersWithSalary.forEach(b => {
+            const salary = Number(b.user?.salary) || 5000; // Fallback to 5k if not defined
+            estimatedLiability += (b.balanceTotal / 30) * salary * 1.33;
+        });
 
         return {
             totalRequests,
             pendingRequests,
             approvedRequests,
             awayNow,
+            awayUsersList: awayUsersList.map(r => ({
+                id: r.userId,
+                name: r.user.name,
+                avatar: r.user.avatarUrl, // Assuming avatarUrl exists on user
+                endDate: r.endDate
+            })),
             riskDistribution: {
                 ok: riskOk,
                 warning: riskWarning,

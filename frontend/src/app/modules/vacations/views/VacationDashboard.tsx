@@ -181,7 +181,7 @@ const VacationDashboard: React.FC = () => {
                                         <span className="text-gray-500 fs-6 fw-bold">Sem dados suficientes</span>
                                     </div>
                                 ) : (
-                                    <ReactApexChart options={pieOptions} series={[liability.taken || 150, liability.sold || 40, liability.totalDays]} type="donut" height={300} />
+                                    <ReactApexChart options={pieOptions} series={[liability.taken, liability.sold, liability.totalDays]} type="donut" height={300} />
                                 )}
                             </div>
                         </div>
@@ -191,7 +191,7 @@ const VacationDashboard: React.FC = () => {
                     <div className="col-xl-7">
                         <div className="card card-xl-stretch mb-xl-8 shadow-sm border-0">
                             <div className="card-body">
-                                <ReactApexChart options={heatmapOptions} series={[{ name: 'Solicitações', data: heatmap.monthlyCounts.length ? heatmap.monthlyCounts : [0, 2, 5, 1, 0, 8, 12, 4, 0, 1, 0, 15] }]} type="heatmap" height={350} />
+                                <ReactApexChart options={heatmapOptions} series={[{ name: 'Solicitações', data: heatmap.monthlyCounts }]} type="heatmap" height={350} />
                             </div>
                         </div>
                     </div>

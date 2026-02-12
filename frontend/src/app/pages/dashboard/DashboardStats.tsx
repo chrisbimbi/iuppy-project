@@ -26,6 +26,10 @@ import { FormsStatsWidget } from './widgets/FormsStatsWidget'
 import { PollsStatsWidget } from './widgets/PollsStatsWidget'
 import { Content } from '../../../layout/components/Content'
 import { AccessHeatmapWidget } from './widgets/AccessHeatmapWidget'
+import { VacationSummaryWidget } from './widgets/VacationSummaryWidget'
+import { HRActionsWidget } from './widgets/HRActionsWidget'
+import { PerformancePulseWidget } from './widgets/PerformancePulseWidget'
+import { TurnoverStatsWidget } from './widgets/TurnoverStatsWidget'
 
 export const DashboardStats: React.FC = () => {
     const intl = useIntl()
@@ -55,24 +59,58 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 2: Top Users & Talent Density (Performance) */}
+            {/* Row 2: Top Users & Turnover Stats */}
             <div className='row g-5 g-xl-8'>
-                <div className='col-xl-6'>
+                <div className='col-xl-8'>
                     <TopUsersWidget
                         className='card-xl-stretch mb-xl-8'
                         users={stats.users.topConnected || []}
                     />
                 </div>
-                <div className='col-xl-6'>
-                    <PerformanceWidget
-                        className='card-xl-stretch mb-xl-8'
-                        activeCycles={stats.performance?.activeCycles || 0}
-                        nineBoxDistribution={stats.performance?.nineBoxDistribution || {}}
-                    />
+                <div className='col-xl-4'>
+                    {stats.users.turnoverStats && (
+                        <TurnoverStatsWidget className='card-xl-stretch mb-xl-8' stats={stats.users.turnoverStats} />
+                    )}
                 </div>
             </div>
 
-            {/* Row 3: Gamification & Access Heatmap */}
+            {/* Row 3: Performance & Vacation */}
+            <div className='row g-5 g-xl-8'>
+                <div className='col-xl-6'>
+                    {activeModules.includes('performance') && stats.performance && (
+                        <div className='d-flex flex-column'>
+                            <PerformanceWidget
+                                className='card-xl-stretch mb-xl-8'
+                                activeCycles={stats.performance.activeCycles || 0}
+                                nineBoxDistribution={stats.performance.nineBoxDistribution || {}}
+                            />
+                            {stats.performance.completionStats && (
+                                <PerformancePulseWidget
+                                    className='card-xl-stretch mb-5'
+                                    stats={stats.performance.completionStats}
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div className='col-xl-6'>
+                    {activeModules.includes('vacations') && stats.vacations && (
+                        <VacationSummaryWidget
+                            className='card-xl-stretch mb-xl-8'
+                            stats={{
+                                awayNow: stats.vacations.awayNow,
+                                pendingRequests: stats.vacations.pendingRequests,
+                                awayUsersList: stats.vacations.awayUsersList
+                            }}
+                        />
+                    )}
+                    {stats.users.heatmap && (
+                        <AccessHeatmapWidget className='card-xl-stretch mb-xl-8' heatmap={stats.users.heatmap} />
+                    )}
+                </div>
+            </div>
+
+            {/* Row 4: Gamification & HR Actions */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     {activeModules.includes('gamification') && stats.gamification && (
@@ -83,13 +121,37 @@ export const DashboardStats: React.FC = () => {
                     )}
                 </div>
                 <div className='col-xl-6'>
-                    {stats.users.heatmap && (
-                        <AccessHeatmapWidget className='card-xl-stretch mb-xl-8' heatmap={stats.users.heatmap} />
-                    )}
+                    {/* Aggregated HR Actions */}
+                    <HRActionsWidget
+                        className='card-xl-stretch mb-xl-8'
+                        actions={[
+                            {
+                                title: 'Solicitações de Férias',
+                                count: stats.vacations?.pendingRequests || 0,
+                                link: '/vacations/requests',
+                                icon: 'bi-sun',
+                                color: 'warning'
+                            },
+                            {
+                                title: 'Avaliações de Desempenho',
+                                count: ((stats.performance?.completionStats?.manager.total || 0) - (stats.performance?.completionStats?.manager.submitted || 0)),
+                                link: '/performance/assessments',
+                                icon: 'bi-trophy',
+                                color: 'primary'
+                            },
+                            {
+                                title: 'Pendências NR-1',
+                                count: stats.nr1?.training.overdue || 0,
+                                link: '/nr1/dashboard',
+                                icon: 'bi-shield-check',
+                                color: 'danger'
+                            }
+                        ]}
+                    />
                 </div>
             </div>
 
-            {/* Row 3: Reading Behavior & Search Stats */}
+            {/* Row 5: Reading Behavior & Search Stats */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     <ReadingBehaviorWidget className='card-xl-stretch mb-xl-8' />
@@ -99,7 +161,7 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 4: Traffic Sources & Chat Behavior */}
+            {/* Row 6: Traffic & Chat */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     <TrafficSourcesWidget className='card-xl-stretch mb-xl-8' />
@@ -109,7 +171,7 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 5: Engagement Funnel & Journeys */}
+            {/* Row 7: Engagement & Journeys */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     <EngagementFunnelWidget className='card-xl-stretch mb-xl-8' />
@@ -121,7 +183,7 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 6: Forms & Polls */}
+            {/* Row 8: Forms & Polls */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     {activeModules.includes('forms') && stats.forms && (
@@ -135,65 +197,7 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 7: Groups & Action Needed */}
-            <div className='row g-5 g-xl-8'>
-                <div className='col-xl-6'>
-                    {activeModules.includes('social') && stats.social && (
-                        <GroupEngagementWidget
-                            className='card-xl-stretch mb-xl-8'
-                            topGroups={stats.social.topGroups}
-                            bottomGroups={stats.social.bottomGroups}
-                        />
-                    )}
-                </div>
-                <div className='col-xl-6'>
-                    {/* Action Needed Card */}
-                    <div className='card card-flush h-xl-100 mb-xl-8 bg-body' style={{ border: '1px dashed #E1E3EA' }}>
-                        <div className='card-header border-0 pt-5'>
-                            <h3 className='card-title align-items-start flex-column'>
-                                <span className='card-label fw-bolder text-dark'>Ações Necessárias</span>
-                                <span className='text-muted mt-1 fw-bold fs-7'>Alertas e tarefas pendentes</span>
-                            </h3>
-                        </div>
-                        <div className='card-body pt-2'>
-                            <div className='d-flex flex-center position-relative mb-7 text-center'>
-                                <div className='d-flex flex-column'>
-                                    <span className='fs-2hx fw-bold text-gray-800'>74%</span>
-                                    <span className='text-muted fs-8 fw-bold'>Eficiência Geral</span>
-                                </div>
-                            </div>
-
-                            <div className='d-flex flex-column'>
-                                <div className='d-flex align-items-center bg-light-danger rounded p-4 mb-4'>
-                                    <div className='symbol symbol-30px me-4'>
-                                        <div className='symbol-label bg-danger'>
-                                            <i className='bi bi-exclamation-triangle-fill text-white fs-6'></i>
-                                        </div>
-                                    </div>
-                                    <div className='flex-grow-1 me-2'>
-                                        <span className='fw-bolder text-gray-800 text-hover-primary fs-7'>NR1 Pendente</span>
-                                        <span className='text-muted fw-bold d-block fs-9'>5 atrasos</span>
-                                    </div>
-                                </div>
-
-                                <div className='d-flex align-items-center bg-light-warning rounded p-4 mb-4'>
-                                    <div className='symbol symbol-30px me-4'>
-                                        <div className='symbol-label bg-warning'>
-                                            <i className='bi bi-chat-dots-fill text-white fs-6'></i>
-                                        </div>
-                                    </div>
-                                    <div className='flex-grow-1 me-2'>
-                                        <span className='fw-bolder text-gray-800 text-hover-primary fs-7'>Conversas</span>
-                                        <span className='text-muted fw-bold d-block fs-9'>12 novas</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Row 8: News & Content Overview */}
+            {/* Row 9: News & Content Overview */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     {stats.news && (
@@ -224,7 +228,7 @@ export const DashboardStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* Row 9: Social Stats & NR-1 */}
+            {/* Row 10: Social Stats & NR-1 */}
             <div className='row g-5 g-xl-8'>
                 <div className='col-xl-6'>
                     {activeModules.includes('social') && stats.social && (

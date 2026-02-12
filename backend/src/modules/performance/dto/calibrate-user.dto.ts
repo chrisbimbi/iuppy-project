@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsString, IsNumber, IsOptional } from 'class-validator';
 
 export class CalibrateUserDto {
     @IsString()
@@ -8,8 +8,18 @@ export class CalibrateUserDto {
     cycleId!: string;
 
     @IsString()
-    newQuadrant!: string;
+    quadrant!: string;
+
+    @IsNumber()
+    scoreX!: number;
+
+    @IsNumber()
+    scoreY!: number;
 
     @IsString()
     justification!: string;
+
+    @IsString()
+    @IsOptional()
+    calibratorId?: string;
 }

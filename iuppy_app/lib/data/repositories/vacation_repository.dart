@@ -9,7 +9,8 @@ class VacationRepository {
   Future<Map<String, dynamic>> getBalance(String userId) async {
     try {
       final resp = await _dio.get('/vacations/balance/$userId');
-      if (resp.data == null || resp.data is String && (resp.data as String).isEmpty) {
+      if (resp.data == null ||
+          resp.data is String && (resp.data as String).isEmpty) {
         return {};
       }
       return Map<String, dynamic>.from(resp.data);
@@ -57,7 +58,8 @@ class VacationRepository {
 
   Future<List<Map<String, dynamic>>> getAllRequests({String? status}) async {
     try {
-      final resp = await _dio.get('/vacations/requests', queryParameters: status != null ? {'status': status} : null);
+      final resp = await _dio.get('/vacations/requests',
+          queryParameters: status != null ? {'status': status} : null);
       if (resp.data == null || resp.data is! List) return [];
       return (resp.data as List).cast<Map<String, dynamic>>();
     } catch (_) {
@@ -66,11 +68,12 @@ class VacationRepository {
   }
 
   Future<void> approveRequest(String requestId) async {
-    await _dio.patch('/vacations/requests/$requestId/approve', data: {'approverId': 'CURRENT_USER'}); 
+    await _dio.patch('/vacations/requests/$requestId/approve',
+        data: {'approverId': 'CURRENT_USER'});
   }
 
   Future<void> rejectRequest(String requestId, String reason) async {
-    // Stub for now as backend might not have it, but frontend needs it to compile.
-    throw UnimplementedError('Backend reject endpoint missing');
+    await _dio.patch('/vacations/requests/$requestId/reject',
+        data: {'rejectorId': 'CURRENT_USER', 'reason': reason});
   }
 }
